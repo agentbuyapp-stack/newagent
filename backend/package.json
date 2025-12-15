@@ -1,0 +1,33 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "dev": "prisma generate && ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@clerk/backend": "^2.27.0",
+    "@clerk/nextjs": "^6.36.2",
+    "@prisma/client": "^6.19.1",
+    "@supabase/supabase-js": "^2.87.1",
+    "@types/cors": "^2.8.19",
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.2",
+    "prisma": "^6.19.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.0.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.3"
+  }
+}
