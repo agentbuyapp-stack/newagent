@@ -166,10 +166,24 @@ app.get("/me", async (req, res) => {
       return res.status(401).json({ error: "Unauthenticated" });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: { profile: true },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: { profile: true },
+      });
+    } catch (dbError: any) {
+      console.error("Database error in /me:", dbError);
+      console.error("Database error details:", {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta,
+      });
+      return res.status(500).json({ 
+        error: "Database connection error",
+        message: process.env.NODE_ENV === "development" ? dbError.message : undefined
+      });
+    }
     
     if (!user) {
       return res.status(404).json({ error: "User not found" });
