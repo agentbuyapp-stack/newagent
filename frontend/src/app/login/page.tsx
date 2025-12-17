@@ -18,7 +18,6 @@ export default function LoginPage() {
 
     try {
       const user = await apiClient.register({ email, role });
-      apiClient.setAuth(user.id, user.role);
       
       // Redirect based on role
       if (user.role === "agent") {

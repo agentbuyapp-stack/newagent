@@ -278,19 +278,23 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                               
                               // Restore thumbnail URL
                               const url = message.imageUrl;
-                              if (url.includes('cloudinary.com')) {
-                                if (url.includes('/upload/')) {
-                                  const parts = url.split('/upload/');
-                                  if (parts.length === 2) {
-                                    img.src = `${parts[0]}/upload/w_600,h_600,c_limit,q_auto,f_auto/${parts[1]}`;
+                              if (url) {
+                                if (url.includes('cloudinary.com')) {
+                                  if (url.includes('/upload/')) {
+                                    const parts = url.split('/upload/');
+                                    if (parts.length === 2) {
+                                      img.src = `${parts[0]}/upload/w_600,h_600,c_limit,q_auto,f_auto/${parts[1]}`;
+                                    }
                                   }
+                                } else {
+                                  img.src = url;
                                 }
-                              } else {
-                                img.src = url;
                               }
                             } else {
                               // Zoom in - full display immediately
                               const originalSrc = message.imageUrl;
+                              
+                              if (!originalSrc) return;
                               
                               // Use original image URL for zoom (without size limit)
                               const tempImg = new Image();

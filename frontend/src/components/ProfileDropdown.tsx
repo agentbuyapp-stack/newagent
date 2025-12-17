@@ -79,7 +79,8 @@ export default function ProfileDropdown() {
           </span>
           <button
             onClick={async () => {
-              if (!confirm(`Та ${user.agentPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ оноогоо зарахдаа итгэлтэй байна уу? Оноо 0 болж, admin-д урамшуулал хүсэлт илгээгдэнэ.`)) {
+              const points = user.agentPoints || 0;
+              if (!confirm(`Та ${points.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ оноогоо зарахдаа итгэлтэй байна уу? Оноо 0 болж, admin-д урамшуулал хүсэлт илгээгдэнэ.`)) {
                 return;
               }
               
