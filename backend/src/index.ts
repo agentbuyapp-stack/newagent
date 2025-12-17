@@ -102,8 +102,22 @@ const requireRole = (allowed: Role | Role[]) => {
   };
 };
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+app.get("/health", async (_req, res) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: "ok",
+      database: "connected"
+    });
+  } catch (error: any) {
+    console.error("Health check error:", error);
+    res.status(503).json({ 
+      status: "error",
+      database: "disconnected",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
 });
 
 // Register new user (public endpoint) - kept for backward compatibility
