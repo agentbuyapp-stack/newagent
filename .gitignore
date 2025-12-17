@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.env.production
 
 # OS files
 .DS_Store
@@ -24,13 +25,41 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
 # Build outputs
 dist/
 build/
 .next/
 out/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+backend/prisma/migrations/*/migration.sql
+!backend/prisma/migrations/*/migration.sql.bak
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Package manager locks (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
 
