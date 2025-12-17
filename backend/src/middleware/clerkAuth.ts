@@ -70,20 +70,35 @@ export const clerkAuth = async (
     }
 
     // Get or create user in database
-    let user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
 
-    if (!user) {
-      // Create new user with default role "user"
-      // You can customize role assignment based on Clerk metadata if needed
-      const role = (clerkUser.publicMetadata?.role as Role) || "user";
-      
-      user = await prisma.user.create({
-        data: {
-          email: email.toLowerCase(),
-          role: role,
-        },
+      if (!user) {
+        // Create new user with default role "user"
+        // You can customize role assignment based on Clerk metadata if needed
+        const role = (clerkUser.publicMetadata?.role as Role) || "user";
+        
+        user = await prisma.user.create({
+          data: {
+            email: email.toLowerCase(),
+            role: role,
+          },
+        });
+      }
+    } catch (dbError: any) {
+      console.error("Database error in clerkAuth:", dbError);
+      console.error("Database error details:", {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta,
+      });
+      // If database connection fails, return 500 error
+      return res.status(500).json({ 
+        error: "Database connection error",
+        message: process.env.NODE_ENV === "development" ? dbError.message : undefined
       });
     }
 

@@ -177,6 +177,7 @@ app.get("/me", async (req, res) => {
       message: error.message,
       stack: error.stack,
       code: error.code,
+      meta: error.meta,
     });
     res.status(500).json({ 
       error: "Internal server error",
