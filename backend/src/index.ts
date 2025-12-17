@@ -22,9 +22,34 @@ declare global {
 const app = express();
 
 // CORS configuration for frontend
+// Support multiple domains from CLIENT_URL or FRONTEND_URL
+const getAllowedOrigins = (): string[] => {
+  const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:3000";
+  // If CLIENT_URL contains multiple URLs (comma-separated), split them
+  if (clientUrl.includes(",")) {
+    return clientUrl.split(",").map(url => url.trim());
+  }
+  return [clientUrl];
+};
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      const allowedOrigins = getAllowedOrigins();
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // In development, allow localhost
+        if (process.env.NODE_ENV === "development" && origin.includes("localhost")) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      }
+    },
     credentials: true,
   })
 );
