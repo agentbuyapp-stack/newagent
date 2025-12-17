@@ -17,22 +17,35 @@ enum Role {
 }
 
 enum OrderStatus {
-  pending
-  approved
-  rejected
-  completed
+  niitlegdsen // Нийтэлсэн
+  agent_sudlaj_bn // Agent шалгаж байна
+  tolbor_huleej_bn // Төлбөр хүлээж байна
+  amjilttai_zahialga // Амжилттай захиалга
+  tsutsalsan_zahialga // Цуцлагдсан захиалга
+}
+
+enum RewardRequestStatus {
+  pending // Хүлээж байна
+  approved // Батлагдсан
+  rejected // Татгалзсан
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  role      Role     @default(user)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  profile Profile?
-  orders   Order[]
-  
+  id          String    @id @default(uuid())
+  email       String    @unique
+  role        Role      @default(user)
+  isApproved  Boolean   @default(false) // For agents: admin approval status
+  approvedAt  DateTime?
+  approvedBy  String? // Admin user ID who approved
+  agentPoints Float     @default(0) // Agent-ийн оноо/орлого (user дүнгийн 5%)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  profile        Profile?
+  orders         Order[]         @relation("UserOrders")
+  agentOrders    Order[]         @relation("AgentOrders") // Orders assigned to this agent
+  rewardRequests RewardRequest[] // Agent-ийн урамшуулал хүсэлтүүд
+
   @@map("users")
 }
 
@@ -45,23 +58,99 @@ model Profile {
   cargo     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("profiles")
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  userId      String
-  productName String
-  description String
-  imageUrl    String?
-  status      OrderStatus @default(pending)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id                  String      @id @default(uuid())
+  userId              String
+  agentId             String? // Agent who is handling this order
+  productName         String
+  description         String
+  imageUrl            String? // Keep for backward compatibility
+  imageUrls           String[]    @default([]) // Array of image URLs
+  status              OrderStatus @default(niitlegdsen)
+  userPaymentVerified Boolean     @default(false) // Admin verified user payment
+  agentPaymentPaid    Boolean     @default(false) // Agent payment paid to admin
+  trackCode           String? // Track code for successful orders
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  user        User         @relation("UserOrders", fields: [userId], references: [id], onDelete: Cascade)
+  agent       User?        @relation("AgentOrders", fields: [agentId], references: [id], onDelete: SetNull)
+  messages    Message[]
+  agentReport AgentReport?
+
   @@map("orders")
+}
+
+model Cargo {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cargos")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  orderId   String
+  senderId  String // User ID who sent the message
+  text      String? // Text message
+  imageUrl  String? // Image URL if message contains image
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model AgentReport {
+  id                    String   @id @default(uuid())
+  orderId               String   @unique
+  userAmount            Float // User дүн
+  paymentLink           String? // Төлбөрийн холбоос
+  additionalImages      String[] @default([]) // Нэмэлт зураг
+  additionalDescription String? // Нэмэлт тайлбар
+  quantity              Int? // Тоо ширхэг
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("agent_reports")
+}
+
+model AdminSettings {
+  id            String   @id @default(uuid())
+  accountNumber String? // Дансны дугаар
+  accountName   String? // Дансны нэр
+  bank          String? // Банк
+  exchangeRate  Float? // Ханш
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("admin_settings")
+}
+
+model RewardRequest {
+  id         String              @id @default(uuid())
+  agentId    String // Agent user ID
+  amount     Float // Зарах гэж буй онооны хэмжээ
+  status     RewardRequestStatus @default(pending) // Хүсэлтийн статус
+  approvedAt DateTime? // Батлагдсан огноо
+  approvedBy String? // Батласан admin user ID
+  rejectedAt DateTime? // Татгалзсан огноо
+  rejectedBy String? // Татгалзсан admin user ID
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  agent User @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("reward_requests")
 }

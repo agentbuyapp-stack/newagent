@@ -72,8 +72,9 @@ export async function uploadImageToCloudinary(
       folder: "agent-orders",
       resource_type: "image",
       transformation: [
-        { width: 1000, height: 1000, crop: "limit" }, // Limit size
+        { width: 1200, height: 1200, crop: "limit" }, // Limit size for chat images
         { quality: "auto" }, // Auto optimize quality
+        { format: "auto" }, // Auto format optimization
       ],
     });
 
