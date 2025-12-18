@@ -97,10 +97,12 @@ export default function NewOrderPage() {
             orderData.imageUrls = [];
           }
           await apiClient.createOrder(orderData);
-          createdOrders.push(order.productName);
+          // validOrders is already filtered to have productName, so it's safe to use !
+          createdOrders.push(order.productName!);
         } catch (orderErr: any) {
           // Continue creating other orders even if one fails
-          setError(`Захиалга үүсгэхэд алдаа гарлаа: ${order.productName} - ${orderErr.message || "Алдаа"}`);
+          // validOrders is already filtered to have productName, so it's safe to use !
+          setError(`Захиалга үүсгэхэд алдаа гарлаа: ${order.productName!} - ${orderErr.message || "Алдаа"}`);
         }
       }
 
