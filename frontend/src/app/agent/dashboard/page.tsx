@@ -349,8 +349,8 @@ export default function AgentDashboardPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-lg text-gray-600">Ачааллаж байна...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-base text-gray-600">Ачааллаж байна...</div>
       </div>
     );
   }
@@ -361,30 +361,30 @@ export default function AgentDashboardPage() {
 
   if (error && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
+          <div className="text-red-500 mb-4 text-base">{error}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gray-50">
   
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
           {/* Approval Status - Only show for agents, not admins */}
           {user?.role === "agent" && !isApproved && (
-            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <h3 className="text-lg font-semibold text-yellow-900">Admin шийдвэр хүлээж байна</h3>
-                  <p className="text-sm text-yellow-800">Таны эрх admin-аар батлагдаагүй байна. Батлагдсаны дараа "нийтэлсэн" захиалгуудыг харж болно.</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Admin шийдвэр хүлээж байна</h3>
+                  <p className="text-sm text-gray-600">Таны эрх admin-аар батлагдаагүй байна. Батлагдсаны дараа "нийтэлсэн" захиалгуудыг харж болно.</p>
                 </div>
               </div>
             </div>
@@ -392,9 +392,9 @@ export default function AgentDashboardPage() {
 
           {/* Box 1: Нийтэлсэн захиалгууд */}
           {(user?.role === "admin" || isApproved) && (
-            <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Нээлттэй захиалгууд</h2>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Нээлттэй захиалгууд</h2>
               <button
                 onClick={() => setShowPublishedOrders(!showPublishedOrders)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
@@ -426,7 +426,7 @@ export default function AgentDashboardPage() {
                             setSelectedOrder(order);
                             setShowOrderModal(true);
                           }}
-                          className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer"
+                          className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden cursor-pointer"
                         >
                           {mainImage && (
                             <div className="w-full h-40 bg-gray-200 overflow-hidden">
@@ -446,7 +446,7 @@ export default function AgentDashboardPage() {
                               </span>
                             </div>
 
-                            <h4 className="font-bold text-gray-900 text-lg line-clamp-1">
+                            <h4 className="font-semibold text-gray-900 text-base line-clamp-1">
                               {order.productName}
                             </h4>
 
@@ -469,7 +469,7 @@ export default function AgentDashboardPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                     Нийтэлсэн захиалга байхгүй байна.
                   </div>
                 )}
@@ -479,9 +479,9 @@ export default function AgentDashboardPage() {
           )}
 
           {/* Box 2: Миний захиалгууд */}
-          <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
             <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Миний захиалгууд</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Миний захиалгууд</h2>
               <button
                 onClick={() => setShowMyOrders(!showMyOrders)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
@@ -548,7 +548,7 @@ export default function AgentDashboardPage() {
                   <div className="flex justify-end mb-2">
                     <button
                       onClick={handleClearAllCancelledOrders}
-                      className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
                     >
                       Бүгдийг устгах (Clear All)
                     </button>
@@ -571,7 +571,7 @@ export default function AgentDashboardPage() {
                                 setSelectedOrder(order);
                                 setShowOrderModal(true);
                               }}
-                              className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer"
+                              className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden cursor-pointer"
                             >
                               {mainImage && (
                                 <div className="w-full h-40 bg-gray-200 overflow-hidden">
@@ -594,7 +594,7 @@ export default function AgentDashboardPage() {
                                 {/* Product Name - Collapsed if agent report exists */}
                                 {agentReports[order.id] && expandedReportOrderId !== order.id ? (
                                   <div className="space-y-2">
-                                    <h4 className="font-bold text-gray-900 text-lg line-clamp-1 opacity-50">
+                                    <h4 className="font-semibold text-gray-900 text-base line-clamp-1 opacity-50">
                                       {order.productName}
                                     </h4>
                                     <p className="text-sm text-gray-600 line-clamp-1 opacity-50">
@@ -603,7 +603,7 @@ export default function AgentDashboardPage() {
                                   </div>
                                 ) : (
                                   <>
-                                    <h4 className="font-bold text-gray-900 text-lg line-clamp-1">
+                                    <h4 className="font-semibold text-gray-900 text-base line-clamp-1">
                                       {order.productName}
                                     </h4>
                                     <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
@@ -693,7 +693,7 @@ export default function AgentDashboardPage() {
                                                 }
                                               }}
                                               disabled={trackCodeLoading}
-                                              className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50"
+                                              className="flex-1 px-2 py-1.5 text-xs bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 min-h-[32px]"
                                             >
                                               {trackCodeLoading ? "Хадгалж..." : "Хадгалах"}
                                             </button>
@@ -708,14 +708,14 @@ export default function AgentDashboardPage() {
                                                 });
                                               }}
                                               disabled={trackCodeLoading}
-                                              className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium disabled:opacity-50"
+                                              className="px-2 py-1.5 text-xs bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium disabled:opacity-50 min-h-[32px]"
                                             >
                                               Цуцлах
                                             </button>
                                           </div>
                                         </div>
                                       ) : (
-                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+                                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-2">
                                           {order.trackCode ? (
                                             <p className="text-xs font-mono text-blue-600 font-semibold">{order.trackCode}</p>
                                           ) : (
@@ -735,7 +735,7 @@ export default function AgentDashboardPage() {
                                         e.stopPropagation();
                                         handleClearCancelledOrder(order.id);
                                       }}
-                                      className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                                      className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors text-sm font-medium min-h-[44px]"
                                     >
                                       Устгах (Clear)
                                     </button>
@@ -761,7 +761,7 @@ export default function AgentDashboardPage() {
                                         setChatOrder(order);
                                         setShowChatModal(true);
                                       }}
-                                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors text-sm font-medium min-h-[44px]"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -800,7 +800,7 @@ export default function AgentDashboardPage() {
                                     </button>
                                     
                                     {expandedReportOrderId === order.id && agentReports[order.id] && (
-                                      <div className="mt-2 p-3 bg-gray-50 rounded-lg space-y-2 text-xs">
+                                      <div className="mt-2 p-3 bg-gray-50 rounded-xl space-y-2 text-xs">
                                         <div>
                                           <span className="font-medium text-gray-900">Хэрэглэгчийн төлөх дүн:</span>
                                           <span className="ml-2 text-gray-900">
@@ -873,7 +873,7 @@ export default function AgentDashboardPage() {
                         })}
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                      <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                         <p>
                           {orderFilter === "all" && "Миний захиалга байхгүй байна."}
                           {orderFilter === "active" && "Идэвхтэй захиалга байхгүй байна."}
@@ -896,13 +896,13 @@ export default function AgentDashboardPage() {
         const hasAgentReport = currentReport !== null && currentReport !== undefined;
         
         return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
               <button
                 onClick={() => setShowOrderModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-[40px] min-w-[40px]"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -938,12 +938,12 @@ export default function AgentDashboardPage() {
               </div>
 
               {/* User Info Section - Collapsible */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <button
                   onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
                   className="w-full flex items-center justify-between text-left"
                 >
-                  <h3 className="text-lg font-bold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
                   <svg 
                     className={`w-5 h-5 transition-transform ${showUserInfoInModal ? 'rotate-180' : ''}`}
                     fill="none" 
@@ -958,29 +958,29 @@ export default function AgentDashboardPage() {
                   <div className="mt-4 space-y-4">
                     {/* User Profile Information */}
                     {selectedOrder.user?.profile && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                        <h4 className="text-sm font-bold text-blue-900 mb-3">Хэрэглэгчийн мэдээлэл (Каргод оруулах)</h4>
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Хэрэглэгчийн мэдээлэл (Каргод оруулах)</h4>
                         
                         {/* User Name */}
                         <div>
-                          <label className="text-xs font-medium text-blue-700">Нэр:</label>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">
+                          <label className="text-xs font-medium text-gray-600">Нэр:</label>
+                          <p className="text-sm font-medium text-gray-900 mt-1">
                             {selectedOrder.user.profile.name || "Байхгүй"}
                           </p>
                         </div>
                         
                         {/* User Phone */}
                         <div>
-                          <label className="text-xs font-medium text-blue-700">Утас:</label>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">
+                          <label className="text-xs font-medium text-gray-600">Утас:</label>
+                          <p className="text-sm font-medium text-gray-900 mt-1">
                             {selectedOrder.user.profile.phone || "Байхгүй"}
                           </p>
                         </div>
                         
                         {/* User Cargo */}
                         <div>
-                          <label className="text-xs font-medium text-blue-700">Сонгосон карго:</label>
-                          <p className="text-sm font-semibold text-blue-900 mt-1">
+                          <label className="text-xs font-medium text-gray-600">Сонгосон карго:</label>
+                          <p className="text-sm font-medium text-gray-900 mt-1">
                             {selectedOrder.user.profile.cargo || "Байхгүй"}
                           </p>
                         </div>
@@ -997,7 +997,7 @@ export default function AgentDashboardPage() {
                               key={index}
                               src={imgUrl}
                               alt={`${selectedOrder.productName} - ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => setZoomedImageIndex(zoomedImageIndex === index ? null : index)}
                             />
                           ))}
@@ -1032,13 +1032,13 @@ export default function AgentDashboardPage() {
                     {/* Product Name */}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Барааны нэр</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
+                      <p className="text-base font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
                     </div>
                     
                     {/* Description */}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Тайлбар</label>
-                      <p className="text-gray-700 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
+                      <p className="text-gray-600 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
                     </div>
                   </div>
                 )}
@@ -1053,7 +1053,7 @@ export default function AgentDashboardPage() {
                 const isMyAssignedOrder = selectedOrder.agentId && selectedOrder.agentId === user?.id;
                 return isMyOrder || isMyAssignedOrder;
               })() && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                   <button
                     onClick={() => {
                       setShowAgentReportInModal(!showAgentReportInModal);
@@ -1064,7 +1064,7 @@ export default function AgentDashboardPage() {
                     }}
                     className="w-full flex items-center justify-between text-left"
                   >
-                    <h3 className="text-lg font-bold text-gray-900">Миний илгээсэн тайлан</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Миний илгээсэн тайлан</h3>
                     <svg 
                       className={`w-5 h-5 transition-transform ${showAgentReportInModal ? 'rotate-180' : ''}`}
                       fill="none" 
@@ -1092,8 +1092,8 @@ export default function AgentDashboardPage() {
                         return (
                           <>
                             <div>
-                              <label className="text-sm font-medium text-gray-700">Хэрэглэгчийн төлөх дүн:</label>
-                              <p className="text-xl font-bold text-green-600 mt-1">
+                              <label className="text-sm font-medium text-gray-600">Хэрэглэгчийн төлөх дүн:</label>
+                              <p className="text-lg font-semibold text-green-600 mt-1">
                                 {(() => {
                                   const exchangeRate = adminSettings?.exchangeRate || 1;
                                   const calculatedAmount = calculateUserPaymentAmount(report, exchangeRate);
@@ -1104,12 +1104,12 @@ export default function AgentDashboardPage() {
 
                             {report.paymentLink && (
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Төлбөрийн холбоос:</label>
+                                <label className="text-sm font-medium text-gray-600">Төлбөрийн холбоос:</label>
                                 <a 
                                   href={report.paymentLink} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline break-all block mt-1"
+                                  className="text-blue-500 hover:text-blue-600 hover:underline break-all block mt-1"
                                 >
                                   {report.paymentLink}
                                 </a>
@@ -1118,28 +1118,28 @@ export default function AgentDashboardPage() {
 
                             {report.quantity && (
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Тоо ширхэг:</label>
+                                <label className="text-sm font-medium text-gray-600">Тоо ширхэг:</label>
                                 <p className="text-gray-900 mt-1">{report.quantity}</p>
                               </div>
                             )}
 
                             {report.additionalDescription && (
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Нэмэлт тайлбар:</label>
-                                <p className="text-gray-700 mt-1 whitespace-pre-wrap">{report.additionalDescription}</p>
+                                <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
+                                <p className="text-gray-600 mt-1 whitespace-pre-wrap">{report.additionalDescription}</p>
                               </div>
                             )}
 
                             {report.additionalImages && report.additionalImages.length > 0 && (
                               <div>
-                                <label className="text-sm font-medium text-gray-700 mb-2 block">Нэмэлт зураг:</label>
+                                <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
                                 <div className="grid grid-cols-3 gap-3">
                                   {report.additionalImages.map((imgUrl, idx) => (
                                     <img
                                       key={idx}
                                       src={imgUrl}
                                       alt={`Additional ${idx + 1}`}
-                                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                      className="w-full h-32 object-cover rounded-xl border border-gray-200"
                                     />
                                   ))}
                                 </div>
@@ -1237,7 +1237,7 @@ export default function AgentDashboardPage() {
                               }
                             }}
                             disabled={trackCodeLoading}
-                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50"
+                            className="flex-1 px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 min-h-[44px]"
                           >
                             {trackCodeLoading ? "Хадгалж байна..." : "Хадгалах"}
                           </button>
@@ -1247,7 +1247,7 @@ export default function AgentDashboardPage() {
                               setTrackCodeInput("");
                             }}
                             disabled={trackCodeLoading}
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium disabled:opacity-50"
+                            className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium disabled:opacity-50 min-h-[44px]"
                           >
                             Цуцлах
                           </button>
@@ -1326,13 +1326,13 @@ export default function AgentDashboardPage() {
 
       {/* Agent Report Form Modal */}
       {showReportForm && reportOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Тайлан илгээх</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Тайлан илгээх</h2>
               <button
                 onClick={() => { setReportOrder(null); setShowReportForm(false); }}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-[40px] min-w-[40px]"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -63,19 +63,19 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
       
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
           Профайл амжилттай шинэчлэгдлээ!
         </div>
       )}
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="name" className="block text-sm font-medium text-gray-900 mb-1">
           Нэр
         </label>
         <input
@@ -84,14 +84,13 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Жишээ: Бат"
-          style={{ fontSize: '16px' }}
         />
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="phone" className="block text-sm font-medium text-gray-900 mb-1">
           Утас
         </label>
         <input
@@ -100,14 +99,13 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           required
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="99112233"
-          style={{ fontSize: '16px' }}
         />
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-1">
           Имэйл
         </label>
         <input
@@ -116,15 +114,14 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="example@email.com"
-          style={{ fontSize: '16px' }}
         />
       </div>
 
       {!hideCargo && (
         <div>
-          <label htmlFor="cargo" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="cargo" className="block text-sm font-medium text-gray-900 mb-1">
             Ачаа сонгох
           </label>
           {loadingCargos ? (
@@ -135,7 +132,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
               required
               value={formData.cargo}
               onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="">Ачаа сонгох</option>
               {cargos.map((cargo) => (
@@ -154,7 +151,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition"
+        className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
       >
         {loading ? "Хадгалж байна..." : profile ? "Шинэчлэх" : "Үүсгэх"}
       </button>

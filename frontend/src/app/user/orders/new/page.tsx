@@ -133,42 +133,39 @@ export default function NewOrderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link href="/user/dashboard" className="text-blue-600 hover:text-blue-700">
+            <Link href="/user/dashboard" className="text-blue-500 hover:text-blue-600 text-base font-medium">
               ← Буцах
             </Link>
-            <h1 className="text-xl font-bold text-gray-900">Захиалга үүсгэх</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Захиалга үүсгэх</h1>
             <div></div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto py-2 sm:px-6 lg:px-8">
-        <div className="px-4 py-1 sm:px-0">
-          <div className="bg-white shadow-lg rounded-lg p-6">
-          
-
+      <main className="max-w-4xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {orders.map((order, index) => (
-                <div key={order.id} className="border-2 border-gray-200 rounded-lg p-5 space-y-4 bg-gray-50">
+                <div key={order.id} className="border border-gray-200 rounded-xl p-4 sm:p-5 space-y-4 bg-gray-50">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold text-gray-900 text-lg">
+                    <h3 className="font-medium text-gray-900 text-base">
                       {index === 0 ? " Бараа #1" : `Бараа #${index + 1}`}
                     </h3>
                     {orders.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeProductField(order.id)}
-                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition flex items-center gap-1"
+                        className="px-3 py-1.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 min-h-[36px]"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -179,7 +176,7 @@ export default function NewOrderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                       Зураг (Дээд тал нь 3 зураг)
                     </label>
                     <input
@@ -188,7 +185,7 @@ export default function NewOrderPage() {
                       multiple
                       onChange={(e) => handleImageChange(e, index)}
                       disabled={imagePreviews[index]?.length >= 3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     {imagePreviews[index] && imagePreviews[index].length > 0 && (
                       <div className="mt-3 grid grid-cols-3 gap-3">
@@ -197,12 +194,12 @@ export default function NewOrderPage() {
                             <img
                               src={preview}
                               alt={`Preview ${index + 1}-${imgIndex + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200"
                             />
                             <button
                               type="button"
                               onClick={() => removeImage(index, imgIndex)}
-                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-[32px] min-w-[32px]"
                               title="Устгах"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,7 +216,7 @@ export default function NewOrderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                       Барааны нэр
                     </label>
                     <input
@@ -231,14 +228,13 @@ export default function NewOrderPage() {
                         newOrders[index].productName = e.target.value;
                         setOrders(newOrders);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Барааны нэр оруулах"
-                      style={{ fontSize: '16px' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                       Тайлбар
                     </label>
                     <textarea
@@ -250,9 +246,8 @@ export default function NewOrderPage() {
                         newOrders[index].description = e.target.value;
                         setOrders(newOrders);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
-                      style={{ fontSize: '16px' }}
                     />
                   </div>
                 </div>
@@ -261,7 +256,7 @@ export default function NewOrderPage() {
               <button
                 type="button"
                 onClick={addProductField}
-                className="w-full px-4 py-3 border-2 border-dashed border-blue-300 rounded-lg text-blue-600 hover:border-blue-500 hover:bg-blue-50 transition flex items-center justify-center gap-2 font-medium"
+                className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[44px]"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -272,12 +267,11 @@ export default function NewOrderPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition font-semibold text-lg"
+                className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
               >
                 {loading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
               </button>
             </form>
-          </div>
         </div>
       </main>
     </div>

@@ -640,8 +640,8 @@ export default function UserDashboardPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-lg text-gray-600">...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-base text-gray-600">...</div>
       </div>
     );
   }
@@ -652,9 +652,9 @@ export default function UserDashboardPage() {
 
   if (error && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
+          <div className="text-red-500 mb-4 text-base">{error}</div>
         </div>
       </div>
     );
@@ -677,22 +677,22 @@ export default function UserDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gray-50">
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
           {/* Agent Registration Section - Show if user role */}
           {user?.role === "user" && (
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-              <div className="flex items-center justify-between">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-900 mb-2">Agent болох</h3>
-                  <p className="text-sm text-blue-800">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Agent болох</h3>
+                  <p className="text-sm text-gray-600">
                     Та agent болох хүсэлт илгээж болно. Admin-аар батлагдсаны дараа захиалгуудыг харж, ажиллах боломжтой болно.
                   </p>
                 </div>
                 <button
                   onClick={handleBecomeAgent}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                  className="w-full sm:w-auto px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px] whitespace-nowrap"
                 >
                   Agent болох
                 </button>
@@ -706,12 +706,12 @@ export default function UserDashboardPage() {
             
 
               {/* Box 2: Шинэ захиалга үүсгэх */}
-              <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
-                <div className="flex justify-between items-center mb-3 sm:mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Шинэ захиалга үүсгэх</h2>
+              <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Шинэ захиалга үүсгэх</h2>
                   <button
                     onClick={() => setShowNewOrderSection(!showNewOrderSection)}
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <svg 
                       className={`w-5 h-5 transition-transform ${showNewOrderSection ? 'rotate-90' : ''}`}
@@ -725,15 +725,15 @@ export default function UserDashboardPage() {
             </div>
                 
                 {showNewOrderSection && (
-                <form onSubmit={handleNewOrderSubmit} className="space-y-6">
+                <form onSubmit={handleNewOrderSubmit} className="space-y-4 sm:space-y-6">
                   {newOrderError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
                       {newOrderError}
                     </div>
                   )}
                   
                   {newOrderSuccess && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
                       Захиалга амжилттай үүслээ!
                     </div>
                   )}
@@ -741,9 +741,9 @@ export default function UserDashboardPage() {
                   {newOrders.map((order, index) => {
                     const isExpanded = expandedProducts.has(order.id);
                     return (
-                    <div key={order.id} className="border-2 border-gray-200 rounded-lg bg-gray-50">
+                    <div key={order.id} className="border border-gray-200 rounded-xl bg-gray-50">
                       <div 
-                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 transition"
+                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => toggleProductExpand(order.id)}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -755,7 +755,7 @@ export default function UserDashboardPage() {
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                          <h3 className="font-semibold text-gray-900 text-sm truncate">
+                          <h3 className="font-medium text-gray-900 text-sm truncate">
                             {index === 0 ? "Бараа #1" : `Бараа #${index + 1}`}
                             {order.productName && ` - ${order.productName}`}
                           </h3>
@@ -767,7 +767,7 @@ export default function UserDashboardPage() {
                               e.stopPropagation();
                               removeNewProductField(order.id);
                             }}
-                            className="px-2 py-1 text-xs text-white bg-red-600 rounded-lg hover:bg-red-700 transition flex items-center gap-1 flex-shrink-0"
+                            className="px-2 py-1 text-xs text-white bg-red-500 rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 flex-shrink-0 min-h-[32px]"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -832,9 +832,8 @@ export default function UserDashboardPage() {
                             updatedOrders[index].productName = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Барааны нэр оруулах"
-                          style={{ fontSize: '16px' }}
                         />
                       </div>
 
@@ -851,9 +850,8 @@ export default function UserDashboardPage() {
                             updatedOrders[index].description = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
-                          style={{ fontSize: '16px' }}
                         />
                       </div>
                       </div>
@@ -865,9 +863,9 @@ export default function UserDashboardPage() {
               <button
                     type="button"
                     onClick={addNewProductField}
-                    className="w-full px-4 py-2 border-2 border-dashed border-blue-300 rounded-lg text-blue-600 hover:border-blue-500 hover:bg-blue-50 transition flex items-center justify-center gap-2 font-medium text-sm"
+                    className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[44px]"
               >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Бараа нэмэх
@@ -876,23 +874,23 @@ export default function UserDashboardPage() {
                   <button
                     type="submit"
                     disabled={newOrderLoading}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition font-medium text-sm"
+                    className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
                   >
                     {newOrderLoading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
                   </button>
                 </form>
                 )}
             </div>
-          <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Өмнөх захиалгууд</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+            <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Өмнөх захиалгууд</h2>
                   <div className="flex items-center gap-2">
                     {/* Notification dropdown */}
                     {(hasOrderUpdates || hasNewMessages || notificationCount > 0) && (
                       <div className="relative" ref={notificationDropdownRef}>
                         <button
                           onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
-                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition relative"
+                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative min-h-[40px] min-w-[40px]"
                           title="Мэдэгдлүүд"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -908,7 +906,7 @@ export default function UserDashboardPage() {
                         {showNotificationDropdown && (
                           <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
                             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                              <h3 className="text-lg font-bold text-gray-900">Мэдэгдлүүд</h3>
+                              <h3 className="text-lg font-semibold text-gray-900">Мэдэгдлүүд</h3>
                               <button
                                 onClick={() => setShowNotificationDropdown(false)}
                                 className="text-gray-400 hover:text-gray-600"
@@ -989,40 +987,40 @@ export default function UserDashboardPage() {
                     <div className="flex gap-2 border-b border-gray-200">
                       <button
                         onClick={() => setOrderFilter("all")}
-                        className={`px-4 py-2 text-sm font-medium transition ${
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
                           orderFilter === "all"
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "text-blue-600 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                       >
                         Бүгд
                       </button>
                       <button
                         onClick={() => setOrderFilter("active")}
-                        className={`px-4 py-2 text-sm font-medium transition ${
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
                           orderFilter === "active"
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "text-blue-600 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                       >
                         Идэвхтэй
                       </button>
                       <button
                         onClick={() => setOrderFilter("completed")}
-                        className={`px-4 py-2 text-sm font-medium transition ${
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
                           orderFilter === "completed"
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "text-blue-600 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                       >
                         Амжилттай захиалга
                       </button>
                       <button
                         onClick={() => setOrderFilter("cancelled")}
-                        className={`px-4 py-2 text-sm font-medium transition ${
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
                           orderFilter === "cancelled"
-                            ? "text-blue-600 border-b-2 border-blue-600"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "text-blue-600 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                       >
                         Цуцлагдсан захиалга
@@ -1034,7 +1032,7 @@ export default function UserDashboardPage() {
                       <div className="flex justify-end mb-2">
                         <button
                           onClick={handleClearAllCancelledOrders}
-                          className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                          className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
                         >
                           Бүгдийг устгах (Clear All)
                         </button>
@@ -1079,7 +1077,7 @@ export default function UserDashboardPage() {
                                     setSelectedOrder(order);
                                     setShowOrderModal(true);
                                   }}
-                                  className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer"
+                                  className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden cursor-pointer"
                                 >
                                   {/* Thumbnail Image */}
                                   {mainImage && (
@@ -1097,14 +1095,14 @@ export default function UserDashboardPage() {
                                     {/* Order ID */}
                                     <div className="flex items-center justify-between">
                                       <p className="text-xs font-mono text-gray-500">ID: {order.id.slice(0, 8)}...</p>
-                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]`}>
+                                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]`}>
                                         {getStatusText(order.status)}
                                       </span>
                                     </div>
 
                                     {/* Payment Verified Notice - Show if user has confirmed payment */}
                                     {order.userPaymentVerified && order.status === "tolbor_huleej_bn" && (
-                                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2">
                                         <p className="text-xs text-yellow-800 font-medium text-center">
                                           Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
                                         </p>
@@ -1114,7 +1112,7 @@ export default function UserDashboardPage() {
                                     {/* Product Name - Collapsed if agent report exists */}
                                     {agentReports[order.id] && expandedReportOrderId !== order.id ? (
                                       <div className="space-y-2">
-                                        <h4 className="font-bold text-gray-900 text-lg line-clamp-1 opacity-50">
+                                        <h4 className="font-semibold text-gray-900 text-base line-clamp-1 opacity-50">
                                           {order.productName}
                                         </h4>
                                         <p className="text-sm text-gray-600 line-clamp-1 opacity-50">
@@ -1123,7 +1121,7 @@ export default function UserDashboardPage() {
                                       </div>
                                     ) : (
                                       <>
-                                        <h4 className="font-bold text-gray-900 text-lg line-clamp-1">
+                                        <h4 className="font-semibold text-gray-900 text-base line-clamp-1">
                                           {order.productName}
                                         </h4>
                                         {/* Parse description to show multiple products as small cards */}
@@ -1133,12 +1131,12 @@ export default function UserDashboardPage() {
                                               const [productName, ...descParts] = productDesc.split(": ");
                                               const productDescription = descParts.join(": ");
                                               return (
-                                                <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                                                  <p className="text-xs font-semibold text-blue-900 line-clamp-1">
+                                                <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-2">
+                                                  <p className="text-xs font-medium text-gray-900 line-clamp-1">
                                                     {productName}
                                                   </p>
                                                   {productDescription && (
-                                                    <p className="text-xs text-blue-700 line-clamp-1 mt-1">
+                                                    <p className="text-xs text-gray-600 line-clamp-1 mt-1">
                                                       {productDescription}
                                                     </p>
                                                   )}
@@ -1158,10 +1156,10 @@ export default function UserDashboardPage() {
                                     {agentReports[order.id] && expandedReportOrderId !== order.id && (
                                       <div className="pt-2 border-t border-gray-200">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-xs font-medium text-gray-700">
+                                          <span className="text-xs font-medium text-gray-600">
                                             {order.status === "amjilttai_zahialga" ? "Төлсөн дүн:" : "Төлөх дүн:"}
                                           </span>
-                                          <span className="text-lg font-bold text-green-600">
+                                          <span className="text-base font-semibold text-green-600">
                                             {(() => {
                                               const exchangeRate = adminSettings?.exchangeRate || 1;
                                               const calculatedAmount = calculateUserPaymentAmount(agentReports[order.id], exchangeRate);
@@ -1176,10 +1174,10 @@ export default function UserDashboardPage() {
                                     {order.status === "amjilttai_zahialga" && order.trackCode && (
                                       <div className="pt-2 border-t border-gray-200">
                                         <div className="flex items-center justify-between gap-2">
-                                          <span className="text-xs font-medium text-gray-700">Track Code:</span>
+                                          <span className="text-xs font-medium text-gray-600">Track Code:</span>
                                           <div className="flex items-center gap-2">
                                             <span 
-                                              className="text-sm font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 transition"
+                                              className="text-sm font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 navigator.clipboard.writeText(order.trackCode || "");
@@ -1215,7 +1213,7 @@ export default function UserDashboardPage() {
                                             e.stopPropagation();
                                             handleClearCancelledOrder(order.id);
                                           }}
-                                          className="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+                                          className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors text-sm font-medium min-h-[44px]"
                                         >
                                           Устгах (Clear)
                                         </button>
@@ -1242,7 +1240,7 @@ export default function UserDashboardPage() {
                                             setChatOrder(order);
                                             setShowChatModal(true);
                                           }}
-                                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors text-sm font-medium min-h-[44px]"
                                         >
                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -1354,7 +1352,7 @@ export default function UserDashboardPage() {
                             })}
                           </div>
                         ) : (
-                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                             <p>
                               {orderFilter === "all" && "Өмнөх захиалга байхгүй байна."}
                               {orderFilter === "active" && "Идэвхтэй захиалга байхгүй байна."}
@@ -1369,7 +1367,7 @@ export default function UserDashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <p className="text-sm text-yellow-800">
                 Захиалга үүсгэхийн тулд эхлээд профайлаа бүрэн бөглөнө үү (Нэр, Утас, Ачаа).
               </p>
@@ -1384,13 +1382,13 @@ export default function UserDashboardPage() {
         const hasAgentReport = currentReport !== null && currentReport !== undefined;
         
         return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
               <button
                 onClick={() => setShowOrderModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-[40px] min-w-[40px]"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1426,12 +1424,12 @@ export default function UserDashboardPage() {
               </div>
 
               {/* User Info Section - Collapsible */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <button
                   onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
                   className="w-full flex items-center justify-between text-left"
                 >
-                  <h3 className="text-lg font-bold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
                   <svg 
                     className={`w-5 h-5 transition-transform ${showUserInfoInModal ? 'rotate-180' : ''}`}
                     fill="none" 
@@ -1454,7 +1452,7 @@ export default function UserDashboardPage() {
                               key={index}
                               src={imgUrl}
                               alt={`${selectedOrder.productName} - ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => setZoomedImageIndex(zoomedImageIndex === index ? null : index)}
                             />
                           ))}
@@ -1489,7 +1487,7 @@ export default function UserDashboardPage() {
                     {/* Product Name */}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Барааны нэр</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
+                      <p className="text-base font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
                     </div>
                     
                     {/* Description - Parse multiple products */}
@@ -1501,12 +1499,12 @@ export default function UserDashboardPage() {
                             const [productName, ...descParts] = productDesc.split(": ");
                             const productDescription = descParts.join(": ");
                             return (
-                              <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <p className="text-sm font-semibold text-blue-900">
+                              <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                                <p className="text-sm font-medium text-gray-900">
                                   {productName}
                                 </p>
                                 {productDescription && (
-                                  <p className="text-sm text-blue-700 mt-1 whitespace-pre-wrap">
+                                  <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
                                     {productDescription}
                                   </p>
                                 )}
@@ -1526,12 +1524,12 @@ export default function UserDashboardPage() {
               {hasAgentReport && currentReport ? (
                 <>
                   {/* Agent Report Section */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-                    <h3 className="text-lg font-bold text-gray-900">Agent-ийн тайлан</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Agent-ийн тайлан</h3>
                     
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Хэрэглэгчийн төлөх дүн:</label>
-                      <p className="text-xl font-bold text-green-600 mt-1">
+                      <label className="text-sm font-medium text-gray-600">Хэрэглэгчийн төлөх дүн:</label>
+                      <p className="text-lg font-semibold text-green-600 mt-1">
                         {(() => {
                           const exchangeRate = adminSettings?.exchangeRate || paymentInfo[selectedOrder.id]?.exchangeRate || 1;
                           const calculatedAmount = calculateUserPaymentAmount(currentReport, exchangeRate);
@@ -1542,12 +1540,12 @@ export default function UserDashboardPage() {
                     
                     {currentReport.paymentLink && (
                     <div>
-                        <label className="text-sm font-medium text-gray-700">Төлбөрийн холбоос:</label>
+                        <label className="text-sm font-medium text-gray-600">Төлбөрийн холбоос:</label>
                         <a 
                           href={currentReport.paymentLink} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline break-all block mt-1"
+                          className="text-blue-500 hover:text-blue-600 hover:underline break-all block mt-1"
                         >
                           {currentReport.paymentLink}
                         </a>
@@ -1556,28 +1554,28 @@ export default function UserDashboardPage() {
 
                     {currentReport.quantity && (
                       <div>
-                        <label className="text-sm font-medium text-gray-700">Тоо ширхэг:</label>
+                        <label className="text-sm font-medium text-gray-600">Тоо ширхэг:</label>
                         <p className="text-gray-900 mt-1">{currentReport.quantity}</p>
                       </div>
                     )}
 
                     {currentReport.additionalDescription && (
                       <div>
-                        <label className="text-sm font-medium text-gray-700">Нэмэлт тайлбар:</label>
-                        <p className="text-gray-700 mt-1 whitespace-pre-wrap">{currentReport.additionalDescription}</p>
+                        <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
+                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">{currentReport.additionalDescription}</p>
                       </div>
                     )}
 
                     {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
                       <div>
-                        <label className="text-sm font-medium text-gray-700 mb-2 block">Нэмэлт зураг:</label>
+                        <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
                         <div className="grid grid-cols-3 gap-3">
                           {currentReport.additionalImages.map((imgUrl, idx) => (
                             <img
                               key={idx}
                               src={imgUrl}
                               alt={`Additional ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200"
                             />
                           ))}
                         </div>
@@ -1592,7 +1590,7 @@ export default function UserDashboardPage() {
                       {selectedOrder.userPaymentVerified ? (
                         <>
                           {/* Show waiting message - always show for tolbor_huleej_bn status */}
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
                             <p className="text-sm text-yellow-800 font-medium">
                               Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
                             </p>
@@ -1604,17 +1602,17 @@ export default function UserDashboardPage() {
                             if (!paymentInfo[selectedOrder.id] && adminSettings) {
                               // Use adminSettings if available
                               return (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
                                   <div>
-                                    <label className="text-sm font-medium text-gray-700">Дансны дугаар:</label>
+                                    <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
                                     <p className="text-gray-900 font-mono">{adminSettings.accountNumber}</p>
                                   </div>
                                   <div>
-                                    <label className="text-sm font-medium text-gray-700">Дансны нэр:</label>
+                                    <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
                                     <p className="text-gray-900">{adminSettings.accountName}</p>
                                   </div>
                                   <div>
-                                    <label className="text-sm font-medium text-gray-700">Банк:</label>
+                                    <label className="text-sm font-medium text-gray-600">Банк:</label>
                                     <p className="text-gray-900">{adminSettings.bank}</p>
                                   </div>
                                 </div>
@@ -1622,7 +1620,7 @@ export default function UserDashboardPage() {
                             } else if (paymentInfo[selectedOrder.id]) {
                               // Use paymentInfo if available
                               return (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
                                   <div>
                                     <label className="text-sm font-medium text-gray-700">Дансны дугаар:</label>
                                     <p className="text-gray-900 font-mono">{paymentInfo[selectedOrder.id]?.accountNumber}</p>
@@ -1660,29 +1658,29 @@ export default function UserDashboardPage() {
                               }
                               setShowPaymentInfo(prev => ({ ...prev, [selectedOrder.id]: !prev[selectedOrder.id] }));
                             }}
-                            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                            className="w-full px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[44px]"
                           >
                             Төлбөр төлөх
                           </button>
 
                           {/* Payment Info Display */}
                           {showPaymentInfo[selectedOrder.id] && paymentInfo[selectedOrder.id] && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Дансны дугаар:</label>
+                                <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
                                 <p className="text-gray-900 font-mono">{paymentInfo[selectedOrder.id]?.accountNumber}</p>
                               </div>
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Дансны нэр:</label>
+                                <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
                                 <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.accountName}</p>
                               </div>
                               <div>
-                                <label className="text-sm font-medium text-gray-700">Банк:</label>
+                                <label className="text-sm font-medium text-gray-600">Банк:</label>
                                 <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.bank}</p>
                               </div>
                               <button
                                 onClick={() => handlePaymentPaid(selectedOrder.id)}
-                                className="w-full mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                                className="w-full mt-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
                               >
                                 Төлбөр төлсөн
                               </button>
@@ -1692,14 +1690,14 @@ export default function UserDashboardPage() {
                           {/* Cancel and Republish Buttons - Only show if payment not verified */}
                           <button
                             onClick={() => handleCancelOrder(selectedOrder.id)}
-                            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                            className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
                           >
                             Цуцлах
                           </button>
 
                           <button
                             onClick={() => handleRepublishOrder(selectedOrder.id)}
-                            className="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition font-medium"
+                            className="w-full px-4 py-2.5 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 active:bg-yellow-700 transition-colors font-medium min-h-[44px]"
                           >
                             Дахин нийтлэх
                           </button>
@@ -1713,15 +1711,15 @@ export default function UserDashboardPage() {
               {/* Track Code - Show for successful orders */}
               {selectedOrder.status === "amjilttai_zahialga" && selectedOrder.trackCode && (
                 <div className="pt-4 border-t border-gray-200">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-700">Track Code</label>
+                      <label className="text-sm font-medium text-gray-600">Track Code</label>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(selectedOrder.trackCode || "");
                           alert("Track code хуулагдлаа!");
                         }}
-                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition flex items-center gap-1"
+                        className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[40px]"
                         title="Хуулах"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1731,7 +1729,7 @@ export default function UserDashboardPage() {
                       </button>
           </div>
                     <p 
-                      className="text-lg font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 transition"
+                      className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
                       onClick={() => {
                         navigator.clipboard.writeText(selectedOrder.trackCode || "");
                         alert("Track code хуулагдлаа!");
@@ -1781,7 +1779,7 @@ export default function UserDashboardPage() {
                       setChatOrder(selectedOrder);
                       setShowChatModal(true);
                     }}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium mb-2 flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium mb-2 flex items-center justify-center gap-2 min-h-[44px]"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -1796,7 +1794,7 @@ export default function UserDashboardPage() {
                 <div className="pt-4 border-t border-gray-200">
                   <button
                     onClick={() => handleCancelOrder(selectedOrder.id)}
-                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                    className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
                   >
                     Захиалга цуцлах / Устгах
                   </button>

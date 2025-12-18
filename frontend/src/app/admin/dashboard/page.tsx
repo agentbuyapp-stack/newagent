@@ -267,8 +267,8 @@ export default function AdminDashboardPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-lg text-gray-600">Ачааллаж байна...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-base text-gray-600">Ачааллаж байна...</div>
       </div>
     );
   }
@@ -279,9 +279,9 @@ export default function AdminDashboardPage() {
 
   if (error && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
+          <div className="text-red-500 mb-4 text-base">{error}</div>
         </div>
       </div>
     );
@@ -289,9 +289,9 @@ export default function AdminDashboardPage() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="text-red-600 mb-4">Та admin эрхгүй байна</div>
+          <div className="text-red-500 mb-4 text-base">Та admin эрхгүй байна</div>
         </div>
       </div>
     );
@@ -307,7 +307,7 @@ export default function AdminDashboardPage() {
          
 
           {/* Tabs */}
-          <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
             <div className="flex gap-1 sm:gap-2 border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("agents")}
@@ -368,10 +368,10 @@ export default function AdminDashboardPage() {
                 {pendingAgents.length > 0 ? (
                   <div className="space-y-3">
                     {pendingAgents.map((agent) => (
-                      <div key={agent.id} className="border border-gray-200 rounded-lg p-4 bg-yellow-50">
-                        <div className="flex justify-between items-start">
+                      <div key={agent.id} className="border border-gray-200 rounded-xl p-4 bg-yellow-50">
+                        <div className="flex justify-between items-start gap-4">
                           <div className="flex-1">
-                            <p className="font-semibold text-gray-900">{agent.profile?.name || agent.email}</p>
+                            <p className="font-medium text-gray-900">{agent.profile?.name || agent.email}</p>
                             <p className="text-sm text-gray-600">{agent.email}</p>
                             <p className="text-sm text-gray-600 capitalize">
                               Эрх: {agent.role === "agent" && !agent.isApproved 
@@ -385,16 +385,16 @@ export default function AdminDashboardPage() {
                             )}
                             <p className="text-xs text-yellow-800 mt-2">Admin шийдвэр хүлээж байна</p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-shrink-0">
                             <button
                               onClick={() => handleApproveAgent(agent.id, true)}
-                              className="px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition"
+                              className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
                             >
                               Батлах
                             </button>
                             <button
                               onClick={() => handleApproveAgent(agent.id, false)}
-                              className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                              className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
                             >
                               Цуцлах
                             </button>
@@ -404,7 +404,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                     Хүлээж байгаа agent байхгүй байна.
                   </div>
                 )}
@@ -413,10 +413,10 @@ export default function AdminDashboardPage() {
                 {approvedAgents.length > 0 ? (
                   <div className="space-y-3">
                     {approvedAgents.map((agent) => (
-                      <div key={agent.id} className="border border-gray-200 rounded-lg p-4 bg-green-50">
-                        <div className="flex justify-between items-start">
+                      <div key={agent.id} className="border border-gray-200 rounded-xl p-4 bg-green-50">
+                        <div className="flex justify-between items-start gap-4">
                           <div className="flex-1">
-                            <p className="font-semibold text-gray-900">{agent.profile?.name || agent.email}</p>
+                            <p className="font-medium text-gray-900">{agent.profile?.name || agent.email}</p>
                             <p className="text-sm text-gray-600">{agent.email}</p>
                             <p className="text-sm text-gray-600 capitalize">
                               Эрх: {agent.role === "agent" && agent.isApproved 
@@ -432,7 +432,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <button
                             onClick={() => handleApproveAgent(agent.id, false)}
-                            className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
                           >
                             Цуцлах
                           </button>
@@ -441,7 +441,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                     Батлагдсан agent байхгүй байна.
                   </div>
                 )}
@@ -459,20 +459,20 @@ export default function AdminDashboardPage() {
                 <div className="flex gap-2 border-b border-gray-200">
                   <button
                     onClick={() => setOrderFilter("active")}
-                    className={`px-4 py-2 text-sm font-medium transition ${
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
                       orderFilter === "active"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "text-blue-600 bg-blue-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
                     Идэвхтэй
                   </button>
                   <button
                     onClick={() => setOrderFilter("completed")}
-                    className={`px-4 py-2 text-sm font-medium transition ${
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
                       orderFilter === "completed"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "text-blue-600 bg-blue-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
                     Идэвхгүй
@@ -507,18 +507,18 @@ export default function AdminDashboardPage() {
                         };
                         
                         return (
-                          <div key={order.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                          <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
                             <div className="flex items-center justify-between gap-4">
                               {/* Барааны нэр */}
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 truncate">{order.productName}</h4>
+                                <h4 className="font-medium text-gray-900 truncate">{order.productName}</h4>
                               </div>
                               
                               {/* Дүн */}
                               {report && (
                                 <div className="text-right">
                                   <p className="text-sm text-gray-500">Дүн</p>
-                                  <p className="text-lg font-bold text-green-600">
+                                  <p className="text-base font-semibold text-green-600">
                                     {calculateUserAmount()?.toLocaleString()} ₮
                                   </p>
                                 </div>
@@ -577,7 +577,7 @@ export default function AdminDashboardPage() {
                                 {order.status === "tolbor_huleej_bn" && !order.userPaymentVerified && (
                                   <button
                                     onClick={() => handleVerifyPayment(order.id)}
-                                    className="px-3 py-1.5 text-xs text-white bg-green-600 rounded-lg hover:bg-green-700 transition whitespace-nowrap"
+                                    className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
                                   >
                                     Батлах
                                   </button>
@@ -586,7 +586,7 @@ export default function AdminDashboardPage() {
                                 {order.userPaymentVerified && !order.agentPaymentPaid && (
                                   <button
                                     onClick={() => handleAgentPayment(order.id)}
-                                    className="px-3 py-1.5 text-xs text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition whitespace-nowrap"
+                                    className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
                                   >
                                     Agent төлбөр
                                   </button>
@@ -598,7 +598,7 @@ export default function AdminDashboardPage() {
                       })}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                       {orderFilter === "active" ? "Идэвхтэй захиалга байхгүй байна." : "Идэвхгүй захиалга байхгүй байна."}
                     </div>
                   );
@@ -617,39 +617,39 @@ export default function AdminDashboardPage() {
                       setCargoFormData({ name: "", description: "" });
                       setShowCargoForm(!showCargoForm);
                     }}
-                    className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                    className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[40px]"
                   >
                     {showCargoForm ? "Хаах" : "Cargo нэмэх"}
                   </button>
                 </div>
 
                 {showCargoForm && (
-                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Cargo нэр</label>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Cargo нэр</label>
                         <input
                           type="text"
                           value={cargoFormData.name}
                           onChange={(e) => setCargoFormData({ ...cargoFormData, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Cargo нэр оруулах"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Тайлбар</label>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Тайлбар</label>
                         <textarea
                           value={cargoFormData.description}
                           onChange={(e) => setCargoFormData({ ...cargoFormData, description: e.target.value })}
                           rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Тайлбар оруулах"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={editingCargo ? handleUpdateCargo : handleCreateCargo}
-                          className="px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition"
+                          className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[44px]"
                         >
                           {editingCargo ? "Шинэчлэх" : "Үүсгэх"}
                         </button>
@@ -659,7 +659,7 @@ export default function AdminDashboardPage() {
                               setEditingCargo(null);
                               setCargoFormData({ name: "", description: "" });
                             }}
-                            className="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                            className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
                           >
                             Цуцлах
                           </button>
@@ -672,8 +672,8 @@ export default function AdminDashboardPage() {
                 {cargos.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {cargos.map((cargo) => (
-                      <div key={cargo.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                        <h4 className="font-semibold text-gray-900">{cargo.name}</h4>
+                      <div key={cargo.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                        <h4 className="font-medium text-gray-900">{cargo.name}</h4>
                         {cargo.description && (
                           <p className="text-sm text-gray-600 mt-1">{cargo.description}</p>
                         )}
@@ -684,13 +684,13 @@ export default function AdminDashboardPage() {
                               setCargoFormData({ name: cargo.name, description: cargo.description || "" });
                               setShowCargoForm(true);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                            className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[32px]"
                           >
                             Засах
                           </button>
                           <button
                             onClick={() => handleDeleteCargo(cargo.id)}
-                            className="px-3 py-1 text-xs text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                            className="px-3 py-1.5 text-xs text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[32px]"
                           >
                             Устгах
                           </button>
@@ -699,7 +699,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                     Cargo байхгүй байна.
                   </div>
                 )}
@@ -714,18 +714,18 @@ export default function AdminDashboardPage() {
                   {!isEditingSettings && (
                     <button
                       onClick={handleEditSettings}
-                      className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                      className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[40px]"
                     >
                       Засах
                     </button>
                   )}
                 </div>
                 
-                <div className="border border-gray-200 rounded-lg p-6 bg-white">
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">Төлбөрийн дансны мэдээлэл</h4>
+                <div className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white">
+                  <h4 className="text-base font-semibold text-gray-900 mb-4">Төлбөрийн дансны мэдээлэл</h4>
                   
                   {settingsSaved && (
-                    <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+                    <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl text-sm">
                       ✓ Тохиргоо амжилттай хадгалагдлаа
                     </div>
                   )}
@@ -733,46 +733,46 @@ export default function AdminDashboardPage() {
                   {isEditingSettings ? (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                           Дансны дугаар
                         </label>
                         <input
                           type="text"
                           value={settingsFormData.accountNumber || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, accountNumber: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Жишээ: 1234567890"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                           Дансны нэр
                         </label>
                         <input
                           type="text"
                           value={settingsFormData.accountName || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, accountName: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Жишээ: Agentbuy.mn"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                           Банк
                         </label>
                         <input
                           type="text"
                           value={settingsFormData.bank || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, bank: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Жишээ: Хаан банк"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                           Ханш (Exchange Rate)
                         </label>
                         <input
@@ -781,7 +781,7 @@ export default function AdminDashboardPage() {
                           min="0"
                           value={settingsFormData.exchangeRate || 1}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, exchangeRate: parseFloat(e.target.value) || 1 })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                           placeholder="Жишээ: 1.0"
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -793,7 +793,7 @@ export default function AdminDashboardPage() {
                         <button
                           onClick={handleSaveSettings}
                           disabled={savingSettings}
-                          className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 px-4 py-2.5 text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                         >
                           {savingSettings ? "Хадгалж байна..." : "Хадгалах"}
                         </button>
@@ -807,7 +807,7 @@ export default function AdminDashboardPage() {
                               exchangeRate: adminSettings?.exchangeRate || 1,
                             });
                           }}
-                          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition font-medium"
+                          className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
                         >
                           Цуцлах
                         </button>
@@ -816,28 +816,28 @@ export default function AdminDashboardPage() {
                   ) : (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
                           Дансны дугаар
                         </label>
                         <p className="text-gray-900 font-mono">{adminSettings?.accountNumber || "Тохируулаагүй"}</p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
                           Дансны нэр
                         </label>
                         <p className="text-gray-900">{adminSettings?.accountName || "Тохируулаагүй"}</p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
                           Банк
                         </label>
                         <p className="text-gray-900">{adminSettings?.bank || "Тохируулаагүй"}</p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
                           Ханш (Exchange Rate)
                         </label>
                         <p className="text-gray-900">{adminSettings?.exchangeRate || 1}</p>
@@ -855,8 +855,8 @@ export default function AdminDashboardPage() {
                 {rewardRequests.length > 0 ? (
                   <div className="space-y-3">
                     {rewardRequests.map((request) => (
-                      <div key={request.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                        <div className="flex justify-between items-start mb-3">
+                      <div key={request.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                        <div className="flex justify-between items-start mb-3 gap-4">
                           <div>
                             <p className="text-sm font-medium text-gray-900">
                               Agent: {request.agent?.profile?.name || request.agent?.email || "Unknown"}
@@ -869,7 +869,7 @@ export default function AdminDashboardPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-bold text-green-600">
+                            <p className="text-base font-semibold text-green-600">
                               {request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
@@ -898,7 +898,7 @@ export default function AdminDashboardPage() {
                                 alert(err.message || "Алдаа гарлаа");
                               }
                             }}
-                            className="px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition"
+                            className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
                           >
                             Батлах
                           </button>
@@ -916,7 +916,7 @@ export default function AdminDashboardPage() {
                                 alert(err.message || "Алдаа гарлаа");
                               }
                             }}
-                            className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
                           >
                             Татгалзах
                           </button>
@@ -925,7 +925,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                     Хүлээж байгаа урамшуулал хүсэлт байхгүй байна.
                   </div>
                 )}

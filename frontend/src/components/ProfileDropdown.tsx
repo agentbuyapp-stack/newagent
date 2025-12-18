@@ -70,11 +70,11 @@ export default function ProfileDropdown() {
     <>
       {/* Agent Points Display - Outside dropdown container */}
       {user?.role === "agent" && user.agentPoints !== undefined && user.agentPoints > 0 && (
-        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-green-50 border border-green-200 rounded-xl">
           <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="text-xs sm:text-sm font-semibold text-green-700">
+          <span className="text-xs sm:text-sm font-medium text-gray-900">
             Миний оноо: {user.agentPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
           </span>
           <button
@@ -93,7 +93,7 @@ export default function ProfileDropdown() {
                 alert(err.message || "Алдаа гарлаа");
               }
             }}
-            className="ml-2 px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+            className="ml-2 px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-white bg-green-500 hover:bg-green-600 active:bg-green-700 rounded-xl transition-colors min-h-[28px]"
             title="Оноо зарах"
           >
             Зарах
@@ -104,7 +104,7 @@ export default function ProfileDropdown() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors min-h-[40px] min-w-[40px]"
           title="Миний мэдээлэл"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,13 +113,13 @@ export default function ProfileDropdown() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl border border-gray-200 z-50 max-h-[80vh] overflow-y-auto">
           <div className="p-3 sm:p-4">
             <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-lg font-bold text-gray-900">Миний мэдээлэл</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Миний мэдээлэл</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 min-h-[32px] min-w-[32px]"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -134,7 +134,7 @@ export default function ProfileDropdown() {
                 <ProfileForm profile={profile} onSuccess={handleProfileSuccess} />
                 <button
                   onClick={handleCancelForm}
-                  className="mt-3 w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  className="mt-3 w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
                 >
                   Цуцлах
                 </button>
@@ -142,12 +142,12 @@ export default function ProfileDropdown() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Имэйл</label>
+                  <label className="block text-sm font-medium text-gray-600">Имэйл</label>
                   <p className="mt-1 text-sm text-gray-900">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Эрх</label>
+                  <label className="block text-sm font-medium text-gray-600">Эрх</label>
                   <p className="mt-1 text-sm text-gray-900 capitalize">
                     {user?.role === "agent" 
                       ? (user?.isApproved ? "agent" : "agent (батлагдаагүй)")
@@ -160,37 +160,37 @@ export default function ProfileDropdown() {
                 {profile ? (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Нэр</label>
+                      <label className="block text-sm font-medium text-gray-600">Нэр</label>
                       <p className="mt-1 text-sm text-gray-900">{profile.name}</p>
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Утас</label>
+                      <label className="block text-sm font-medium text-gray-600">Утас</label>
                       <p className="mt-1 text-sm text-gray-900">{profile.phone}</p>
                     </div>
 
                     {profile.cargo && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Ачаа</label>
+                        <label className="block text-sm font-medium text-gray-600">Ачаа</label>
                         <p className="mt-1 text-sm text-gray-900">{profile.cargo}</p>
                       </div>
                     )}
 
                     <button
                       onClick={() => setShowProfileForm(true)}
-                      className="w-full px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                      className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
                     >
                       Профайл засах
                     </button>
                   </>
                 ) : (
                   <>
-                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl">
                       Профайл үүсгээгүй байна.
                     </div>
                     <button
                       onClick={() => setShowProfileForm(true)}
-                      className="w-full px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                      className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
                     >
                       Профайл үүсгэх
                     </button>
@@ -200,7 +200,7 @@ export default function ProfileDropdown() {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <Link
                     href="/user/dashboard"
-                    className="block w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-center"
+                    className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-[40px]"
                     onClick={() => setIsOpen(false)}
                   >
                     User Dashboard
@@ -208,7 +208,7 @@ export default function ProfileDropdown() {
                   {(user?.role === "agent" || user?.role === "admin") && (
                     <Link
                       href="/agent/dashboard"
-                      className="block w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-center"
+                      className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-[40px]"
                       onClick={() => setIsOpen(false)}
                     >
                       Agent Dashboard
@@ -217,7 +217,7 @@ export default function ProfileDropdown() {
                   {user?.role === "admin" && (
                     <Link
                       href="/admin/dashboard"
-                      className="block w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-center"
+                      className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-[40px]"
                       onClick={() => setIsOpen(false)}
                     >
                       Admin Dashboard

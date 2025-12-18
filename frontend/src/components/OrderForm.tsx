@@ -73,19 +73,19 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
       
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
           Захиалга амжилттай үүслээ!
         </div>
       )}
 
       <div>
-        <label htmlFor="image" className="block text-sm font-medium text-black mb-1">
+        <label htmlFor="image" className="block text-sm font-medium text-gray-900 mb-1">
           Зураг
         </label>
         <input
@@ -93,21 +93,21 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 text-black focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
         />
         {imagePreview && (
           <div className="mt-2">
             <img
               src={imagePreview}
               alt="Preview"
-              className="max-w-xs h-48 object-cover rounded-lg border border-gray-300"
+              className="max-w-xs h-48 object-cover rounded-xl border border-gray-200"
             />
           </div>
         )}
       </div>
 
       <div>
-        <label htmlFor="productName" className="block text-sm font-medium text-black mb-1">
+        <label htmlFor="productName" className="block text-sm font-medium text-gray-900 mb-1">
           Барааны нэр
         </label>
         <input
@@ -116,13 +116,13 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           required
           value={formData.productName}
           onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Жишээ: iPhone 15 Pro"
         />
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-black mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-900 mb-1">
           Тайлбар
         </label>
         <textarea
@@ -131,7 +131,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           rows={4}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Барааны дэлгэрэнгүй мэдээлэл оруулах..."
         />
       </div>
@@ -139,7 +139,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition"
+        className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
       >
         {loading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
       </button>

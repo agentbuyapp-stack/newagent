@@ -133,13 +133,13 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
 
       <div>
-        <label htmlFor="userAmount" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="userAmount" className="block text-sm font-medium text-gray-900 mb-1">
           User дүн <span className="text-red-500">*</span>
         </label>
         <input
@@ -150,13 +150,13 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           required
           value={formData.userAmount || ""}
           onChange={(e) => setFormData({ ...formData, userAmount: parseFloat(e.target.value) || 0 })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="0.00"
         />
       </div>
 
       <div>
-        <label htmlFor="paymentLink" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="paymentLink" className="block text-sm font-medium text-gray-900 mb-1">
           Төлбөрийн холбоос
         </label>
         <input
@@ -164,13 +164,13 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           type="url"
           value={formData.paymentLink || ""}
           onChange={(e) => setFormData({ ...formData, paymentLink: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="https://..."
         />
       </div>
 
       <div>
-        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="quantity" className="block text-sm font-medium text-gray-900 mb-1">
           Тоо ширхэг
         </label>
         <input
@@ -179,13 +179,13 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           min="1"
           value={formData.quantity || ""}
           onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || undefined })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="1"
         />
       </div>
 
       <div>
-        <label htmlFor="additionalDescription" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="additionalDescription" className="block text-sm font-medium text-gray-900 mb-1">
           Нэмэлт тайлбар
         </label>
         <textarea
@@ -193,13 +193,13 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           rows={4}
           value={formData.additionalDescription || ""}
           onChange={(e) => setFormData({ ...formData, additionalDescription: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
           placeholder="Нэмэлт тайлбар бичнэ үү..."
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-900 mb-1">
           Нэмэлт зураг (Дээд тал нь 3)
         </label>
         <input
@@ -208,7 +208,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           multiple
           onChange={handleImageChange}
           disabled={uploadingImages || imagePreviews.length >= 3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50"
         />
         {uploadingImages && (
           <p className="text-sm text-gray-500 mt-1">Зураг ачааллаж байна...</p>
@@ -220,12 +220,12 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
                 <img
                   src={preview}
                   alt={`Preview ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                  className="w-full h-32 object-cover rounded-xl border border-gray-200"
                 />
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-[32px] min-w-[32px]"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -242,7 +242,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+            className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
           >
             Цуцлах
           </button>
@@ -250,7 +250,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
         <button
           type="submit"
           disabled={loading || uploadingImages}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
         >
           {loading ? "Илгээж байна..." : "Тайлан илгээх"}
         </button>

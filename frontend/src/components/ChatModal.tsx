@@ -191,14 +191,14 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 w-full h-full sm:h-auto sm:max-w-2xl sm:h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Чат - {order.productName}</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Чат - {order.productName}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition"
+            className="text-gray-500 hover:text-gray-700 transition-colors p-2 min-h-[40px] min-w-[40px]"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -221,10 +221,10 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                   className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md rounded-lg p-3 ${
+                    className={`max-w-xs lg:max-w-md rounded-xl p-3 ${
                       isOwnMessage
                         ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-900"
+                        : "bg-gray-100 text-gray-900"
                     }`}
                   >
                     {message.text && (
@@ -383,7 +383,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
           {showScrollToBottom && (
             <button
               onClick={scrollToBottom}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors z-10 flex items-center justify-center"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-3 rounded-full hover:bg-blue-600 active:bg-blue-700 transition-colors z-10 flex items-center justify-center min-h-[44px] min-w-[44px]"
               aria-label="Доошоо гүйлгэх"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,7 +411,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage || sending}
-              className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+              className="px-3 py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-50 min-h-[44px] min-w-[44px]"
             >
               {uploadingImage ? (
                 <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,14 +429,14 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Мессеж бичнэ үү..."
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-3 pr-12 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none min-h-[44px]"
                 rows={1}
                 disabled={sending || uploadingImage}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={(!newMessage.trim() && !fileInputRef.current?.files?.[0]) || sending || uploadingImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] min-w-[36px]"
                 title="Илгээх"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
