@@ -85,7 +85,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       )}
 
       <div>
-        <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="image" className="block text-sm font-medium text-black mb-1">
           Зураг
         </label>
         <input
@@ -107,7 +107,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       </div>
 
       <div>
-        <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="productName" className="block text-sm font-medium text-black mb-1">
           Барааны нэр
         </label>
         <input
@@ -122,7 +122,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-black mb-1">
           Тайлбар
         </label>
         <textarea
