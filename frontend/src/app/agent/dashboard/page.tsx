@@ -659,7 +659,7 @@ export default function AgentDashboardPage() {
                                               setTrackCodeInputs(prev => ({ ...prev, [order.id]: e.target.value }));
                                             }}
                                             placeholder="Track code оруулах"
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                                             style={{ fontSize: '16px' }}
                                             onClick={(e) => e.stopPropagation()}
                                             disabled={trackCodeLoading}
@@ -1207,7 +1207,7 @@ export default function AgentDashboardPage() {
                           value={trackCodeInput}
                           onChange={(e) => setTrackCodeInput(e.target.value)}
                           placeholder="Track code оруулах"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                           style={{ fontSize: '16px' }}
                           disabled={trackCodeLoading}
                         />

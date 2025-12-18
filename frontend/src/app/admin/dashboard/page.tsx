@@ -632,7 +632,7 @@ export default function AdminDashboardPage() {
                           type="text"
                           value={cargoFormData.name}
                           onChange={(e) => setCargoFormData({ ...cargoFormData, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
                           placeholder="Cargo нэр оруулах"
                         />
                       </div>
@@ -642,7 +642,7 @@ export default function AdminDashboardPage() {
                           value={cargoFormData.description}
                           onChange={(e) => setCargoFormData({ ...cargoFormData, description: e.target.value })}
                           rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
                           placeholder="Тайлбар оруулах"
                         />
                       </div>
@@ -740,7 +740,7 @@ export default function AdminDashboardPage() {
                           type="text"
                           value={settingsFormData.accountNumber || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, accountNumber: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                           placeholder="Жишээ: 1234567890"
                         />
                       </div>
@@ -753,7 +753,7 @@ export default function AdminDashboardPage() {
                           type="text"
                           value={settingsFormData.accountName || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, accountName: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                           placeholder="Жишээ: Agentbuy.mn"
                         />
                       </div>
@@ -766,7 +766,7 @@ export default function AdminDashboardPage() {
                           type="text"
                           value={settingsFormData.bank || ""}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, bank: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                           placeholder="Жишээ: Хаан банк"
                         />
                       </div>
@@ -781,7 +781,7 @@ export default function AdminDashboardPage() {
                           min="0"
                           value={settingsFormData.exchangeRate || 1}
                           onChange={(e) => setSettingsFormData({ ...settingsFormData, exchangeRate: parseFloat(e.target.value) || 1 })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
                           placeholder="Жишээ: 1.0"
                         />
                         <p className="text-xs text-gray-500 mt-1">

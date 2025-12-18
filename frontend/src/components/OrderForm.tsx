@@ -93,7 +93,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 text-black focus:ring-blue-500 focus:border-blue-500"
         />
         {imagePreview && (
           <div className="mt-2">
@@ -116,7 +116,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           required
           value={formData.productName}
           onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
           placeholder="Жишээ: iPhone 15 Pro"
         />
       </div>
@@ -131,7 +131,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           rows={4}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
           placeholder="Барааны дэлгэрэнгүй мэдээлэл оруулах..."
         />
       </div>

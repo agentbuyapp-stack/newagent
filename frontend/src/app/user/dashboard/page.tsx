@@ -832,7 +832,7 @@ export default function UserDashboardPage() {
                             updatedOrders[index].productName = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
                           placeholder="Барааны нэр оруулах"
                           style={{ fontSize: '16px' }}
                         />
@@ -851,7 +851,7 @@ export default function UserDashboardPage() {
                             updatedOrders[index].description = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black"
                           placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
                           style={{ fontSize: '16px' }}
                         />
