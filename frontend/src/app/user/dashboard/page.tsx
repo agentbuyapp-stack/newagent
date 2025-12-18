@@ -512,9 +512,22 @@ export default function UserDashboardPage() {
           if (!orderData.imageUrls) {
             orderData.imageUrls = [];
           }
+          
+          console.log(`[DEBUG] Creating order:`, {
+            productName: orderData.productName,
+            description: orderData.description?.substring(0, 50),
+            imageUrlsCount: orderData.imageUrls?.length || 0,
+          });
+          
           await apiClient.createOrder(orderData);
           createdOrders.push(order.productName);
+          console.log(`[DEBUG] Order created successfully: ${order.productName}`);
         } catch (orderErr: any) {
+          console.error(`[DEBUG] Error creating order ${order.productName}:`, {
+            message: orderErr.message,
+            stack: orderErr.stack,
+            response: orderErr.response,
+          });
           // Continue creating other orders even if one fails
           errors.push(`${order.productName}: ${orderErr.message || "Алдаа"}`);
         }

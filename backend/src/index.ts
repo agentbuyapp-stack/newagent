@@ -410,6 +410,14 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
     
     const { productName, description, imageUrl, imageUrls } = req.body;
     
+    console.log(`[DEBUG] POST /orders: User ${req.user.id} creating order`, {
+      productName,
+      description: description?.substring(0, 50),
+      hasImageUrl: !!imageUrl,
+      hasImageUrls: Array.isArray(imageUrls),
+      imageUrlsCount: Array.isArray(imageUrls) ? imageUrls.length : 0,
+    });
+    
     // Validation
     if (!productName || typeof productName !== "string" || productName.trim().length === 0) {
       return res.status(400).json({ error: "Product name is required" });
@@ -424,18 +432,27 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
     if (imageUrls && Array.isArray(imageUrls)) {
       // Limit to 3 images
       const imagesToProcess = imageUrls.slice(0, 3);
+      console.log(`[DEBUG] POST /orders: Processing ${imagesToProcess.length} images`);
       
-      for (const img of imagesToProcess) {
+      for (let i = 0; i < imagesToProcess.length; i++) {
+        const img = imagesToProcess[i];
         if (typeof img === "string" && img.startsWith("data:image")) {
           try {
+            console.log(`[DEBUG] POST /orders: Uploading image ${i + 1} to Cloudinary`);
             const uploadResult = await uploadImageToCloudinary(img);
             finalImageUrls.push(uploadResult.url);
+            console.log(`[DEBUG] POST /orders: Image ${i + 1} uploaded successfully: ${uploadResult.url}`);
           } catch (uploadError: any) {
-            console.error("Image upload error:", uploadError);
+            console.error(`[DEBUG] POST /orders: Image ${i + 1} upload error:`, {
+              message: uploadError.message,
+              stack: uploadError.stack,
+              name: uploadError.name,
+            });
             // Continue with other images even if one fails
           }
         } else if (typeof img === "string") {
           // If it's already a URL, use it directly
+          console.log(`[DEBUG] POST /orders: Image ${i + 1} is already a URL: ${img.substring(0, 50)}`);
           finalImageUrls.push(img);
         }
       }
@@ -445,14 +462,20 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
     let finalImageUrl = null;
     if (imageUrl && typeof imageUrl === "string" && imageUrl.startsWith("data:image")) {
       try {
+        console.log(`[DEBUG] POST /orders: Uploading single image to Cloudinary`);
         const uploadResult = await uploadImageToCloudinary(imageUrl);
         finalImageUrl = uploadResult.url;
         // Add to array if not already there
         if (!finalImageUrls.includes(finalImageUrl)) {
           finalImageUrls.push(finalImageUrl);
         }
+        console.log(`[DEBUG] POST /orders: Single image uploaded successfully: ${finalImageUrl}`);
       } catch (uploadError: any) {
-        console.error("Image upload error:", uploadError);
+        console.error(`[DEBUG] POST /orders: Single image upload error:`, {
+          message: uploadError.message,
+          stack: uploadError.stack,
+          name: uploadError.name,
+        });
       }
     } else if (imageUrl && typeof imageUrl === "string") {
       finalImageUrl = imageUrl;
@@ -460,6 +483,13 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
         finalImageUrls.push(finalImageUrl);
       }
     }
+    
+    console.log(`[DEBUG] POST /orders: Creating order in database`, {
+      userId: req.user.id,
+      productName: productName.trim(),
+      finalImageUrl,
+      finalImageUrlsCount: finalImageUrls.length,
+    });
     
     const order = await prisma.order.create({
       data: {
@@ -472,10 +502,21 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
       },
     });
     
+    console.log(`[DEBUG] POST /orders: Order created successfully: ${order.id}`);
+    
     res.status(201).json(order);
   } catch (error: any) {
-    console.error("Error in POST /orders:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("[DEBUG] POST /orders: Error creating order:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      meta: error.meta,
+    });
+    res.status(500).json({ 
+      error: "Internal server error",
+      message: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
   }
 });
 
