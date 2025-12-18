@@ -501,13 +501,29 @@ export default function UserDashboardPage() {
         return;
       }
 
-      // Create all orders
+      // Create one order with multiple products
       const createdOrders: string[] = [];
       const errors: string[] = [];
       
-      for (const order of validOrders) {
-        try {
-          const { id, ...orderData } = order;
+      try {
+        // If multiple products, create one order with all products
+        if (validOrders.length > 1) {
+          console.log(`[DEBUG] Creating order with ${validOrders.length} products`);
+          
+          const products = validOrders
+            .filter(order => order.productName && order.description)
+            .map(order => ({
+              productName: order.productName!,
+              description: order.description!,
+              imageUrls: order.imageUrls || [],
+            }));
+          
+          await apiClient.createOrder({ products } as any);
+          createdOrders.push(...validOrders.filter(o => o.productName).map(o => o.productName!));
+          console.log(`[DEBUG] Order created successfully with ${validOrders.length} products`);
+        } else {
+          // Single product order
+          const { id, ...orderData } = validOrders[0];
           // Ensure imageUrls is an array (can be empty)
           if (!orderData.imageUrls) {
             orderData.imageUrls = [];
@@ -520,17 +536,18 @@ export default function UserDashboardPage() {
           });
           
           await apiClient.createOrder(orderData);
-          createdOrders.push(order.productName);
-          console.log(`[DEBUG] Order created successfully: ${order.productName}`);
-        } catch (orderErr: any) {
-          console.error(`[DEBUG] Error creating order ${order.productName}:`, {
-            message: orderErr.message,
-            stack: orderErr.stack,
-            response: orderErr.response,
-          });
-          // Continue creating other orders even if one fails
-          errors.push(`${order.productName}: ${orderErr.message || "Алдаа"}`);
+          if (validOrders[0].productName) {
+            createdOrders.push(validOrders[0].productName);
+          }
+          console.log(`[DEBUG] Order created successfully: ${validOrders[0].productName}`);
         }
+      } catch (orderErr: any) {
+        console.error(`[DEBUG] Error creating order:`, {
+          message: orderErr.message,
+          stack: orderErr.stack,
+          response: orderErr.response,
+        });
+        errors.push(`Захиалга үүсгэхэд алдаа: ${orderErr.message || "Алдаа"}`);
       }
 
       if (createdOrders.length > 0) {
@@ -1107,9 +1124,31 @@ export default function UserDashboardPage() {
                                         <h4 className="font-bold text-gray-900 text-lg line-clamp-1">
                                           {order.productName}
                                         </h4>
-                                        <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
-                                          {order.description}
-                                        </p>
+                                        {/* Parse description to show multiple products as small cards */}
+                                        {order.description && order.description.includes(":") && order.description.split("\n\n").length > 1 ? (
+                                          <div className="space-y-2">
+                                            {order.description.split("\n\n").map((productDesc, idx) => {
+                                              const [productName, ...descParts] = productDesc.split(": ");
+                                              const productDescription = descParts.join(": ");
+                                              return (
+                                                <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                                  <p className="text-xs font-semibold text-blue-900 line-clamp-1">
+                                                    {productName}
+                                                  </p>
+                                                  {productDescription && (
+                                                    <p className="text-xs text-blue-700 line-clamp-1 mt-1">
+                                                      {productDescription}
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
+                                            {order.description}
+                                          </p>
+                                        )}
                                       </>
                                     )}
 
@@ -1192,8 +1231,8 @@ export default function UserDashboardPage() {
                                       </p>
                                     </div>
 
-                                    {/* Chat Button - Show for active and completed orders with agent */}
-                                    {(order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
+                                    {/* Chat Button - Show for all orders (including niitlegdsen) */}
+                                    {(order.status === "niitlegdsen" || order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
                                       <div className="pt-2 border-t border-gray-200">
                                         <button
                                           onClick={(e) => {
@@ -1446,15 +1485,36 @@ export default function UserDashboardPage() {
                     )}
 
                     {/* Product Name */}
-                <div>
+                    <div>
                       <label className="text-sm font-medium text-gray-500">Барааны нэр</label>
                       <p className="text-lg font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
-                </div>
-
-                    {/* Description */}
+                    </div>
+                    
+                    {/* Description - Parse multiple products */}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Тайлбар</label>
-                      <p className="text-gray-700 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
+                      {selectedOrder.description && selectedOrder.description.includes(":") && selectedOrder.description.split("\n\n").length > 1 ? (
+                        <div className="mt-2 space-y-2">
+                          {selectedOrder.description.split("\n\n").map((productDesc, idx) => {
+                            const [productName, ...descParts] = productDesc.split(": ");
+                            const productDescription = descParts.join(": ");
+                            return (
+                              <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-sm font-semibold text-blue-900">
+                                  {productName}
+                                </p>
+                                {productDescription && (
+                                  <p className="text-sm text-blue-700 mt-1 whitespace-pre-wrap">
+                                    {productDescription}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-700 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1711,8 +1771,8 @@ export default function UserDashboardPage() {
                 </div>
                     </div>
                     
-              {/* Chat Button - Show for active and completed orders with agent */}
-              {selectedOrder.agentId && (selectedOrder.status === "agent_sudlaj_bn" || selectedOrder.status === "tolbor_huleej_bn" || selectedOrder.status === "amjilttai_zahialga") && (
+              {/* Chat Button - Show for all orders (including niitlegdsen) */}
+              {(selectedOrder.status === "niitlegdsen" || selectedOrder.status === "agent_sudlaj_bn" || selectedOrder.status === "tolbor_huleej_bn" || selectedOrder.status === "amjilttai_zahialga") && (
                 <div className="pt-4 border-t border-gray-200">
                   <button
                     onClick={() => {

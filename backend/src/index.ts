@@ -408,8 +408,64 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
       return res.status(401).json({ error: "Unauthenticated" });
     }
     
-    const { productName, description, imageUrl, imageUrls } = req.body;
+    const { productName, description, imageUrl, imageUrls, products } = req.body;
     
+    // Support for multiple products in one order
+    if (products && Array.isArray(products) && products.length > 0) {
+      // Create order with combined product information
+      let allImageUrls: string[] = [];
+      const productDescriptions: string[] = [];
+      
+      for (const product of products) {
+        if (product.productName && product.description) {
+          productDescriptions.push(`${product.productName}: ${product.description}`);
+        }
+        if (product.imageUrls && Array.isArray(product.imageUrls)) {
+          allImageUrls = [...allImageUrls, ...product.imageUrls.slice(0, 3)];
+        }
+      }
+      
+      // Limit total images to 9 (3 per product * 3 products max)
+      allImageUrls = allImageUrls.slice(0, 9);
+      
+      // Upload images to Cloudinary
+      const finalImageUrls: string[] = [];
+      for (let i = 0; i < allImageUrls.length; i++) {
+        const img = allImageUrls[i];
+        if (typeof img === "string" && img.startsWith("data:image")) {
+          try {
+            console.log(`[DEBUG] POST /orders: Uploading image ${i + 1} to Cloudinary`);
+            const uploadResult = await uploadImageToCloudinary(img);
+            finalImageUrls.push(uploadResult.url);
+          } catch (uploadError: any) {
+            console.error(`[DEBUG] POST /orders: Image ${i + 1} upload error:`, uploadError.message);
+          }
+        } else if (typeof img === "string") {
+          finalImageUrls.push(img);
+        }
+      }
+      
+      const combinedProductName = products.map((p: any) => p.productName).filter(Boolean).join(", ");
+      const combinedDescription = productDescriptions.join("\n\n");
+      
+      console.log(`[DEBUG] POST /orders: Creating order with ${products.length} products`);
+      
+      const order = await prisma.order.create({
+        data: {
+          userId: req.user.id,
+          productName: combinedProductName || "Олон бараа",
+          description: combinedDescription,
+          imageUrl: finalImageUrls[0] || null,
+          imageUrls: finalImageUrls,
+          status: "niitlegdsen",
+        },
+      });
+      
+      console.log(`[DEBUG] POST /orders: Order created successfully: ${order.id}`);
+      return res.status(201).json(order);
+    }
+    
+    // Single product order (existing logic)
     console.log(`[DEBUG] POST /orders: User ${req.user.id} creating order`, {
       productName,
       description: description?.substring(0, 50),

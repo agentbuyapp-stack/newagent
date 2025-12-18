@@ -57,10 +57,15 @@ export interface Order {
 }
 
 export interface OrderData {
-  productName: string;
-  description: string;
+  productName?: string;
+  description?: string;
   imageUrl?: string; // Keep for backward compatibility
   imageUrls?: string[]; // Array of image URLs (max 3)
+  products?: Array<{
+    productName: string;
+    description: string;
+    imageUrls?: string[];
+  }>; // Multiple products in one order
 }
 
 class ApiClient {
