@@ -487,24 +487,37 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
     console.log(`[DEBUG] POST /orders: Creating order in database`, {
       userId: req.user.id,
       productName: productName.trim(),
+      description: description.trim().substring(0, 50),
       finalImageUrl,
       finalImageUrlsCount: finalImageUrls.length,
+      finalImageUrls: finalImageUrls.map(url => url.substring(0, 50)),
     });
     
-    const order = await prisma.order.create({
-      data: {
-        userId: req.user.id,
-        productName: productName.trim(),
-        description: description.trim(),
-        imageUrl: finalImageUrl, // Keep for backward compatibility
-        imageUrls: finalImageUrls, // Array of image URLs
-        status: "niitlegdsen", // Default: Нийтэлсэн
-      },
-    });
-    
-    console.log(`[DEBUG] POST /orders: Order created successfully: ${order.id}`);
-    
-    res.status(201).json(order);
+    try {
+      const order = await prisma.order.create({
+        data: {
+          userId: req.user.id,
+          productName: productName.trim(),
+          description: description.trim(),
+          imageUrl: finalImageUrl, // Keep for backward compatibility
+          imageUrls: finalImageUrls, // Array of image URLs
+          status: "niitlegdsen", // Default: Нийтэлсэн
+        },
+      });
+      
+      console.log(`[DEBUG] POST /orders: Order created successfully: ${order.id}`);
+      
+      res.status(201).json(order);
+    } catch (dbError: any) {
+      console.error("[DEBUG] POST /orders: Database error creating order:", {
+        message: dbError.message,
+        stack: dbError.stack,
+        name: dbError.name,
+        code: dbError.code,
+        meta: dbError.meta,
+      });
+      throw dbError; // Re-throw to be caught by outer catch
+    }
   } catch (error: any) {
     console.error("[DEBUG] POST /orders: Error creating order:", {
       message: error.message,
@@ -513,9 +526,15 @@ app.post("/orders", requireRole(["user", "agent", "admin"]), async (req, res) =>
       code: error.code,
       meta: error.meta,
     });
+    
+    // Return more detailed error in development
+    const errorMessage = process.env.NODE_ENV === "development" 
+      ? error.message 
+      : "Internal server error";
+    
     res.status(500).json({ 
       error: "Internal server error",
-      message: process.env.NODE_ENV === "development" ? error.message : undefined
+      message: errorMessage
     });
   }
 });
