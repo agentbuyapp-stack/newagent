@@ -231,7 +231,7 @@ export default function NewOrderPage() {
                         newOrders[index].productName = e.target.value;
                         setOrders(newOrders);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Барааны нэр оруулах"
                       style={{ fontSize: '16px' }}
                     />
@@ -250,7 +250,7 @@ export default function NewOrderPage() {
                         newOrders[index].description = e.target.value;
                         setOrders(newOrders);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
                       style={{ fontSize: '16px' }}
                     />

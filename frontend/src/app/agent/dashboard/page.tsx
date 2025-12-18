@@ -802,7 +802,7 @@ export default function AgentDashboardPage() {
                                     {expandedReportOrderId === order.id && agentReports[order.id] && (
                                       <div className="mt-2 p-3 bg-gray-50 rounded-lg space-y-2 text-xs">
                                         <div>
-                                          <span className="font-medium text-gray-700">Хэрэглэгчийн төлөх дүн:</span>
+                                          <span className="font-medium text-gray-900">Хэрэглэгчийн төлөх дүн:</span>
                                           <span className="ml-2 text-gray-900">
                                             {(() => {
                                               const exchangeRate = adminSettings?.exchangeRate || 1;
@@ -813,12 +813,12 @@ export default function AgentDashboardPage() {
                                         </div>
                                         {agentReports[order.id]?.paymentLink && (
                                           <div>
-                                            <span className="font-medium text-gray-700">Төлбөрийн холбоос:</span>
+                                            <span className="font-medium text-gray-900">Төлбөрийн холбоос:</span>
                                             <a 
                                               href={agentReports[order.id]?.paymentLink} 
                                               target="_blank" 
                                               rel="noopener noreferrer"
-                                              className="ml-2 text-blue-600 hover:underline break-all"
+                                              className="ml-2 text-blue-800 hover:underline break-all"
                                             >
                                               {agentReports[order.id]?.paymentLink}
                                             </a>
@@ -826,19 +826,19 @@ export default function AgentDashboardPage() {
                                         )}
                                         {agentReports[order.id]?.quantity && (
                                           <div>
-                                            <span className="font-medium text-gray-700">Тоо ширхэг:</span>
+                                            <span className="font-medium text-gray-900">Тоо ширхэг:</span>
                                             <span className="ml-2 text-gray-900">{agentReports[order.id]?.quantity}</span>
                                           </div>
                                         )}
                                         {agentReports[order.id]?.additionalDescription && (
                                           <div>
-                                            <span className="font-medium text-gray-700">Нэмэлт тайлбар:</span>
-                                            <p className="mt-1 text-gray-600 whitespace-pre-wrap">{agentReports[order.id]?.additionalDescription}</p>
+                                            <span className="font-medium text-gray-900">Нэмэлт тайлбар:</span>
+                                            <p className="mt-1 text-gray-900 whitespace-pre-wrap">{agentReports[order.id]?.additionalDescription}</p>
                                           </div>
                                         )}
                                         {agentReports[order.id]?.additionalImages && agentReports[order.id]!.additionalImages.length > 0 && (
                                           <div>
-                                            <span className="font-medium text-gray-700">Нэмэлт зураг:</span>
+                                            <span className="font-medium text-gray-900">Нэмэлт зураг:</span>
                                             <div className="mt-2 grid grid-cols-3 gap-2">
                                               {agentReports[order.id]!.additionalImages.map((imgUrl, idx) => (
                                                 <img
