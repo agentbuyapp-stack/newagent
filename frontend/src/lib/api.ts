@@ -181,6 +181,13 @@ class ApiClient {
     });
   }
 
+  // Agent endpoints
+  async registerAsAgent(): Promise<User> {
+    return this.request<User>("/agents/register", {
+      method: "POST",
+    });
+  }
+
   // Admin endpoints
   async getAgents(): Promise<User[]> {
     return this.request<User[]>("/admin/agents");

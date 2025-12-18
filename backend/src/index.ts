@@ -910,6 +910,39 @@ app.get("/admin", requireRole("admin"), (req, res) => {
   res.json({ message: "Admin only route." });
 });
 
+// Request to become an agent (user can request to become agent)
+app.post("/agents/register", requireRole("user"), async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthenticated" });
+    }
+
+    console.log(`[DEBUG] POST /agents/register: User ${req.user.id} requesting to become agent`);
+
+    // Update user role to "agent" (pending approval)
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { 
+        role: "agent",
+        isApproved: false, // Needs admin approval
+      },
+      include: { profile: true },
+    });
+    
+    console.log(`[DEBUG] POST /agents/register: User ${req.user.id} is now agent:`, {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      isApproved: updatedUser.isApproved,
+    });
+    
+    res.json(updatedUser);
+  } catch (error: any) {
+    console.error("Error in POST /agents/register:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Get all agents (pending and approved)
 app.get("/admin/agents", requireRole("admin"), async (req, res) => {
   try {
@@ -917,6 +950,21 @@ app.get("/admin/agents", requireRole("admin"), async (req, res) => {
       where: { role: "agent" },
       include: { profile: true },
       orderBy: { createdAt: "desc" },
+    });
+    
+    // Debug: Log agents for production debugging
+    console.log(`[DEBUG] GET /admin/agents: Found ${agents.length} agents`);
+    agents.forEach((agent, index) => {
+      console.log(`[DEBUG] Agent ${index + 1}:`, {
+        id: agent.id,
+        email: agent.email,
+        role: agent.role,
+        isApproved: agent.isApproved,
+        approvedAt: agent.approvedAt,
+        approvedBy: agent.approvedBy,
+        hasProfile: !!agent.profile,
+        profileName: agent.profile?.name,
+      });
     });
     
     res.json(agents);
@@ -935,6 +983,8 @@ app.put("/admin/agents/:id/approve", requireRole("admin"), async (req, res) => {
 
     const { approved } = req.body; // true or false
 
+    console.log(`[DEBUG] PUT /admin/agents/:id/approve: Admin ${req.user.id} ${approved ? "approving" : "rejecting"} agent ${req.params.id}`);
+
     if (typeof approved !== "boolean") {
       return res.status(400).json({ error: "approved must be a boolean" });
     }
@@ -944,6 +994,11 @@ app.put("/admin/agents/:id/approve", requireRole("admin"), async (req, res) => {
     });
 
     if (!agent || agent.role !== "agent") {
+      console.log(`[DEBUG] PUT /admin/agents/:id/approve: Agent not found or not an agent:`, {
+        id: req.params.id,
+        found: !!agent,
+        role: agent?.role,
+      });
       return res.status(404).json({ error: "Agent not found" });
     }
 
@@ -954,6 +1009,16 @@ app.put("/admin/agents/:id/approve", requireRole("admin"), async (req, res) => {
         approvedAt: approved ? new Date() : null,
         approvedBy: approved ? req.user.id : null,
       },
+      include: { profile: true },
+    });
+
+    console.log(`[DEBUG] PUT /admin/agents/:id/approve: Agent updated:`, {
+      id: updatedAgent.id,
+      email: updatedAgent.email,
+      role: updatedAgent.role,
+      isApproved: updatedAgent.isApproved,
+      approvedAt: updatedAgent.approvedAt,
+      approvedBy: updatedAgent.approvedBy,
     });
 
     res.json(updatedAgent);

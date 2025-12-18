@@ -630,10 +630,45 @@ export default function UserDashboardPage() {
     );
   }
 
+  const handleBecomeAgent = async () => {
+    if (!confirm("Та agent болох хүсэлт илгээхдээ итгэлтэй байна уу? Admin-аар батлагдахад хүлээнэ үү.")) {
+      return;
+    }
+    
+    try {
+      const updatedUser = await apiClient.registerAsAgent();
+      setUser(updatedUser);
+      alert("Agent бүртгэл амжилттай үүслээ! Admin-аар батлагдахад хүлээнэ үү.");
+      // Reload data
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Agent бүртгэл үүсгэхэд алдаа гарлаа");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
+          {/* Agent Registration Section - Show if user role */}
+          {user?.role === "user" && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-900 mb-2">Agent болох</h3>
+                  <p className="text-sm text-blue-800">
+                    Та agent болох хүсэлт илгээж болно. Admin-аар батлагдсаны дараа захиалгуудыг харж, ажиллах боломжтой болно.
+                  </p>
+                </div>
+                <button
+                  onClick={handleBecomeAgent}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                >
+                  Agent болох
+                </button>
+              </div>
+            </div>
+          )}
           {/* Order Section - Only show if profile is complete */}
           {isProfileComplete ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

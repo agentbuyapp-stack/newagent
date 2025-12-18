@@ -107,6 +107,24 @@ export default function AgentDashboardPage() {
         const userData = await apiClient.getMe();
         setUser(userData);
         
+        // If user role, automatically register as agent
+        if (userData.role === "user") {
+          try {
+            const updatedUser = await apiClient.registerAsAgent();
+            setUser(updatedUser);
+            setIsApproved(updatedUser.isApproved || false);
+            if (updatedUser.profile) {
+              setProfile(updatedUser.profile);
+            }
+            // Reload data after registering as agent
+            await loadData();
+            return;
+          } catch (registerErr: any) {
+            setError(registerErr.message || "Agent бүртгэл үүсгэхэд алдаа гарлаа");
+            setLoading(false);
+            return;
+          }
+        }
         // Allow both admin and agent roles to access agent dashboard
         // Admin can access all dashboards (user, agent, admin)
         if (userData.role !== "agent" && userData.role !== "admin") {
@@ -158,6 +176,23 @@ export default function AgentDashboardPage() {
             setUser(userData);
             
             // Check role again on retry
+            // If user role, automatically register as agent
+            if (userData.role === "user") {
+              try {
+                const updatedUser = await apiClient.registerAsAgent();
+                setUser(updatedUser);
+                setIsApproved(updatedUser.isApproved || false);
+                if (updatedUser.profile) {
+                  setProfile(updatedUser.profile);
+                }
+                // Reload data after registering as agent
+                await loadData();
+                return;
+              } catch (registerErr: any) {
+                setError(registerErr.message || "Agent бүртгэл үүсгэхэд алдаа гарлаа");
+                return;
+              }
+            }
             // Allow both admin and agent roles to access agent dashboard
             if (userData.role !== "agent" && userData.role !== "admin") {
               setError("Та agent эрхгүй байна");

@@ -87,6 +87,16 @@ export default function AdminDashboardPage() {
           const results = await Promise.all(promises);
           const [agentsData, ordersData, cargosData, settingsData, rewardRequestsData] = results;
           
+          // Debug: Log agents for production debugging
+          console.log("[DEBUG] Admin Dashboard: Loaded agents:", agentsData.length);
+          console.log("[DEBUG] Agents data:", agentsData.map((a: User) => ({
+            id: a.id,
+            email: a.email,
+            role: a.role,
+            isApproved: a.isApproved,
+            hasProfile: !!a.profile,
+          })));
+          
           setAgents(agentsData);
           setOrders(ordersData);
           setCargos(cargosData);
@@ -140,10 +150,13 @@ export default function AdminDashboardPage() {
 
   const handleApproveAgent = async (agentId: string, approved: boolean) => {
     try {
-      await apiClient.approveAgent(agentId, approved);
+      console.log(`[DEBUG] Admin Dashboard: Approving agent ${agentId} with approved=${approved}`);
+      const updatedAgent = await apiClient.approveAgent(agentId, approved);
+      console.log(`[DEBUG] Admin Dashboard: Agent updated:`, updatedAgent);
       await loadData();
       alert(`Agent ${approved ? "батлагдлаа" : "цуцлагдлаа"}`);
     } catch (err: any) {
+      console.error(`[DEBUG] Admin Dashboard: Error approving agent:`, err);
       alert(err.message || "Алдаа гарлаа");
     }
   };
@@ -242,6 +255,15 @@ export default function AdminDashboardPage() {
   // Filter agents: pending agents have isApproved === false or null/undefined
   const pendingAgents = agents.filter(a => a.isApproved === false || a.isApproved === null || a.isApproved === undefined);
   const approvedAgents = agents.filter(a => a.isApproved === true);
+  
+  // Debug: Log filtered agents for production debugging
+  console.log("[DEBUG] Admin Dashboard: Filtered agents:", {
+    total: agents.length,
+    pending: pendingAgents.length,
+    approved: approvedAgents.length,
+    pendingDetails: pendingAgents.map((a: User) => ({ id: a.id, email: a.email, isApproved: a.isApproved })),
+    approvedDetails: approvedAgents.map((a: User) => ({ id: a.id, email: a.email, isApproved: a.isApproved })),
+  });
 
   if (!isLoaded || loading) {
     return (
