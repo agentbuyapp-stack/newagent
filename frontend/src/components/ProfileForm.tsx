@@ -86,6 +86,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Жишээ: Бат"
+          style={{ fontSize: '16px' }}
         />
       </div>
 
@@ -101,6 +102,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="99112233"
+          style={{ fontSize: '16px' }}
         />
       </div>
 
@@ -116,6 +118,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="example@email.com"
+          style={{ fontSize: '16px' }}
         />
       </div>
 

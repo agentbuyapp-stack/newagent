@@ -832,8 +832,9 @@ export default function UserDashboardPage() {
                             updatedOrders[index].productName = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base"
                           placeholder="Барааны нэр оруулах"
+                          style={{ fontSize: '16px' }}
                         />
                       </div>
 
@@ -850,8 +851,9 @@ export default function UserDashboardPage() {
                             updatedOrders[index].description = e.target.value;
                             setNewOrders(updatedOrders);
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-base"
                           placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
+                          style={{ fontSize: '16px' }}
                         />
                       </div>
                       </div>
@@ -1095,7 +1097,7 @@ export default function UserDashboardPage() {
                                     {/* Order ID */}
                                     <div className="flex items-center justify-between">
                                       <p className="text-xs font-mono text-gray-500">ID: {order.id.slice(0, 8)}...</p>
-                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]`}>
                                         {getStatusText(order.status)}
                                       </span>
                                     </div>

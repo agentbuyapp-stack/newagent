@@ -233,6 +233,7 @@ export default function NewOrderPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Барааны нэр оруулах"
+                      style={{ fontSize: '16px' }}
                     />
                   </div>
 
@@ -251,6 +252,7 @@ export default function NewOrderPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
+                      style={{ fontSize: '16px' }}
                     />
                   </div>
                 </div>
