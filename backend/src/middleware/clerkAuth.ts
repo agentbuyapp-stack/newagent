@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { createClerkClient, verifyToken } from "@clerk/backend";
-import { prisma } from "../lib/prisma";
-import { Role } from "@prisma/client";
+import { User, Role } from "../models";
 
 declare global {
   namespace Express {
@@ -25,6 +24,31 @@ export const clerkAuth = async (
   next: NextFunction
 ) => {
   try {
+    // Development mode bypass (ONLY for local development without Clerk)
+    if (process.env.NODE_ENV === "development" && process.env.DISABLE_CLERK_AUTH === "true") {
+      console.warn("⚠️  WARNING: Clerk authentication is DISABLED (development mode only!)");
+      
+      // Use a default test user or create one
+      let user = await User.findOne({ email: "test@example.com" }).lean();
+      
+      if (!user) {
+        // Create a default test user
+        const newUser = await User.create({
+          email: "test@example.com",
+          role: "admin", // Default to admin for testing
+        });
+        user = newUser.toObject();
+      }
+      
+      req.user = {
+        id: user._id.toString(),
+        role: user.role,
+        clerkId: "dev-bypass",
+      };
+      
+      return next();
+    }
+
     // Get the Authorization header
     const authHeader = req.headers.authorization;
     
@@ -33,6 +57,16 @@ export const clerkAuth = async (
     }
 
     const sessionToken = authHeader.substring(7); // Remove "Bearer " prefix
+
+    // Check if Clerk secret key is configured
+    if (!process.env.CLERK_SECRET_KEY) {
+      console.error("CLERK_SECRET_KEY is not set in environment variables");
+      console.error("💡 Tip: Set DISABLE_CLERK_AUTH=true in .env for development without Clerk");
+      return res.status(500).json({ 
+        error: "Server configuration error",
+        message: "Clerk authentication is not configured. Set CLERK_SECRET_KEY or DISABLE_CLERK_AUTH=true for development"
+      });
+    }
 
     // Verify the session token with Clerk
     const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
@@ -45,6 +79,7 @@ export const clerkAuth = async (
       });
 
       if (!userId) {
+        console.error("Token verification failed: No userId returned");
         return res.status(401).json({ error: "Invalid or expired token" });
       }
 
@@ -52,11 +87,29 @@ export const clerkAuth = async (
       clerkUser = await clerk.users.getUser(userId);
     } catch (tokenError: any) {
       console.error("Token verification error:", tokenError);
-      // If verifyToken fails, try alternative method
+      console.error("Token error details:", {
+        message: tokenError.message,
+        reason: tokenError.reason,
+        action: tokenError.action,
+        status: tokenError.status,
+      });
+      
+      // If verifyToken fails, return proper error
+      if (tokenError.reason === "jwk-failed-to-resolve") {
+        return res.status(500).json({ 
+          error: "Clerk configuration error",
+          message: "CLERK_SECRET_KEY is invalid or Clerk service is unavailable"
+        });
+      }
+      
       if (tokenError.message?.includes("verifyToken") || tokenError.status === 401) {
         return res.status(401).json({ error: "Invalid or expired token" });
       }
-      throw tokenError;
+      
+      return res.status(500).json({ 
+        error: "Authentication error",
+        message: process.env.NODE_ENV === "development" ? tokenError.message : "Authentication failed"
+      });
     }
     
     if (!clerkUser) {
@@ -72,28 +125,24 @@ export const clerkAuth = async (
     // Get or create user in database
     let user;
     try {
-      user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
+      user = await User.findOne({ email: email.toLowerCase() }).lean();
 
       if (!user) {
         // Create new user with default role "user"
         // You can customize role assignment based on Clerk metadata if needed
         const role = (clerkUser.publicMetadata?.role as Role) || "user";
         
-        user = await prisma.user.create({
-          data: {
-            email: email.toLowerCase(),
-            role: role,
-          },
+        const newUser = await User.create({
+          email: email.toLowerCase(),
+          role: role,
         });
+        user = newUser.toObject();
       }
     } catch (dbError: any) {
       console.error("Database error in clerkAuth:", dbError);
       console.error("Database error details:", {
         message: dbError.message,
         code: dbError.code,
-        meta: dbError.meta,
       });
       // If database connection fails, return 500 error
       return res.status(500).json({ 
@@ -104,7 +153,7 @@ export const clerkAuth = async (
 
     // Attach user to request
     req.user = {
-      id: user.id,
+      id: user._id.toString(),
       role: user.role,
       clerkId: clerkUser.id,
     };

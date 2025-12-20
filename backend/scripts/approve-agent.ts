@@ -1,14 +1,12 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import connectDB from "../src/lib/mongodb";
+import { User } from "../src/models";
 
 async function main() {
+  await connectDB();
   const email = "erdenebilegamgalan@gmail.com";
 
   // First, make sure user is an agent
-  let user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-  });
+  let user = await User.findOne({ email: email.toLowerCase() }).lean();
 
   if (!user) {
     console.error(`❌ User ${email} not found!`);
@@ -17,27 +15,26 @@ async function main() {
 
   if (user.role !== "agent") {
     console.log(`⚠️  User ${email} is not an agent. Setting role to agent...`);
-    user = await prisma.user.update({
-      where: { email: email.toLowerCase() },
-      data: { role: "agent" },
-    });
+    await User.findByIdAndUpdate(user._id, { role: "agent" });
+    user = await User.findById(user._id).lean();
   }
 
   // Approve the agent
-  const approvedAgent = await prisma.user.update({
-    where: { email: email.toLowerCase() },
-    data: {
+  const approvedAgent = await User.findByIdAndUpdate(
+    user._id,
+    {
       isApproved: true,
       approvedAt: new Date(),
-      approvedBy: user.id, // Self-approved for now
+      approvedBy: user._id.toString(), // Self-approved for now
     },
-  });
+    { new: true }
+  ).lean();
 
   console.log(`✅ Agent ${email} is now approved!`);
-  console.log(`User ID: ${approvedAgent.id}`);
-  console.log(`Role: ${approvedAgent.role}`);
-  console.log(`Is Approved: ${approvedAgent.isApproved}`);
-  console.log(`Approved At: ${approvedAgent.approvedAt}`);
+  console.log(`User ID: ${approvedAgent!._id.toString()}`);
+  console.log(`Role: ${approvedAgent!.role}`);
+  console.log(`Is Approved: ${approvedAgent!.isApproved}`);
+  console.log(`Approved At: ${approvedAgent!.approvedAt}`);
 }
 
 main()
@@ -46,6 +43,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(0);
   });
-

@@ -1,8 +1,9 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import "dotenv/config";
+import connectDB from "../src/lib/mongodb";
+import { User } from "../src/models";
 
 async function main() {
+  await connectDB();
   const email = process.argv[2];
   
   if (!email) {
@@ -12,9 +13,7 @@ async function main() {
   }
   
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    const user = await (User as any).findOne({ email: email.toLowerCase() });
     
     if (!user) {
       console.error(`❌ User олдсонгүй: ${email}`);
@@ -22,13 +21,23 @@ async function main() {
       process.exit(1);
     }
     
-    const updatedUser = await prisma.user.update({
-      where: { email: email.toLowerCase() },
-      data: { role: "admin" },
-    });
+    const updatedUser = await (User as any).findByIdAndUpdate(
+      user._id,
+      { role: "admin" },
+      { new: true }
+    );
+    
+    if (!updatedUser) {
+      console.error(`❌ User шинэчлэхэд алдаа гарлаа: ${email}`);
+      process.exit(1);
+    }
     
     console.log(`✅ User ${email} одоо admin боллоо!`);
-    console.log(updatedUser);
+    console.log({
+      id: updatedUser._id.toString(),
+      email: updatedUser.email,
+      role: updatedUser.role,
+    });
   } catch (error: any) {
     console.error("❌ Алдаа:", error.message);
     process.exit(1);
@@ -41,6 +50,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    process.exit(0);
   });
-

@@ -1,0 +1,108 @@
+import { Request, Response } from "express";
+import { User, RewardRequest } from "../models";
+import mongoose from "mongoose";
+
+export const registerAsAgent = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthenticated" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { role: "agent" },
+      { new: true }
+    ).lean();
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      ...user,
+      id: user._id.toString(),
+    });
+  } catch (error: any) {
+    console.error("Error in POST /agents/register:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getMyRewardRequests = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthenticated" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    // Get all reward requests for this agent
+    const requests = await RewardRequest.find({
+      agentId: new mongoose.Types.ObjectId(req.user.id)
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(requests.map(request => ({
+      ...request,
+      id: request._id.toString(),
+      agentId: request.agentId.toString(),
+    })));
+  } catch (error: any) {
+    console.error("Error in GET /agents/reward-requests:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const createRewardRequest = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthenticated" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    // Get user's current points
+    const user = await User.findById(req.user.id).lean();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const agentPoints = user.agentPoints || 0;
+
+    if (agentPoints <= 0) {
+      return res.status(400).json({ error: "Insufficient points" });
+    }
+
+    // Create reward request with all available points
+    const request = await RewardRequest.create({
+      agentId: new mongoose.Types.ObjectId(req.user.id),
+      amount: agentPoints,
+      status: "pending",
+    });
+
+    // Deduct points from user (they will be returned if request is rejected)
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { agentPoints: 0 }
+    );
+
+    res.status(201).json({
+      ...request.toObject(),
+      id: request._id.toString(),
+      agentId: request.agentId.toString(),
+    });
+  } catch (error: any) {
+    console.error("Error in POST /agents/reward-request:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+

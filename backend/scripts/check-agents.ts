@@ -1,34 +1,45 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import connectDB from "../src/lib/mongodb";
+import { User, Profile } from "../src/models";
 
 async function checkAgents() {
+  await connectDB();
   try {
     console.log("Checking for agents in database...");
     
     // Get all users
-    const allUsers = await prisma.user.findMany({
-      include: { profile: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const allUsers = await User.find()
+      .sort({ createdAt: -1 })
+      .lean();
     
-    console.log(`\nTotal users in database: ${allUsers.length}`);
+    const usersWithProfiles = await Promise.all(
+      allUsers.map(async (user) => {
+        const profile = await Profile.findOne({ userId: user._id }).lean();
+        return { ...user, profile };
+      })
+    );
+    
+    console.log(`\nTotal users in database: ${usersWithProfiles.length}`);
     console.log("\nAll users:");
-    allUsers.forEach((user) => {
+    usersWithProfiles.forEach((user) => {
       console.log(`- Email: ${user.email}, Role: ${user.role}, isApproved: ${user.isApproved}`);
     });
     
     // Get only agent users
-    const agents = await prisma.user.findMany({
-      where: { role: "agent" },
-      include: { profile: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const agents = await User.find({ role: "agent" })
+      .sort({ createdAt: -1 })
+      .lean();
     
-    console.log(`\n\nTotal agents in database: ${agents.length}`);
-    if (agents.length > 0) {
+    const agentsWithProfiles = await Promise.all(
+      agents.map(async (agent) => {
+        const profile = await Profile.findOne({ userId: agent._id }).lean();
+        return { ...agent, profile };
+      })
+    );
+    
+    console.log(`\n\nTotal agents in database: ${agentsWithProfiles.length}`);
+    if (agentsWithProfiles.length > 0) {
       console.log("\nAgents:");
-      agents.forEach((agent) => {
+      agentsWithProfiles.forEach((agent) => {
         console.log(`- Email: ${agent.email}, isApproved: ${agent.isApproved}, Profile: ${agent.profile ? "Yes" : "No"}`);
       });
     } else {
@@ -39,9 +50,8 @@ async function checkAgents() {
   } catch (error) {
     console.error("Error checking agents:", error);
   } finally {
-    await prisma.$disconnect();
+    process.exit(0);
   }
 }
 
 checkAgents();
-

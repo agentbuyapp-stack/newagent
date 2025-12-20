@@ -4,25 +4,20 @@
   "type": "commonjs",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "prisma generate && tsc -p tsconfig.json",
-    "start": "prisma migrate deploy && node dist/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@clerk/backend": "^2.27.0",
     "@clerk/nextjs": "^6.36.2",
-    "@prisma/client": "^6.19.1",
-    "@supabase/supabase-js": "^2.87.1",
     "@types/cors": "^2.8.19",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
-    "multer": "^2.0.2",
-    "prisma": "^6.19.1"
+    "mongoose": "^8.0.0",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
