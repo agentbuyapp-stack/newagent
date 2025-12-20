@@ -20,6 +20,7 @@ export interface Profile {
   phone: string;
   email: string;
   cargo?: string;
+  accountNumber?: string; // For agents
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +35,7 @@ export interface ProfileData {
   phone: string;
   email: string;
   cargo?: string;
+  accountNumber?: string; // For agents
 }
 
 export type OrderStatus = "niitlegdsen" | "agent_sudlaj_bn" | "tolbor_huleej_bn" | "amjilttai_zahialga" | "tsutsalsan_zahialga";
@@ -82,7 +84,7 @@ class ApiClient {
    */
   setTokenGetter(getToken: () => Promise<string | null>) {
     this.getToken = getToken;
-    }
+  }
 
   async getHeaders(): Promise<HeadersInit> {
     const headers: HeadersInit = {
@@ -94,7 +96,13 @@ class ApiClient {
       const token = await this.getToken();
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+      } else if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === "true") {
+        // Development mode: Skip authentication header
+        console.warn("⚠️  Development mode: Clerk authentication disabled");
       }
+    } else if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === "true") {
+      // Development mode: Skip authentication header
+      console.warn("⚠️  Development mode: Clerk authentication disabled");
     }
 
     return headers;
@@ -106,21 +114,46 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = await this.getHeaders();
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Unknown error" }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        let errorData: any;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: `HTTP error! status: ${response.status}` };
+        }
+
+        // Log error for debugging
+        console.error(`API Error [${response.status}]:`, {
+          endpoint,
+          url,
+          error: errorData.error || errorData.message,
+          details: errorData,
+        });
+
+        throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Enhanced error logging
+      console.error("API Request failed:", {
+        endpoint,
+        url,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
     }
-
-    return response.json();
   }
 
   // Auth endpoints
@@ -194,6 +227,13 @@ class ApiClient {
   }
 
   // Admin endpoints
+  async addAgent(email: string): Promise<User> {
+    return this.request<User>("/admin/agents", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async getAgents(): Promise<User[]> {
     return this.request<User[]>("/admin/agents");
   }
@@ -283,6 +323,10 @@ class ApiClient {
   }
 
   // Reward request endpoints (agent)
+  async getMyRewardRequests(): Promise<RewardRequest[]> {
+    return this.request<RewardRequest[]>("/agents/reward-requests");
+  }
+
   async createRewardRequest(): Promise<RewardRequest> {
     return this.request<RewardRequest>("/agents/reward-request", {
       method: "POST",

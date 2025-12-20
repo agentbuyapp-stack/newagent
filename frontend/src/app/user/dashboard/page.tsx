@@ -33,7 +33,7 @@ export default function UserDashboardPage() {
   const [paymentInfo, setPaymentInfo] = useState<Record<string, { accountNumber?: string; accountName?: string; bank?: string; exchangeRate?: number }>>({});
   const [adminSettings, setAdminSettings] = useState<{ accountNumber?: string; accountName?: string; bank?: string; exchangeRate?: number } | null>(null);
   const [showUserInfoInModal, setShowUserInfoInModal] = useState(false);
-  
+
   // Notification states
   const [hasOrderUpdates, setHasOrderUpdates] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
@@ -65,7 +65,7 @@ export default function UserDashboardPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showNotificationDropdown]);
-  
+
   // Demo: Check for notifications (can be replaced with real API calls)
   useEffect(() => {
     if (orders.length > 0) {
@@ -73,7 +73,7 @@ export default function UserDashboardPage() {
       setHasNewMessages(true); // Demo: always show for testing
     }
   }, [orders]);
-  
+
   // New order form state - support multiple products
   const [newOrders, setNewOrders] = useState<Array<OrderData & { id: number }>>([
     { id: Date.now(), productName: "", description: "", imageUrls: [] },
@@ -117,7 +117,7 @@ export default function UserDashboardPage() {
 
   const loadData = async () => {
     if (!clerkUser) return;
-    
+
     try {
       // Get or create user in our database
       const email = clerkUser.primaryEmailAddress?.emailAddress || "";
@@ -134,7 +134,7 @@ export default function UserDashboardPage() {
         if (userData.profile) {
           setProfile(userData.profile);
         }
-        
+
         // Load admin settings for payment info and exchange rate
         try {
           const settings = await apiClient.getAdminSettings();
@@ -142,12 +142,12 @@ export default function UserDashboardPage() {
         } catch (err) {
           console.error("Failed to load admin settings:", err);
         }
-        
+
         // Load orders
         try {
           const ordersData = await apiClient.getOrders();
           setOrders(ordersData);
-          
+
           // If modal is open and we have a selectedOrder, update it from fresh data
           // Preserve userPaymentVerified state if it was set locally
           if (showOrderModal && selectedOrder) {
@@ -158,14 +158,14 @@ export default function UserDashboardPage() {
               setSelectedOrder({ ...refreshedOrder, userPaymentVerified: preservedUserPaymentVerified });
             }
           }
-          
+
           // Load agent reports for orders that have agent assigned (including completed orders)
           ordersData.forEach(order => {
             if (order.agentId && (order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga")) {
               loadAgentReport(order.id);
             }
           });
-          
+
           // Check for order updates (status changed, new track code, etc.)
           const hasUpdates = ordersData.some(order => {
             // Check if order status changed or has recent updates
@@ -191,14 +191,14 @@ export default function UserDashboardPage() {
             const orderDate = new Date(order.updatedAt);
             const now = new Date();
             const hoursSinceUpdate = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
-            
+
             // Order status update notifications
             if (hoursSinceUpdate < 24 && order.status !== 'agent_sudlaj_bn') {
-              const statusText = 
+              const statusText =
                 order.status === 'tolbor_huleej_bn' ? 'Төлбөр хүлээж байна' :
-                order.status === 'amjilttai_zahialga' ? 'Амжилттай захиалга' :
-                order.status === 'tsutsalsan_zahialga' ? 'Цуцлагдсан захиалга' : '';
-              
+                  order.status === 'amjilttai_zahialga' ? 'Амжилттай захиалга' :
+                    order.status === 'tsutsalsan_zahialga' ? 'Цуцлагдсан захиалга' : '';
+
               generatedNotifications.push({
                 id: `order-${order.id}-${order.status}`,
                 type: 'order_update',
@@ -280,9 +280,9 @@ export default function UserDashboardPage() {
   };
 
   const canCancelOrder = (order: Order) => {
-    // Зөвхөн "нийтэлсэн" эсвэл "цуцлагдсан" статустай захиалгыг цуцлах боломжтой
-    // Хэрэв agent шалгаж эхэлсэн бол (agent_sudlaj_bn, tolbor_huleej_bn, amjilttai_zahialga) цуцлах боломжгүй
-    return order.status === "niitlegdsen" || order.status === "tsutsalsan_zahialga";
+    // "нийтэлсэн", "цуцлагдсан", эсвэл "төлбөр хүлээж байна" статустай захиалгыг цуцлах боломжтой
+    // "agent шалгаж байна" эсвэл "амжилттай захиалга" статустай захиалгыг цуцлах боломжгүй
+    return order.status === "niitlegdsen" || order.status === "tsutsalsan_zahialga" || order.status === "tolbor_huleej_bn";
   };
 
   const handleRepublishOrder = async (orderId: string) => {
@@ -293,7 +293,7 @@ export default function UserDashboardPage() {
     try {
       // First cancel the order
       await apiClient.cancelOrder(orderId);
-      
+
       // Get the order details
       const order = orders.find(o => o.id === orderId);
       if (!order) {
@@ -325,18 +325,18 @@ export default function UserDashboardPage() {
       await apiClient.request<Order>(`/orders/${orderId}/user-payment-confirmed`, {
         method: "PUT",
       });
-      
+
       alert("Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.");
-      
+
       // Update selectedOrder state immediately with the updated order from API response
       // Ensure userPaymentVerified is set to true
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ 
-          ...selectedOrder, 
-          userPaymentVerified: true 
+        setSelectedOrder({
+          ...selectedOrder,
+          userPaymentVerified: true
         });
       }
-      
+
       // Reload data to get updated orders list
       // Note: loadData will preserve userPaymentVerified if it was set
       await loadData();
@@ -405,18 +405,18 @@ export default function UserDashboardPage() {
   const handleNewOrderImageChange = (e: React.ChangeEvent<HTMLInputElement>, productIndex: number) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
+
     const newPreviews = [...newOrderImagePreviews];
     const currentImages = newPreviews[productIndex] || [];
-    
+
     const remainingSlots = 3 - currentImages.length;
     if (remainingSlots <= 0) {
       alert("Дээд тал нь 3 зураг оруулах боломжтой");
       return;
     }
-    
+
     const filesToAdd = Array.from(files).slice(0, remainingSlots);
-    
+
     filesToAdd.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -427,7 +427,7 @@ export default function UserDashboardPage() {
         }
         updatedPreviews[productIndex] = [...updatedPreviews[productIndex], dataUrl];
         setNewOrderImagePreviews(updatedPreviews);
-        
+
         const newOrdersList = [...newOrders];
         if (!newOrdersList[productIndex].imageUrls) {
           newOrdersList[productIndex].imageUrls = [];
@@ -437,7 +437,7 @@ export default function UserDashboardPage() {
       };
       reader.readAsDataURL(file);
     });
-    
+
     e.target.value = "";
   };
 
@@ -445,7 +445,7 @@ export default function UserDashboardPage() {
     const updatedPreviews = [...newOrderImagePreviews];
     updatedPreviews[productIndex] = updatedPreviews[productIndex].filter((_, i) => i !== imageIndex);
     setNewOrderImagePreviews(updatedPreviews);
-    
+
     const newOrdersList = [...newOrders];
     newOrdersList[productIndex].imageUrls = updatedPreviews[productIndex];
     setNewOrders(newOrdersList);
@@ -504,12 +504,12 @@ export default function UserDashboardPage() {
       // Create one order with multiple products
       const createdOrders: string[] = [];
       const errors: string[] = [];
-      
+
       try {
         // If multiple products, create one order with all products
         if (validOrders.length > 1) {
           console.log(`[DEBUG] Creating order with ${validOrders.length} products`);
-          
+
           const products = validOrders
             .filter(order => order.productName && order.description)
             .map(order => ({
@@ -517,7 +517,7 @@ export default function UserDashboardPage() {
               description: order.description!,
               imageUrls: order.imageUrls || [],
             }));
-          
+
           await apiClient.createOrder({ products } as any);
           createdOrders.push(...validOrders.filter(o => o.productName).map(o => o.productName!));
           console.log(`[DEBUG] Order created successfully with ${validOrders.length} products`);
@@ -528,13 +528,13 @@ export default function UserDashboardPage() {
           if (!orderData.imageUrls) {
             orderData.imageUrls = [];
           }
-          
+
           console.log(`[DEBUG] Creating order:`, {
             productName: orderData.productName,
             description: orderData.description?.substring(0, 50),
             imageUrlsCount: orderData.imageUrls?.length || 0,
           });
-          
+
           await apiClient.createOrder(orderData);
           if (validOrders[0].productName) {
             createdOrders.push(validOrders[0].productName);
@@ -554,15 +554,15 @@ export default function UserDashboardPage() {
         setNewOrderSuccess(true);
         setNewOrders([{ id: Date.now(), productName: "", description: "", imageUrls: [] }]);
         setNewOrderImagePreviews([[]]);
-        
+
         // Reload orders
         await loadData();
-        
+
         // Show error message if some orders failed
         if (errors.length > 0) {
           setNewOrderError(`Зарим захиалга үүсгэхэд алдаа гарлаа: ${errors.join(", ")}`);
         }
-        
+
         // Reset success message after 2 seconds
         setTimeout(() => {
           setNewOrderSuccess(false);
@@ -578,7 +578,7 @@ export default function UserDashboardPage() {
   };
 
   // Memoize profile completion check
-  const isProfileComplete = useMemo(() => 
+  const isProfileComplete = useMemo(() =>
     profile && profile.name && profile.phone && profile.cargo,
     [profile]
   );
@@ -660,50 +660,16 @@ export default function UserDashboardPage() {
     );
   }
 
-  const handleBecomeAgent = async () => {
-    if (!confirm("Та agent болох хүсэлт илгээхдээ итгэлтэй байна уу? Admin-аар батлагдахад хүлээнэ үү.")) {
-      return;
-    }
-    
-    try {
-      const updatedUser = await apiClient.registerAsAgent();
-      setUser(updatedUser);
-      alert("Agent бүртгэл амжилттай үүслээ! Admin-аар батлагдахад хүлээнэ үү.");
-      // Reload data
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || "Agent бүртгэл үүсгэхэд алдаа гарлаа");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
-          {/* Agent Registration Section - Show if user role */}
-          {user?.role === "user" && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Agent болох</h3>
-                  <p className="text-sm text-gray-600">
-                    Та agent болох хүсэлт илгээж болно. Admin-аар батлагдсаны дараа захиалгуудыг харж, ажиллах боломжтой болно.
-                  </p>
-                </div>
-                <button
-                  onClick={handleBecomeAgent}
-                  className="w-full sm:w-auto px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px] whitespace-nowrap"
-                >
-                  Agent болох
-                </button>
-              </div>
-            </div>
-          )}
           {/* Order Section - Only show if profile is complete */}
           {isProfileComplete ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Box 1: Омнох захиалгууд */}
-            
+
 
               {/* Box 2: Шинэ захиалга үүсгэх */}
               <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
@@ -713,176 +679,176 @@ export default function UserDashboardPage() {
                     onClick={() => setShowNewOrderSection(!showNewOrderSection)}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
                   >
-                    <svg 
+                    <svg
                       className={`w-5 h-5 transition-transform ${showNewOrderSection ? 'rotate-90' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-            </div>
-                
+                </div>
+
                 {showNewOrderSection && (
-                <form onSubmit={handleNewOrderSubmit} className="space-y-4 sm:space-y-6">
-                  {newOrderError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                      {newOrderError}
-                    </div>
-                  )}
-                  
-                  {newOrderSuccess && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
-                      Захиалга амжилттай үүслээ!
-                    </div>
-                  )}
+                  <form onSubmit={handleNewOrderSubmit} className="space-y-4 sm:space-y-6">
+                    {newOrderError && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                        {newOrderError}
+                      </div>
+                    )}
 
-                  {newOrders.map((order, index) => {
-                    const isExpanded = expandedProducts.has(order.id);
-                    return (
-                    <div key={order.id} className="border border-gray-200 rounded-xl bg-gray-50">
-                      <div 
-                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => toggleProductExpand(order.id)}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <svg 
-                            className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <h3 className="font-medium text-gray-900 text-sm truncate">
-                            {index === 0 ? "Бараа #1" : `Бараа #${index + 1}`}
-                            {order.productName && ` - ${order.productName}`}
-                          </h3>
-                        </div>
-                        {newOrders.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeNewProductField(order.id);
-                            }}
-                            className="px-2 py-1 text-xs text-white bg-red-500 rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 flex-shrink-0 min-h-[32px]"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Устгах
-                </button>
-                        )}
-            </div>
+                    {newOrderSuccess && (
+                      <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                        Захиалга амжилттай үүслээ!
+                      </div>
+                    )}
 
-                      {isExpanded && (
-                      <div className="p-4 space-y-4 border-t border-gray-200">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Зураг (Дээд тал нь 3 зураг)
-                        </label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => handleNewOrderImageChange(e, index)}
-                          disabled={newOrderImagePreviews[index]?.length >= 3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        />
-                        {newOrderImagePreviews[index] && newOrderImagePreviews[index].length > 0 && (
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {newOrderImagePreviews[index].map((preview, imgIndex) => (
-                              <div key={imgIndex} className="relative">
-                                <img
-                                  src={preview}
-                                  alt={`Preview ${index + 1}-${imgIndex + 1}`}
-                                  className="w-full h-20 object-cover rounded-lg border border-gray-300"
+                    {newOrders.map((order, index) => {
+                      const isExpanded = expandedProducts.has(order.id);
+                      return (
+                        <div key={order.id} className="border border-gray-200 rounded-xl bg-gray-50">
+                          <div
+                            className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => toggleProductExpand(order.id)}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <svg
+                                className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              <h3 className="font-medium text-gray-900 text-sm truncate">
+                                {index === 0 ? "Бараа #1" : `Бараа #${index + 1}`}
+                                {order.productName && ` - ${order.productName}`}
+                              </h3>
+                            </div>
+                            {newOrders.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeNewProductField(order.id);
+                                }}
+                                className="px-2 py-1 text-xs text-white bg-red-500 rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 flex-shrink-0 min-h-[32px]"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Устгах
+                              </button>
+                            )}
+                          </div>
+
+                          {isExpanded && (
+                            <div className="p-4 space-y-4 border-t border-gray-200">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Зураг (Дээд тал нь 3 зураг)
+                                </label>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) => handleNewOrderImageChange(e, index)}
+                                  disabled={newOrderImagePreviews[index]?.length >= 3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => removeNewOrderImage(index, imgIndex)}
-                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
-                                  title="Устгах"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-          </div>
-                            ))}
-        </div>
-                        )}
-                        {newOrderImagePreviews[index]?.length >= 3 && (
-                          <p className="mt-2 text-xs text-gray-500">Дээд тал нь 3 зураг оруулах боломжтой</p>
-                        )}
-                      </div>
+                                {newOrderImagePreviews[index] && newOrderImagePreviews[index].length > 0 && (
+                                  <div className="mt-3 grid grid-cols-3 gap-2">
+                                    {newOrderImagePreviews[index].map((preview, imgIndex) => (
+                                      <div key={imgIndex} className="relative">
+                                        <img
+                                          src={preview}
+                                          alt={`Preview ${index + 1}-${imgIndex + 1}`}
+                                          className="w-full h-20 object-cover rounded-lg border border-gray-300"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeNewOrderImage(index, imgIndex)}
+                                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                                          title="Устгах"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {newOrderImagePreviews[index]?.length >= 3 && (
+                                  <p className="mt-2 text-xs text-gray-500">Дээд тал нь 3 зураг оруулах боломжтой</p>
+                                )}
+                              </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Барааны нэр
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={order.productName}
-                          onChange={(e) => {
-                            const updatedOrders = [...newOrders];
-                            updatedOrders[index].productName = e.target.value;
-                            setNewOrders(updatedOrders);
-                          }}
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Барааны нэр оруулах"
-                        />
-                      </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Барааны нэр
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={order.productName}
+                                  onChange={(e) => {
+                                    const updatedOrders = [...newOrders];
+                                    updatedOrders[index].productName = e.target.value;
+                                    setNewOrders(updatedOrders);
+                                  }}
+                                  className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                  placeholder="Барааны нэр оруулах"
+                                />
+                              </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Тайлбар
-                        </label>
-                        <textarea
-                          required
-                          rows={3}
-                          value={order.description}
-                          onChange={(e) => {
-                            const updatedOrders = [...newOrders];
-                            updatedOrders[index].description = e.target.value;
-                            setNewOrders(updatedOrders);
-                          }}
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
-                        />
-                      </div>
-                      </div>
-                      )}
-                    </div>
-                    );
-                  })}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Тайлбар
+                                </label>
+                                <textarea
+                                  required
+                                  rows={3}
+                                  value={order.description}
+                                  onChange={(e) => {
+                                    const updatedOrders = [...newOrders];
+                                    updatedOrders[index].description = e.target.value;
+                                    setNewOrders(updatedOrders);
+                                  }}
+                                  className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                  placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
 
-              <button
-                    type="button"
-                    onClick={addNewProductField}
-                    className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[44px]"
-              >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Бараа нэмэх
-              </button>
+                    <button
+                      type="button"
+                      onClick={addNewProductField}
+                      className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[44px]"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Бараа нэмэх
+                    </button>
 
-                  <button
-                    type="submit"
-                    disabled={newOrderLoading}
-                    className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
-                  >
-                    {newOrderLoading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={newOrderLoading}
+                      className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
+                    >
+                      {newOrderLoading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
+                    </button>
+                  </form>
                 )}
-            </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+                <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Өмнөх захиалгууд</h2>
                   <div className="flex items-center gap-2">
                     {/* Notification dropdown */}
@@ -902,7 +868,7 @@ export default function UserDashboardPage() {
                             </div>
                           )}
                         </button>
-                        
+
                         {showNotificationDropdown && (
                           <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
                             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
@@ -934,11 +900,10 @@ export default function UserDashboardPage() {
                                     }}
                                   >
                                     <div className="flex items-start gap-3">
-                                      <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
-                                        notification.type === 'order_update' ? 'bg-yellow-500' :
+                                      <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${notification.type === 'order_update' ? 'bg-yellow-500' :
                                         notification.type === 'message' ? 'bg-blue-500' :
-                                        'bg-green-500'
-                                      }`}></div>
+                                          'bg-green-500'
+                                        }`}></div>
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
                                         <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
@@ -969,10 +934,10 @@ export default function UserDashboardPage() {
                       onClick={() => setShowOrderSection(!showOrderSection)}
                       className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
                     >
-                      <svg 
+                      <svg
                         className={`w-5 h-5 transition-transform ${showOrderSection ? 'rotate-90' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -980,53 +945,49 @@ export default function UserDashboardPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 {showOrderSection && (
-              <div className="space-y-4">
+                  <div className="space-y-4">
                     {/* Category tabs */}
                     <div className="flex gap-2 border-b border-gray-200">
                       <button
                         onClick={() => setOrderFilter("all")}
-                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
-                          orderFilter === "all"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${orderFilter === "all"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                       >
                         Бүгд
                       </button>
                       <button
                         onClick={() => setOrderFilter("active")}
-                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
-                          orderFilter === "active"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${orderFilter === "active"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                       >
                         Идэвхтэй
                       </button>
                       <button
                         onClick={() => setOrderFilter("completed")}
-                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
-                          orderFilter === "completed"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${orderFilter === "completed"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                       >
                         Амжилттай захиалга
                       </button>
                       <button
                         onClick={() => setOrderFilter("cancelled")}
-                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${
-                          orderFilter === "cancelled"
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                        }`}
+                        className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-[40px] ${orderFilter === "cancelled"
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          }`}
                       >
                         Цуцлагдсан захиалга
                       </button>
                     </div>
-                    
+
                     {/* Clear All button for cancelled orders */}
                     {orderFilter === "cancelled" && filteredOrders.length > 0 && (
                       <div className="flex justify-end mb-2">
@@ -1042,325 +1003,312 @@ export default function UserDashboardPage() {
                     {/* Filtered orders */}
                     <div className="max-h-96 overflow-y-auto">
                       {filteredOrders.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            {filteredOrders.map((order) => {
-                              const mainImage = (order.imageUrls && order.imageUrls.length > 0) 
-                                ? order.imageUrls[0] 
-                                : order.imageUrl || null;
-                              
-                              const getStatusColor = (status: string) => {
-                                switch (status) {
-                                  case "niitlegdsen": return "bg-gray-100 text-gray-800";
-                                  case "agent_sudlaj_bn": return "bg-yellow-100 text-yellow-800";
-                                  case "tolbor_huleej_bn": return "bg-blue-100 text-blue-800";
-                                  case "amjilttai_zahialga": return "bg-green-100 text-green-800";
-                                  case "tsutsalsan_zahialga": return "bg-red-100 text-red-800";
-                                  default: return "bg-gray-100 text-gray-800";
-                                }
-                              };
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                          {filteredOrders.map((order) => {
+                            const mainImage = (order.imageUrls && order.imageUrls.length > 0)
+                              ? order.imageUrls[0]
+                              : order.imageUrl || null;
 
-                              const getStatusText = (status: string) => {
-                                switch (status) {
-                                  case "niitlegdsen": return "Нийтэлсэн";
-                                  case "agent_sudlaj_bn": return "Agent шалгаж байна";
-                                  case "tolbor_huleej_bn": return "Төлбөр хүлээж байна";
-                                  case "amjilttai_zahialga": return "Амжилттай захиалга";
-                                  case "tsutsalsan_zahialga": return "Цуцлагдсан захиалга";
-                                  default: return status;
-                                }
-                              };
+                            const getStatusColor = (status: string) => {
+                              switch (status) {
+                                case "niitlegdsen": return "bg-gray-100 text-gray-800";
+                                case "agent_sudlaj_bn": return "bg-yellow-100 text-yellow-800";
+                                case "tolbor_huleej_bn": return "bg-blue-100 text-blue-800";
+                                case "amjilttai_zahialga": return "bg-green-100 text-green-800";
+                                case "tsutsalsan_zahialga": return "bg-red-100 text-red-800";
+                                default: return "bg-gray-100 text-gray-800";
+                              }
+                            };
 
-                              return (
-                                <div 
-                                  key={order.id} 
-                                  onClick={() => {
-                                    setSelectedOrder(order);
-                                    setShowOrderModal(true);
-                                  }}
-                                  className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden cursor-pointer"
-                                >
-                                  {/* Thumbnail Image */}
-                                  {mainImage && (
-                                    <div className="w-full h-40 bg-gray-200 overflow-hidden">
-                                      <img
-                                        src={mainImage}
-                                        alt={order.productName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  {/* Card Content */}
-                                  <div className="p-4 space-y-3">
-                                    {/* Order ID */}
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-xs font-mono text-gray-500">ID: {order.id.slice(0, 8)}...</p>
-                                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]`}>
-                                        {getStatusText(order.status)}
-                                      </span>
-                                    </div>
+                            const getStatusText = (status: string) => {
+                              switch (status) {
+                                case "niitlegdsen": return "Нийтэлсэн";
+                                case "agent_sudlaj_bn": return "Agent шалгаж байна";
+                                case "tolbor_huleej_bn": return "Төлбөр хүлээж байна";
+                                case "amjilttai_zahialga": return "Амжилттай захиалга";
+                                case "tsutsalsan_zahialga": return "Цуцлагдсан захиалга";
+                                default: return status;
+                              }
+                            };
 
-                                    {/* Payment Verified Notice - Show if user has confirmed payment */}
-                                    {order.userPaymentVerified && order.status === "tolbor_huleej_bn" && (
-                                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2">
-                                        <p className="text-xs text-yellow-800 font-medium text-center">
-                                          Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
-                                        </p>
-                                      </div>
-                                    )}
+                            return (
+                              <div
+                                key={order.id}
+                                onClick={() => {
+                                  setSelectedOrder(order);
+                                  setShowOrderModal(true);
+                                }}
+                                className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden cursor-pointer"
+                              >
+                                {/* Thumbnail Image */}
+                                {mainImage && (
+                                  <div className="w-full h-40 bg-gray-200 overflow-hidden">
+                                    <img
+                                      src={mainImage}
+                                      alt={order.productName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
 
-                                    {/* Product Name - Collapsed if agent report exists */}
-                                    {agentReports[order.id] && expandedReportOrderId !== order.id ? (
-                                      <div className="space-y-2">
-                                        <h4 className="font-semibold text-gray-900 text-base line-clamp-1 opacity-50">
-                                          {order.productName}
-                                        </h4>
-                                        <p className="text-sm text-gray-600 line-clamp-1 opacity-50">
-                                          {order.description}
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        <h4 className="font-semibold text-gray-900 text-base line-clamp-1">
-                                          {order.productName}
-                                        </h4>
-                                        {/* Parse description to show multiple products as small cards */}
-                                        {order.description && order.description.includes(":") && order.description.split("\n\n").length > 1 ? (
-                                          <div className="space-y-2">
-                                            {order.description.split("\n\n").map((productDesc, idx) => {
-                                              const [productName, ...descParts] = productDesc.split(": ");
-                                              const productDescription = descParts.join(": ");
-                                              return (
-                                                <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-2">
-                                                  <p className="text-xs font-medium text-gray-900 line-clamp-1">
-                                                    {productName}
-                                                  </p>
-                                                  {productDescription && (
-                                                    <p className="text-xs text-gray-600 line-clamp-1 mt-1">
-                                                      {productDescription}
-                                                    </p>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : (
-                                          <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
-                                            {order.description}
-                                          </p>
-                                        )}
-                                      </>
-                                    )}
+                                {/* Card Content */}
+                                <div className="p-4 space-y-3">
+                                  {/* Order ID */}
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs font-mono text-gray-500">ID: {order.id.slice(0, 8)}...</p>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)} overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]`}>
+                                      {getStatusText(order.status)}
+                                    </span>
+                                  </div>
 
-                                    {/* Agent Report Price - Show on card if report exists */}
-                                    {agentReports[order.id] && expandedReportOrderId !== order.id && (
-                                      <div className="pt-2 border-t border-gray-200">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs font-medium text-gray-600">
-                                            {order.status === "amjilttai_zahialga" ? "Төлсөн дүн:" : "Төлөх дүн:"}
-                                          </span>
-                                          <span className="text-base font-semibold text-green-600">
-                                            {(() => {
-                                              const exchangeRate = adminSettings?.exchangeRate || 1;
-                                              const calculatedAmount = calculateUserPaymentAmount(agentReports[order.id], exchangeRate);
-                                              return calculatedAmount.toLocaleString();
-                                            })()} ₮
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Track Code - Show for successful orders */}
-                                    {order.status === "amjilttai_zahialga" && order.trackCode && (
-                                      <div className="pt-2 border-t border-gray-200">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <span className="text-xs font-medium text-gray-600">Track Code:</span>
-                                          <div className="flex items-center gap-2">
-                                            <span 
-                                              className="text-sm font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigator.clipboard.writeText(order.trackCode || "");
-                                                alert("Track code хуулагдлаа!");
-                                              }}
-                                              title="Хуулах"
-                                            >
-                                              {order.trackCode}
-                                            </span>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigator.clipboard.writeText(order.trackCode || "");
-                                                alert("Track code хуулагдлаа!");
-                                              }}
-                                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition"
-                                              title="Хуулах"
-                                            >
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                              </svg>
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Clear button for cancelled orders */}
-                                    {order.status === "tsutsalsan_zahialga" && (
-                                      <div className="pt-2 border-t border-gray-200">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleClearCancelledOrder(order.id);
-                                          }}
-                                          className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors text-sm font-medium min-h-[44px]"
-                                        >
-                                          Устгах (Clear)
-                                        </button>
-                                      </div>
-                                    )}
-
-                                    {/* Date */}
-                                    <div className="pt-2 border-t border-gray-200">
-                                      <p className="text-xs text-gray-400">
-                                        {new Date(order.createdAt).toLocaleDateString("mn-MN", {
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric"
-                                        })}
+                                  {/* Payment Verified Notice - Show if user has confirmed payment */}
+                                  {order.userPaymentVerified && order.status === "tolbor_huleej_bn" && (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-2">
+                                      <p className="text-xs text-yellow-800 font-medium text-center">
+                                        Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
                                       </p>
                                     </div>
+                                  )}
 
-                                    {/* Chat Button - Show for all orders (including niitlegdsen) */}
-                                    {(order.status === "niitlegdsen" || order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
-                                      <div className="pt-2 border-t border-gray-200">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setChatOrder(order);
-                                            setShowChatModal(true);
-                                          }}
-                                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors text-sm font-medium min-h-[44px]"
-                                        >
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                          </svg>
-                                          Чат нээх
-                                        </button>
+                                  {/* Product Name - Collapsed if agent report exists */}
+                                  {agentReports[order.id] && expandedReportOrderId !== order.id ? (
+                                    <div className="space-y-2">
+                                      <h4 className="font-semibold text-gray-900 text-base line-clamp-1 opacity-50">
+                                        {order.productName}
+                                      </h4>
+                                      <p className="text-sm text-gray-600 line-clamp-1 opacity-50">
+                                        {order.description}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <h4 className="font-semibold text-gray-900 text-base line-clamp-1">
+                                        {order.productName}
+                                      </h4>
+                                      {/* Parse description to show multiple products as small cards */}
+                                      {order.description && order.description.includes(":") && order.description.split("\n\n").length > 1 ? (
+                                        <div className="space-y-2">
+                                          {order.description.split("\n\n").map((productDesc, idx) => {
+                                            const [productName, ...descParts] = productDesc.split(": ");
+                                            const productDescription = descParts.join(": ");
+                                            return (
+                                              <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-2">
+                                                <p className="text-xs font-medium text-gray-900 line-clamp-1">
+                                                  {productName}
+                                                </p>
+                                                {productDescription && (
+                                                  <p className="text-xs text-gray-600 line-clamp-1 mt-1">
+                                                    {productDescription}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">
+                                          {order.description}
+                                        </p>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {/* Agent Report Price - Show on card if report exists */}
+                                  {agentReports[order.id] && expandedReportOrderId !== order.id && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-gray-600">
+                                          {order.status === "amjilttai_zahialga" ? "Төлсөн дүн:" : "Төлөх дүн:"}
+                                        </span>
+                                        <span className="text-base font-semibold text-green-600">
+                                          {(() => {
+                                            const exchangeRate = adminSettings?.exchangeRate || 1;
+                                            const calculatedAmount = calculateUserPaymentAmount(agentReports[order.id], exchangeRate);
+                                            return calculatedAmount.toLocaleString();
+                                          })()} ₮
+                                        </span>
                                       </div>
-                                    )}
+                                    </div>
+                                  )}
 
-                                    {/* Agent Report Dropdown - Show for orders with agent report */}
-                                    {order.agentId && (order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
-                                      <div className="pt-2 border-t border-gray-200">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (expandedReportOrderId === order.id) {
-                                              setExpandedReportOrderId(null);
-                                            } else {
-                                              setExpandedReportOrderId(order.id);
-                                              if (agentReports[order.id] === undefined) {
-                                                loadAgentReport(order.id);
-                                              }
-                                            }
-                                          }}
-                                          className="w-full flex items-center justify-between text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition"
-                                        >
-                                          <span className="font-medium">Agent-ийн тайлан</span>
-                                          <svg 
-                                            className={`w-4 h-4 transition-transform ${expandedReportOrderId === order.id ? 'rotate-180' : ''}`}
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            viewBox="0 0 24 24"
+                                  {/* Track Code - Show for successful orders */}
+                                  {order.status === "amjilttai_zahialga" && order.trackCode && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-medium text-gray-600">Track Code:</span>
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className="text-sm font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigator.clipboard.writeText(order.trackCode || "");
+                                              alert("Track code хуулагдлаа!");
+                                            }}
+                                            title="Хуулах"
                                           >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                          </svg>
-                                        </button>
-                                        
-                                        {expandedReportOrderId === order.id && agentReports[order.id] && (
-                                          <div className="mt-2 p-3 bg-gray-50 rounded-lg space-y-2 text-xs">
-                <div>
-                                              <span className="font-medium text-gray-700">Хэрэглэгчийн төлөх дүн:</span>
-                                              <span className="ml-2 text-gray-900">
-                                                {(() => {
-                                                  const exchangeRate = adminSettings?.exchangeRate || 1;
-                                                  const calculatedAmount = calculateUserPaymentAmount(agentReports[order.id], exchangeRate);
-                                                  return calculatedAmount.toLocaleString();
-                                                })()} ₮
-                                              </span>
-                </div>
-                                            {agentReports[order.id]?.paymentLink && (
-                                              <div>
-                                                <span className="font-medium text-gray-700">Төлбөрийн холбоос:</span>
-                                                <a 
-                                                  href={agentReports[order.id]?.paymentLink} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer"
-                                                  className="ml-2 text-blue-600 hover:underline break-all"
-                                                >
-                                                  {agentReports[order.id]?.paymentLink}
-                                                </a>
-                                              </div>
-                                            )}
-                                            {agentReports[order.id]?.quantity && (
-                                              <div>
-                                                <span className="font-medium text-gray-700">Тоо ширхэг:</span>
-                                                <span className="ml-2 text-gray-900">{agentReports[order.id]?.quantity}</span>
-                                              </div>
-                                            )}
-                                            {agentReports[order.id]?.additionalDescription && (
-                                              <div>
-                                                <span className="font-medium text-gray-700">Нэмэлт тайлбар:</span>
-                                                <p className="mt-1 text-gray-600 whitespace-pre-wrap">{agentReports[order.id]?.additionalDescription}</p>
-                                              </div>
-                                            )}
-                                            {agentReports[order.id]?.additionalImages && agentReports[order.id]!.additionalImages.length > 0 && (
-                                              <div>
-                                                <span className="font-medium text-gray-700">Нэмэлт зураг:</span>
-                                                <div className="mt-2 grid grid-cols-3 gap-2">
-                                                  {agentReports[order.id]!.additionalImages.map((imgUrl, idx) => (
-                                                    <img
-                                                      key={idx}
-                                                      src={imgUrl}
-                                                      alt={`Additional ${idx + 1}`}
-                                                      className="w-full h-20 object-cover rounded border border-gray-200"
-                                                    />
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        )}
-                                        
-                                        {expandedReportOrderId === order.id && agentReports[order.id] === null && (
-                                          <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">
-                                            Тайлан байхгүй байна
-                                          </div>
-                                        )}
-                                        
-                                        {expandedReportOrderId === order.id && agentReports[order.id] === undefined && (
-                                          <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">
-                                            Ачааллаж байна...
-                                          </div>
-                                        )}
+                                            {order.trackCode}
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigator.clipboard.writeText(order.trackCode || "");
+                                              alert("Track code хуулагдлаа!");
+                                            }}
+                                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition"
+                                            title="Хуулах"
+                                          >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                            </svg>
+                                          </button>
+                                        </div>
                                       </div>
-                                    )}
+                                    </div>
+                                  )}
+
+                                  {/* Clear button for cancelled orders */}
+                                  {order.status === "tsutsalsan_zahialga" && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleClearCancelledOrder(order.id);
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors text-sm font-medium min-h-[44px]"
+                                      >
+                                        Устгах (Clear)
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Date */}
+                                  <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-xs text-gray-400">
+                                      {new Date(order.createdAt).toLocaleDateString("mn-MN", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric"
+                                      })}
+                                    </p>
                                   </div>
+
+                                  {/* Chat Button - Show for all orders (including niitlegdsen) */}
+                                  {(order.status === "niitlegdsen" || order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setChatOrder(order);
+                                          setShowChatModal(true);
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors text-sm font-medium min-h-[44px]"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                        </svg>
+                                        Чат нээх
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Agent Report Dropdown - Show for orders with agent report */}
+                                  {order.agentId && (order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga") && (
+                                    <div className="pt-2 border-t border-gray-200">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (expandedReportOrderId === order.id) {
+                                            setExpandedReportOrderId(null);
+                                          } else {
+                                            setExpandedReportOrderId(order.id);
+                                            if (agentReports[order.id] === undefined) {
+                                              loadAgentReport(order.id);
+                                            }
+                                          }
+                                        }}
+                                        className="w-full flex items-center justify-between text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition"
+                                      >
+                                        <span className="font-medium">Agent-ийн тайлан</span>
+                                        <svg
+                                          className={`w-4 h-4 transition-transform ${expandedReportOrderId === order.id ? 'rotate-180' : ''}`}
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      </button>
+
+                                      {expandedReportOrderId === order.id && agentReports[order.id] && (
+                                        <div className="mt-2 p-3 bg-gray-50 rounded-lg space-y-2 text-xs">
+                                          <div>
+                                            <span className="font-medium text-gray-700">Хэрэглэгчийн төлөх дүн:</span>
+                                            <span className="ml-2 text-gray-900">
+                                              {(() => {
+                                                const exchangeRate = adminSettings?.exchangeRate || 1;
+                                                const calculatedAmount = calculateUserPaymentAmount(agentReports[order.id], exchangeRate);
+                                                return calculatedAmount.toLocaleString();
+                                              })()} ₮
+                                            </span>
+                                          </div>
+                                          {agentReports[order.id]?.quantity && (
+                                            <div>
+                                              <span className="font-medium text-gray-700">Тоо ширхэг:</span>
+                                              <span className="ml-2 text-gray-900">{agentReports[order.id]?.quantity}</span>
+                                            </div>
+                                          )}
+                                          {agentReports[order.id]?.additionalDescription && (
+                                            <div>
+                                              <span className="font-medium text-gray-700">Нэмэлт тайлбар:</span>
+                                              <p className="mt-1 text-gray-600 whitespace-pre-wrap">{agentReports[order.id]?.additionalDescription}</p>
+                                            </div>
+                                          )}
+                                          {agentReports[order.id]?.additionalImages && agentReports[order.id]!.additionalImages.length > 0 && (
+                                            <div>
+                                              <span className="font-medium text-gray-700">Нэмэлт зураг:</span>
+                                              <div className="mt-2 grid grid-cols-3 gap-2">
+                                                {agentReports[order.id]!.additionalImages.map((imgUrl, idx) => (
+                                                  <img
+                                                    key={idx}
+                                                    src={imgUrl}
+                                                    alt={`Additional ${idx + 1}`}
+                                                    className="w-full h-20 object-cover rounded border border-gray-200"
+                                                  />
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {expandedReportOrderId === order.id && agentReports[order.id] === null && (
+                                        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">
+                                          Тайлан байхгүй байна
+                                        </div>
+                                      )}
+
+                                      {expandedReportOrderId === order.id && agentReports[order.id] === undefined && (
+                                        <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">
+                                          Ачааллаж байна...
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                            <p>
-                              {orderFilter === "all" && "Өмнөх захиалга байхгүй байна."}
-                              {orderFilter === "active" && "Идэвхтэй захиалга байхгүй байна."}
-                              {orderFilter === "completed" && "Амжилттай захиалга байхгүй байна."}
-                              {orderFilter === "cancelled" && "Цуцлагдсан захиалга байхгүй байна."}
-                            </p>
-                          </div>
-                        )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
+                          <p>
+                            {orderFilter === "all" && "Өмнөх захиалга байхгүй байна."}
+                            {orderFilter === "active" && "Идэвхтэй захиалга байхгүй байна."}
+                            {orderFilter === "completed" && "Амжилттай захиалга байхгүй байна."}
+                            {orderFilter === "cancelled" && "Цуцлагдсан захиалга байхгүй байна."}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1380,429 +1328,377 @@ export default function UserDashboardPage() {
       {showOrderModal && selectedOrder && (() => {
         const currentReport = agentReports[selectedOrder.id];
         const hasAgentReport = currentReport !== null && currentReport !== undefined;
-        
+
         return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
-              <button
-                onClick={() => setShowOrderModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-[40px] min-w-[40px]"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Order ID */}
-                <div>
-                <label className="text-sm font-medium text-gray-500">Захиалгын ID</label>
-                <p className="text-lg font-mono text-gray-900 mt-1">{selectedOrder.id}</p>
-                </div>
-
-              {/* Status */}
-                <div>
-                <label className="text-sm font-medium text-gray-500">Статус</label>
-                <div className="mt-1">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedOrder.status === "niitlegdsen" ? "bg-gray-100 text-gray-800" :
-                    selectedOrder.status === "agent_sudlaj_bn" ? "bg-yellow-100 text-yellow-800" :
-                    selectedOrder.status === "tolbor_huleej_bn" ? "bg-blue-100 text-blue-800" :
-                    selectedOrder.status === "amjilttai_zahialga" ? "bg-green-100 text-green-800" :
-                    "bg-red-100 text-red-800"
-                  }`}>
-                    {selectedOrder.status === "niitlegdsen" ? "Нийтэлсэн" :
-                     selectedOrder.status === "agent_sudlaj_bn" ? "Agent шалгаж байна" :
-                     selectedOrder.status === "tolbor_huleej_bn" ? "Төлбөр хүлээж байна" :
-                     selectedOrder.status === "amjilttai_zahialga" ? "Амжилттай захиалга" :
-                     "Цуцлагдсан захиалга"}
-                  </span>
-                </div>
-              </div>
-
-              {/* User Info Section - Collapsible */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
                 <button
-                  onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
-                  className="w-full flex items-center justify-between text-left"
+                  onClick={() => setShowOrderModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-[40px] min-w-[40px]"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
-                  <svg 
-                    className={`w-5 h-5 transition-transform ${showUserInfoInModal ? 'rotate-180' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                
-                {showUserInfoInModal && (
-                  <div className="mt-4 space-y-4">
-                    {/* Images */}
-                    {(selectedOrder.imageUrls && selectedOrder.imageUrls.length > 0) && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 mb-2 block">Зургууд</label>
-                        <div className="grid grid-cols-3 gap-3">
-                          {selectedOrder.imageUrls.map((imgUrl, index) => (
-                            <img
-                              key={index}
-                              src={imgUrl}
-                              alt={`${selectedOrder.productName} - ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => setZoomedImageIndex(zoomedImageIndex === index ? null : index)}
-                            />
-                          ))}
-                        </div>
-                        {zoomedImageIndex !== null && (
-                          <div
-                            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] p-4"
-                            onClick={() => setZoomedImageIndex(null)}
-                          >
-                            <img
-                              src={selectedOrder.imageUrls[zoomedImageIndex]}
-                              alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
-                              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setZoomedImageIndex(null);
-                              }}
-                            />
-                            <button
-                              onClick={() => setZoomedImageIndex(null)}
-                              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition"
-                            >
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Product Name */}
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Барааны нэр</label>
-                      <p className="text-base font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
-                    </div>
-                    
-                    {/* Description - Parse multiple products */}
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Тайлбар</label>
-                      {selectedOrder.description && selectedOrder.description.includes(":") && selectedOrder.description.split("\n\n").length > 1 ? (
-                        <div className="mt-2 space-y-2">
-                          {selectedOrder.description.split("\n\n").map((productDesc, idx) => {
-                            const [productName, ...descParts] = productDesc.split(": ");
-                            const productDescription = descParts.join(": ");
-                            return (
-                              <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {productName}
-                                </p>
-                                {productDescription && (
-                                  <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
-                                    {productDescription}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-gray-700 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Show Agent Report if exists */}
-              {hasAgentReport && currentReport ? (
-                <>
-                  {/* Agent Report Section */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Agent-ийн тайлан</h3>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Хэрэглэгчийн төлөх дүн:</label>
-                      <p className="text-lg font-semibold text-green-600 mt-1">
-                        {(() => {
-                          const exchangeRate = adminSettings?.exchangeRate || paymentInfo[selectedOrder.id]?.exchangeRate || 1;
-                          const calculatedAmount = calculateUserPaymentAmount(currentReport, exchangeRate);
-                          return calculatedAmount.toLocaleString();
-                        })()} ₮
-                      </p>
-                    </div>
-                    
-                    {currentReport.paymentLink && (
-                    <div>
-                        <label className="text-sm font-medium text-gray-600">Төлбөрийн холбоос:</label>
-                        <a 
-                          href={currentReport.paymentLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:text-blue-600 hover:underline break-all block mt-1"
-                        >
-                          {currentReport.paymentLink}
-                        </a>
-                    </div>
-                    )}
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                {/* Order ID */}
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Захиалгын ID</label>
+                  <p className="text-lg font-mono text-gray-900 mt-1">{selectedOrder.id}</p>
+                </div>
 
-                    {currentReport.quantity && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Тоо ширхэг:</label>
-                        <p className="text-gray-900 mt-1">{currentReport.quantity}</p>
-                      </div>
-                    )}
-
-                    {currentReport.additionalDescription && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
-                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">{currentReport.additionalDescription}</p>
-                      </div>
-                    )}
-
-                    {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
-                        <div className="grid grid-cols-3 gap-3">
-                          {currentReport.additionalImages.map((imgUrl, idx) => (
-                            <img
-                              key={idx}
-                              src={imgUrl}
-                              alt={`Additional ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                {/* Status */}
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Статус</label>
+                  <div className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedOrder.status === "niitlegdsen" ? "bg-gray-100 text-gray-800" :
+                      selectedOrder.status === "agent_sudlaj_bn" ? "bg-yellow-100 text-yellow-800" :
+                        selectedOrder.status === "tolbor_huleej_bn" ? "bg-blue-100 text-blue-800" :
+                          selectedOrder.status === "amjilttai_zahialga" ? "bg-green-100 text-green-800" :
+                            "bg-red-100 text-red-800"
+                      }`}>
+                      {selectedOrder.status === "niitlegdsen" ? "Нийтэлсэн" :
+                        selectedOrder.status === "agent_sudlaj_bn" ? "Agent шалгаж байна" :
+                          selectedOrder.status === "tolbor_huleej_bn" ? "Төлбөр хүлээж байна" :
+                            selectedOrder.status === "amjilttai_zahialga" ? "Амжилттай захиалга" :
+                              "Цуцлагдсан захиалга"}
+                    </span>
                   </div>
+                </div>
 
-                  {/* Action Buttons for orders with agent report */}
-                  {selectedOrder.status === "tolbor_huleej_bn" && (
-                    <div className="space-y-3 pt-4 border-t border-gray-200">
-                      {/* If payment is verified, show only admin account info */}
-                      {selectedOrder.userPaymentVerified ? (
-                        <>
-                          {/* Show waiting message - always show for tolbor_huleej_bn status */}
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+                {/* User Info Section - Collapsible */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <button
+                    onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900">Хэрэглэгчийн мэдээлэл</h3>
+                    <svg
+                      className={`w-5 h-5 transition-transform ${showUserInfoInModal ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showUserInfoInModal && (
+                    <div className="mt-4 space-y-4">
+                      {/* Images */}
+                      {(selectedOrder.imageUrls && selectedOrder.imageUrls.length > 0) && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 mb-2 block">Зургууд</label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {selectedOrder.imageUrls.map((imgUrl, index) => (
+                              <img
+                                key={index}
+                                src={imgUrl}
+                                alt={`${selectedOrder.productName} - ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setZoomedImageIndex(zoomedImageIndex === index ? null : index)}
+                              />
+                            ))}
+                          </div>
+                          {zoomedImageIndex !== null && (
+                            <div
+                              className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] p-4"
+                              onClick={() => setZoomedImageIndex(null)}
+                            >
+                              <img
+                                src={selectedOrder.imageUrls[zoomedImageIndex]}
+                                alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
+                                className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setZoomedImageIndex(null);
+                                }}
+                              />
+                              <button
+                                onClick={() => setZoomedImageIndex(null)}
+                                className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Product Name */}
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Барааны нэр</label>
+                        <p className="text-base font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
+                      </div>
+
+                      {/* Description - Parse multiple products */}
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Тайлбар</label>
+                        {selectedOrder.description && selectedOrder.description.includes(":") && selectedOrder.description.split("\n\n").length > 1 ? (
+                          <div className="mt-2 space-y-2">
+                            {selectedOrder.description.split("\n\n").map((productDesc, idx) => {
+                              const [productName, ...descParts] = productDesc.split(": ");
+                              const productDescription = descParts.join(": ");
+                              return (
+                                <div key={idx} className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {productName}
+                                  </p>
+                                  {productDescription && (
+                                    <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                                      {productDescription}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-gray-700 mt-1 whitespace-pre-wrap">{selectedOrder.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Show Agent Report if exists */}
+                {hasAgentReport && currentReport ? (
+                  <>
+                    {/* Agent Report Section */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Agent-ийн тайлан</h3>
+
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Хэрэглэгчийн төлөх дүн:</label>
+                        <p className="text-lg font-semibold text-green-600 mt-1">
+                          {(() => {
+                            const exchangeRate = adminSettings?.exchangeRate || paymentInfo[selectedOrder.id]?.exchangeRate || 1;
+                            const calculatedAmount = calculateUserPaymentAmount(currentReport, exchangeRate);
+                            return calculatedAmount.toLocaleString();
+                          })()} ₮
+                        </p>
+                      </div>
+
+
+                      {currentReport.quantity && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Тоо ширхэг:</label>
+                          <p className="text-gray-900 mt-1">{currentReport.quantity}</p>
+                        </div>
+                      )}
+
+                      {currentReport.additionalDescription && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
+                          <p className="text-gray-600 mt-1 whitespace-pre-wrap">{currentReport.additionalDescription}</p>
+                        </div>
+                      )}
+
+                      {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {currentReport.additionalImages.map((imgUrl, idx) => (
+                              <img
+                                key={idx}
+                                src={imgUrl}
+                                alt={`Additional ${idx + 1}`}
+                                className="w-full h-32 object-cover rounded-xl border border-gray-200"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons for orders with agent report */}
+                    {selectedOrder.status === "tolbor_huleej_bn" && (
+                      <div className="space-y-3 pt-4 border-t border-gray-200">
+                        {/* Always show admin account info for tolbor_huleej_bn status */}
+                        {(() => {
+                          // Load payment info if not loaded yet
+                          if (!paymentInfo[selectedOrder.id] && adminSettings) {
+                            // Use adminSettings if available
+                            return (
+                              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                                <div>
+                                  <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
+                                  <p className="text-gray-900 font-mono">{adminSettings.accountNumber}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
+                                  <p className="text-gray-900">{adminSettings.accountName}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-600">Банк:</label>
+                                  <p className="text-gray-900">{adminSettings.bank}</p>
+                                </div>
+                              </div>
+                            );
+                          } else if (paymentInfo[selectedOrder.id]) {
+                            // Use paymentInfo if available
+                            return (
+                              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700">Дансны дугаар:</label>
+                                  <p className="text-gray-900 font-mono">{paymentInfo[selectedOrder.id]?.accountNumber}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700">Дансны нэр:</label>
+                                  <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.accountName}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700">Банк:</label>
+                                  <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.bank}</p>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            // Load payment info if not available
+                            if (!showPaymentInfo[selectedOrder.id]) {
+                              loadPaymentInfo(selectedOrder.id);
+                            }
+                            return (
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <p className="text-sm text-gray-500 text-center">Ачааллаж байна...</p>
+                              </div>
+                            );
+                          }
+                        })()}
+
+                        {/* If payment is verified, show waiting message */}
+                        {selectedOrder.userPaymentVerified && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                             <p className="text-sm text-yellow-800 font-medium">
                               Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
                             </p>
                           </div>
-                          
-                          {/* Admin Account Info Display - Always show if payment verified */}
-                          {(() => {
-                            // Load payment info if not loaded yet
-                            if (!paymentInfo[selectedOrder.id] && adminSettings) {
-                              // Use adminSettings if available
-                              return (
-                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
-                                    <p className="text-gray-900 font-mono">{adminSettings.accountNumber}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
-                                    <p className="text-gray-900">{adminSettings.accountName}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-600">Банк:</label>
-                                    <p className="text-gray-900">{adminSettings.bank}</p>
-                                  </div>
-                                </div>
-                              );
-                            } else if (paymentInfo[selectedOrder.id]) {
-                              // Use paymentInfo if available
-                              return (
-                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-700">Дансны дугаар:</label>
-                                    <p className="text-gray-900 font-mono">{paymentInfo[selectedOrder.id]?.accountNumber}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-700">Дансны нэр:</label>
-                                    <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.accountName}</p>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm font-medium text-gray-700">Банк:</label>
-                                    <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.bank}</p>
-                                  </div>
-                                </div>
-                              );
-                            } else {
-                              // Load payment info if not available
-                              if (!showPaymentInfo[selectedOrder.id]) {
-                                loadPaymentInfo(selectedOrder.id);
-                              }
-                              return (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                  <p className="text-sm text-gray-500 text-center">Ачааллаж байна...</p>
-                                </div>
-                              );
-                            }
-                          })()}
+                        )}
+
+                        {/* Payment and Cancel Buttons - Only show if payment not verified */}
+                        {!selectedOrder.userPaymentVerified && (
+                          <>
+                            <button
+                              onClick={() => handlePaymentPaid(selectedOrder.id)}
+                              className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
+                            >
+                              Төлбөр төлсөн
+                            </button>
+
+                            <button
+                              onClick={() => handleCancelOrder(selectedOrder.id)}
+                              className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
+                            >
+                              Цуцлах
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </>
-                ) : (
-                        <>
-                          {/* Payment Info Button - Only show if payment not verified */}
-                          <button
-                            onClick={() => {
-                              if (!showPaymentInfo[selectedOrder.id]) {
-                                loadPaymentInfo(selectedOrder.id);
-                              }
-                              setShowPaymentInfo(prev => ({ ...prev, [selectedOrder.id]: !prev[selectedOrder.id] }));
-                            }}
-                            className="w-full px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[44px]"
-                          >
-                            Төлбөр төлөх
-                          </button>
+                ) : null}
 
-                          {/* Payment Info Display */}
-                          {showPaymentInfo[selectedOrder.id] && paymentInfo[selectedOrder.id] && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-                              <div>
-                                <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
-                                <p className="text-gray-900 font-mono">{paymentInfo[selectedOrder.id]?.accountNumber}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
-                                <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.accountName}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-600">Банк:</label>
-                                <p className="text-gray-900">{paymentInfo[selectedOrder.id]?.bank}</p>
-                              </div>
-                              <button
-                                onClick={() => handlePaymentPaid(selectedOrder.id)}
-                                className="w-full mt-3 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
-                              >
-                                Төлбөр төлсөн
-                              </button>
-                  </div>
-                          )}
-
-                          {/* Cancel and Republish Buttons - Only show if payment not verified */}
-                          <button
-                            onClick={() => handleCancelOrder(selectedOrder.id)}
-                            className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
-                          >
-                            Цуцлах
-                          </button>
-
-                          <button
-                            onClick={() => handleRepublishOrder(selectedOrder.id)}
-                            className="w-full px-4 py-2.5 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 active:bg-yellow-700 transition-colors font-medium min-h-[44px]"
-                          >
-                            Дахин нийтлэх
-                          </button>
-                        </>
-                )}
-              </div>
-            )}
-                </>
-              ) : null}
-                
-              {/* Track Code - Show for successful orders */}
-              {selectedOrder.status === "amjilttai_zahialga" && selectedOrder.trackCode && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-600">Track Code</label>
-                      <button
+                {/* Track Code - Show for successful orders */}
+                {selectedOrder.status === "amjilttai_zahialga" && selectedOrder.trackCode && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-600">Track Code</label>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedOrder.trackCode || "");
+                            alert("Track code хуулагдлаа!");
+                          }}
+                          className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[40px]"
+                          title="Хуулах"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-xs font-medium">Хуулах</span>
+                        </button>
+                      </div>
+                      <p
+                        className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
                         onClick={() => {
                           navigator.clipboard.writeText(selectedOrder.trackCode || "");
                           alert("Track code хуулагдлаа!");
                         }}
-                        className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[40px]"
                         title="Хуулах"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-xs font-medium">Хуулах</span>
-                      </button>
-          </div>
-                    <p 
-                      className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={() => {
-                        navigator.clipboard.writeText(selectedOrder.trackCode || "");
-                        alert("Track code хуулагдлаа!");
-                      }}
-                      title="Хуулах"
-                    >
-                      {selectedOrder.trackCode}
+                        {selectedOrder.trackCode}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">Таны захиалгын track code. Энэ кодыг ашиглан захиалгаа хянах боломжтой.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Үүсгэсэн огноо</label>
+                    <p className="text-gray-700 mt-1">
+                      {new Date(selectedOrder.createdAt).toLocaleDateString("mn-MN", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
                     </p>
-                    <p className="text-xs text-gray-500 mt-2">Таны захиалгын track code. Энэ кодыг ашиглан захиалгаа хянах боломжтой.</p>
-        </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Шинэчлэгдсэн огноо</label>
+                    <p className="text-gray-700 mt-1">
+                      {new Date(selectedOrder.updatedAt).toLocaleDateString("mn-MN", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Үүсгэсэн огноо</label>
-                  <p className="text-gray-700 mt-1">
-                    {new Date(selectedOrder.createdAt).toLocaleDateString("mn-MN", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
-                  </p>
-                </div>
-                    <div>
-                  <label className="text-sm font-medium text-gray-500">Шинэчлэгдсэн огноо</label>
-                  <p className="text-gray-700 mt-1">
-                    {new Date(selectedOrder.updatedAt).toLocaleDateString("mn-MN", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
-                  </p>
-                </div>
-                    </div>
-                    
-              {/* Chat Button - Show for all orders (including niitlegdsen) */}
-              {(selectedOrder.status === "niitlegdsen" || selectedOrder.status === "agent_sudlaj_bn" || selectedOrder.status === "tolbor_huleej_bn" || selectedOrder.status === "amjilttai_zahialga") && (
-                <div className="pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => {
-                      setChatOrder(selectedOrder);
-                      setShowChatModal(true);
-                    }}
-                    className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium mb-2 flex items-center justify-center gap-2 min-h-[44px]"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    Чат нээх
-                  </button>
-                    </div>
-              )}
+                {/* Chat Button - Show for all orders (including niitlegdsen) */}
+                {(selectedOrder.status === "niitlegdsen" || selectedOrder.status === "agent_sudlaj_bn" || selectedOrder.status === "tolbor_huleej_bn" || selectedOrder.status === "amjilttai_zahialga") && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        setChatOrder(selectedOrder);
+                        setShowChatModal(true);
+                      }}
+                      className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium mb-2 flex items-center justify-center gap-2 min-h-[44px]"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      Чат нээх
+                    </button>
+                  </div>
+                )}
 
-              {/* Cancel Button - Only for cancellable orders */}
-              {canCancelOrder(selectedOrder) && (
-                <div className="pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => handleCancelOrder(selectedOrder.id)}
-                    className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
-                  >
-                    Захиалга цуцлах / Устгах
-                  </button>
+                {/* Cancel Button - Only for cancellable orders */}
+                {canCancelOrder(selectedOrder) && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handleCancelOrder(selectedOrder.id)}
+                      className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px]"
+                    >
+                      Захиалга цуцлах / Устгах
+                    </button>
                   </div>
                 )}
               </div>
+            </div>
           </div>
-        </div>
         );
       })()}
 

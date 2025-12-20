@@ -6,7 +6,7 @@ import { apiClient, type Profile, type ProfileData, type Cargo } from "@/lib/api
 interface ProfileFormProps {
   profile?: Profile | null;
   onSuccess?: () => void;
-  hideCargo?: boolean; // Hide cargo field for agents
+  hideCargo?: boolean; // Hide cargo field for agents, show accountNumber instead
 }
 
 export default function ProfileForm({ profile, onSuccess, hideCargo = false }: ProfileFormProps) {
@@ -15,6 +15,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
     phone: profile?.phone || "",
     email: profile?.email || "",
     cargo: profile?.cargo || "",
+    accountNumber: profile?.accountNumber || "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,8 +24,10 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
   const [loadingCargos, setLoadingCargos] = useState(true);
 
   useEffect(() => {
-    loadCargos();
-  }, []);
+    if (!hideCargo) {
+      loadCargos();
+    }
+  }, [hideCargo]);
 
   const loadCargos = async () => {
     setLoadingCargos(true);
@@ -67,7 +70,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           {error}
         </div>
       )}
-      
+
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
           Профайл амжилттай шинэчлэгдлээ!
@@ -119,7 +122,7 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
         />
       </div>
 
-      {!hideCargo && (
+      {!hideCargo ? (
         <div>
           <label htmlFor="cargo" className="block text-sm font-medium text-gray-900 mb-1">
             Ачаа сонгох
@@ -145,6 +148,20 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
           {!loadingCargos && cargos.length === 0 && (
             <p className="text-sm text-gray-500 mt-1">Ачааны төрөл байхгүй байна. Admin-аас нэмэх хэрэгтэй.</p>
           )}
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="accountNumber" className="block text-sm font-medium text-gray-900 mb-1">
+            Дансны дугаар
+          </label>
+          <input
+            id="accountNumber"
+            type="text"
+            value={formData.accountNumber}
+            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+            className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            placeholder="Жишээ: 1234567890"
+          />
         </div>
       )}
 

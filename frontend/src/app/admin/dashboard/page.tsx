@@ -36,6 +36,8 @@ export default function AdminDashboardPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [newAgentEmail, setNewAgentEmail] = useState("");
+  const [addingAgent, setAddingAgent] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !clerkUser) {
@@ -49,7 +51,7 @@ export default function AdminDashboardPage() {
 
   const loadData = async (includeRewards = true) => {
     if (!clerkUser) return;
-    
+
     try {
       const email = clerkUser.primaryEmailAddress?.emailAddress || "";
       if (!email) {
@@ -70,7 +72,7 @@ export default function AdminDashboardPage() {
           setLoading(false);
           return;
         }
-        
+
         // Load agents, orders, cargos, admin settings, and reward requests
         try {
           const promises: Promise<any>[] = [
@@ -79,14 +81,14 @@ export default function AdminDashboardPage() {
             apiClient.getCargos(),
             apiClient.getAdminSettings(),
           ];
-          
+
           if (includeRewards) {
             promises.push(apiClient.getRewardRequests());
           }
-          
+
           const results = await Promise.all(promises);
           const [agentsData, ordersData, cargosData, settingsData, rewardRequestsData] = results;
-          
+
           // Debug: Log agents for production debugging
           console.log("[DEBUG] Admin Dashboard: Loaded agents:", agentsData.length);
           console.log("[DEBUG] Agents data:", agentsData.map((a: User) => ({
@@ -96,7 +98,7 @@ export default function AdminDashboardPage() {
             isApproved: a.isApproved,
             hasProfile: !!a.profile,
           })));
-          
+
           setAgents(agentsData);
           setOrders(ordersData);
           setCargos(cargosData);
@@ -110,7 +112,7 @@ export default function AdminDashboardPage() {
             bank: settingsData.bank || "",
             exchangeRate: settingsData.exchangeRate || 1,
           });
-          
+
           // Load agent reports for orders
           const reports: Record<string, AgentReport | null> = {};
           for (const order of ordersData) {
@@ -148,6 +150,26 @@ export default function AdminDashboardPage() {
     setShowProfileForm(false);
   };
 
+  const handleAddAgent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAgentEmail.trim()) {
+      alert("Email оруулах шаардлагатай");
+      return;
+    }
+
+    setAddingAgent(true);
+    try {
+      await apiClient.addAgent(newAgentEmail.trim());
+      setNewAgentEmail("");
+      await loadData();
+      alert("Agent амжилттай нэмэгдлээ!");
+    } catch (err: any) {
+      alert(err.message || "Agent нэмэхэд алдаа гарлаа");
+    } finally {
+      setAddingAgent(false);
+    }
+  };
+
   const handleApproveAgent = async (agentId: string, approved: boolean) => {
     try {
       console.log(`[DEBUG] Admin Dashboard: Approving agent ${agentId} with approved=${approved}`);
@@ -164,9 +186,9 @@ export default function AdminDashboardPage() {
   const handleVerifyPayment = async (orderId: string) => {
     try {
       await apiClient.verifyUserPayment(orderId);
-      await loadData();
-      setOrderFilter("completed"); // Switch to completed tab after verification
+      await loadData(); // Reload data to get updated order status
       alert("User төлбөр батлагдлаа");
+      // Don't change orderFilter - keep it on current tab so user can see the update
     } catch (err: any) {
       alert(err.message || "Алдаа гарлаа");
     }
@@ -252,17 +274,13 @@ export default function AdminDashboardPage() {
     setSettingsSaved(false);
   };
 
-  // Filter agents: pending agents have isApproved === false or null/undefined
-  const pendingAgents = agents.filter(a => a.isApproved === false || a.isApproved === null || a.isApproved === undefined);
-  const approvedAgents = agents.filter(a => a.isApproved === true);
-  
-  // Debug: Log filtered agents for production debugging
-  console.log("[DEBUG] Admin Dashboard: Filtered agents:", {
+  // All agents are approved since admin adds them directly
+  const approvedAgents = agents;
+
+  // Debug: Log agents for production debugging
+  console.log("[DEBUG] Admin Dashboard: Agents:", {
     total: agents.length,
-    pending: pendingAgents.length,
-    approved: approvedAgents.length,
-    pendingDetails: pendingAgents.map((a: User) => ({ id: a.id, email: a.email, isApproved: a.isApproved })),
-    approvedDetails: approvedAgents.map((a: User) => ({ id: a.id, email: a.email, isApproved: a.isApproved })),
+    agents: approvedAgents.map((a: User) => ({ id: a.id, email: a.email, isApproved: a.isApproved })),
   });
 
   if (!isLoaded || loading) {
@@ -299,63 +317,58 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-     
+
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
-         
-         
+
+
 
           {/* Tabs */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
             <div className="flex gap-1 sm:gap-2 border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("agents")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "agents"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${activeTab === "agents"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
-                Agents ({pendingAgents.length} хүлээж байна)
+                Agents ({agents.length})
               </button>
               <button
                 onClick={() => setActiveTab("orders")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "orders"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${activeTab === "orders"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Захиалгууд ({orders.length})
               </button>
               <button
                 onClick={() => setActiveTab("cargos")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "cargos"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${activeTab === "cargos"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Cargos ({cargos.length})
               </button>
               <button
                 onClick={() => setActiveTab("settings")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "settings"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${activeTab === "settings"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Тохиргоо
               </button>
               <button
                 onClick={() => setActiveTab("rewards")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "rewards"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${activeTab === "rewards"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Урамшуулал ({rewardRequests.length})
               </button>
@@ -364,50 +377,30 @@ export default function AdminDashboardPage() {
             {/* Agents Tab */}
             {activeTab === "agents" && (
               <div className="space-y-4">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Хүлээж байгаа Agents</h3>
-                {pendingAgents.length > 0 ? (
-                  <div className="space-y-3">
-                    {pendingAgents.map((agent) => (
-                      <div key={agent.id} className="border border-gray-200 rounded-xl p-4 bg-yellow-50">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{agent.profile?.name || agent.email}</p>
-                            <p className="text-sm text-gray-600">{agent.email}</p>
-                            <p className="text-sm text-gray-600 capitalize">
-                              Эрх: {agent.role === "agent" && !agent.isApproved 
-                                ? `${agent.role} (батлагдаагүй)` 
-                                : agent.role === "user" && !agent.isApproved
-                                ? `${agent.role} (батлагдаагүй)`
-                                : agent.role}
-                            </p>
-                            {agent.profile?.phone && (
-                              <p className="text-sm text-gray-600">Утас: {agent.profile.phone}</p>
-                            )}
-                            <p className="text-xs text-yellow-800 mt-2">Admin шийдвэр хүлээж байна</p>
-                          </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => handleApproveAgent(agent.id, true)}
-                              className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
-                            >
-                              Батлах
-                            </button>
-                            <button
-                              onClick={() => handleApproveAgent(agent.id, false)}
-                              className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
-                            >
-                              Цуцлах
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                    Хүлээж байгаа agent байхгүй байна.
-                  </div>
-                )}
+                {/* Add New Agent Form */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Шинэ Agent нэмэх</h3>
+                  <form onSubmit={handleAddAgent} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="email"
+                      value={newAgentEmail}
+                      onChange={(e) => setNewAgentEmail(e.target.value)}
+                      placeholder="Agent email оруулах (жишээ: agent@example.com)"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base min-h-[44px]"
+                      disabled={addingAgent}
+                    />
+                    <button
+                      type="submit"
+                      disabled={addingAgent || !newAgentEmail.trim()}
+                      className="px-6 py-2.5 text-sm sm:text-base text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      {addingAgent ? "Нэмж байна..." : "Agent нэмэх"}
+                    </button>
+                  </form>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Email оруулахад тухайн email-д agent эрх өгөгдөнө. Хэрэв user байхгүй бол шинээр үүсгэнэ.
+                  </p>
+                </div>
 
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mt-4 sm:mt-6">Батлагдсан Agents</h3>
                 {approvedAgents.length > 0 ? (
@@ -419,11 +412,11 @@ export default function AdminDashboardPage() {
                             <p className="font-medium text-gray-900">{agent.profile?.name || agent.email}</p>
                             <p className="text-sm text-gray-600">{agent.email}</p>
                             <p className="text-sm text-gray-600 capitalize">
-                              Эрх: {agent.role === "agent" && agent.isApproved 
-                                ? `${agent.role}` 
-                                : agent.role === "user" && agent.isApproved
+                              Эрх: {agent.role === "agent" && agent.isApproved
                                 ? `${agent.role}`
-                                : agent.role}
+                                : agent.role === "user" && agent.isApproved
+                                  ? `${agent.role}`
+                                  : agent.role}
                             </p>
                             {agent.profile?.phone && (
                               <p className="text-sm text-gray-600">Утас: {agent.profile.phone}</p>
@@ -454,31 +447,29 @@ export default function AdminDashboardPage() {
                 <div className="flex justify-between items-center">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900">Захиалгууд</h3>
                 </div>
-                
+
                 {/* Category Tabs */}
                 <div className="flex gap-2 border-b border-gray-200">
                   <button
                     onClick={() => setOrderFilter("active")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
-                      orderFilter === "active"
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${orderFilter === "active"
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
                   >
                     Идэвхтэй
                   </button>
                   <button
                     onClick={() => setOrderFilter("completed")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
-                      orderFilter === "completed"
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${orderFilter === "completed"
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
                   >
                     Идэвхгүй
                   </button>
                 </div>
-                
+
                 {(() => {
                   const filteredOrders = orders.filter((order) => {
                     if (orderFilter === "active") {
@@ -490,22 +481,27 @@ export default function AdminDashboardPage() {
                       return order.status === "amjilttai_zahialga" || order.status === "tsutsalsan_zahialga";
                     }
                     return true;
+                  }).sort((a, b) => {
+                    // Sort: userPaymentVerified: true захиалгуудыг эхэнд харуулах
+                    if (a.userPaymentVerified && !b.userPaymentVerified) return -1;
+                    if (!a.userPaymentVerified && b.userPaymentVerified) return 1;
+                    return 0;
                   });
-                  
+
                   return filteredOrders.length > 0 ? (
                     <div className="space-y-2">
                       {filteredOrders.map((order) => {
                         const report = agentReports[order.id];
                         const userProfile = order.user?.profile;
                         const agentProfile = order.agent?.profile;
-                        
+
                         // Calculate user payment amount
                         const calculateUserAmount = () => {
                           if (!report) return null;
                           const exchangeRate = adminSettings?.exchangeRate || 1;
                           return report.userAmount * exchangeRate * 1.05;
                         };
-                        
+
                         return (
                           <div key={order.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
                             <div className="flex items-center justify-between gap-4">
@@ -513,7 +509,7 @@ export default function AdminDashboardPage() {
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium text-gray-900 truncate">{order.productName}</h4>
                               </div>
-                              
+
                               {/* Дүн */}
                               {report && (
                                 <div className="text-right">
@@ -523,14 +519,14 @@ export default function AdminDashboardPage() {
                                   </p>
                                 </div>
                               )}
-                              
+
                               {/* Төлбөрийн холбоос */}
                               {report?.paymentLink && (
                                 <div className="text-right min-w-0">
                                   <p className="text-sm text-gray-500">Төлбөрийн холбоос</p>
-                                  <a 
-                                    href={report.paymentLink} 
-                                    target="_blank" 
+                                  <a
+                                    href={report.paymentLink}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-blue-600 hover:underline truncate block max-w-[200px]"
                                   >
@@ -538,7 +534,7 @@ export default function AdminDashboardPage() {
                                   </a>
                                 </div>
                               )}
-                              
+
                               {/* User утас */}
                               {userProfile?.phone && (
                                 <div className="text-right">
@@ -546,7 +542,7 @@ export default function AdminDashboardPage() {
                                   <p className="text-sm font-medium text-gray-900">{userProfile.phone}</p>
                                 </div>
                               )}
-                              
+
                               {/* Agent утас */}
                               {agentProfile?.phone && (
                                 <div className="text-right">
@@ -554,35 +550,56 @@ export default function AdminDashboardPage() {
                                   <p className="text-sm font-medium text-gray-900">{agentProfile.phone}</p>
                                 </div>
                               )}
-                              
+
                               {/* Статус */}
                               <div className="text-right">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  order.status === "niitlegdsen" ? "bg-gray-100 text-gray-800" :
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === "niitlegdsen" ? "bg-gray-100 text-gray-800" :
                                   order.status === "agent_sudlaj_bn" ? "bg-yellow-100 text-yellow-800" :
-                                  order.status === "tolbor_huleej_bn" ? "bg-blue-100 text-blue-800" :
-                                  order.status === "amjilttai_zahialga" ? "bg-green-100 text-green-800" :
-                                  "bg-red-100 text-red-800"
-                                }`}>
+                                    order.status === "tolbor_huleej_bn" ? "bg-blue-100 text-blue-800" :
+                                      order.status === "amjilttai_zahialga" ? "bg-green-100 text-green-800" :
+                                        "bg-red-100 text-red-800"
+                                  }`}>
                                   {order.status === "niitlegdsen" ? "Нийтэлсэн" :
-                                   order.status === "agent_sudlaj_bn" ? "Agent шалгаж байна" :
-                                   order.status === "tolbor_huleej_bn" ? "Төлбөр хүлээж байна" :
-                                   order.status === "amjilttai_zahialga" ? "Амжилттай" :
-                                   "Цуцлагдсан"}
+                                    order.status === "agent_sudlaj_bn" ? "Agent шалгаж байна" :
+                                      order.status === "tolbor_huleej_bn" ? "Төлбөр хүлээж байна" :
+                                        order.status === "amjilttai_zahialga" ? "Амжилттай" :
+                                          "Цуцлагдсан"}
                                 </span>
                               </div>
-                              
+
+                              {/* User Payment Status - Only show for tolbor_huleej_bn status (not for amjilttai_zahialga) */}
+                              {order.status === "tolbor_huleej_bn" && (
+                                <div className="text-right">
+                                  {order.userPaymentVerified ? (
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Төлбөр төлсөн
+                                      </span>
+                                      <button
+                                        onClick={() => handleVerifyPayment(order.id)}
+                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
+                                      >
+                                        Батлах
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Төлбөр хүлээж байна
+                                      </span>
+                                      <button
+                                        onClick={() => handleVerifyPayment(order.id)}
+                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
+                                      >
+                                        Батлах
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
                               {/* Action Buttons */}
                               <div className="flex gap-2">
-                                {order.status === "tolbor_huleej_bn" && !order.userPaymentVerified && (
-                                  <button
-                                    onClick={() => handleVerifyPayment(order.id)}
-                                    className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
-                                  >
-                                    Батлах
-                                  </button>
-                                )}
-                                
                                 {order.userPaymentVerified && !order.agentPaymentPaid && (
                                   <button
                                     onClick={() => handleAgentPayment(order.id)}
@@ -720,10 +737,10 @@ export default function AdminDashboardPage() {
                     </button>
                   )}
                 </div>
-                
+
                 <div className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white">
                   <h4 className="text-base font-semibold text-gray-900 mb-4">Төлбөрийн дансны мэдээлэл</h4>
-                  
+
                   {settingsSaved && (
                     <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl text-sm">
                       ✓ Тохиргоо амжилттай хадгалагдлаа
@@ -852,83 +869,191 @@ export default function AdminDashboardPage() {
             {activeTab === "rewards" && (
               <div className="space-y-4">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">Урамшуулал хүсэлтүүд</h3>
-                {rewardRequests.length > 0 ? (
-                  <div className="space-y-3">
-                    {rewardRequests.map((request) => (
-                      <div key={request.id} className="border border-gray-200 rounded-xl p-4 bg-white">
-                        <div className="flex justify-between items-start mb-3 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              Agent: {request.agent?.profile?.name || request.agent?.email || "Unknown"}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Утас: {request.agent?.profile?.phone || "Байхгүй"}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Имэйл: {request.agent?.email}
-                            </p>
+                {(() => {
+                  const pendingRequests = rewardRequests.filter(r => r.status === "pending");
+                  const approvedRequests = rewardRequests.filter(r => r.status === "approved");
+                  const rejectedRequests = rewardRequests.filter(r => r.status === "rejected");
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Pending Requests */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Хүлээж байгаа хүсэлтүүд ({pendingRequests.length})</h4>
+                        {pendingRequests.length > 0 ? (
+                          <div className="space-y-3">
+                            {pendingRequests.map((request) => (
+                              <div key={request.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                                <div className="flex justify-between items-start mb-3 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      Agent: {request.agent?.profile?.name || request.agent?.email || "Unknown"}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Утас: {request.agent?.profile?.phone || "Байхгүй"}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Имэйл: {request.agent?.email}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-base font-semibold text-green-600">
+                                      {request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {new Date(request.createdAt).toLocaleDateString("mn-MN", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллыг батлахдаа итгэлтэй байна уу?`)) {
+                                        return;
+                                      }
+
+                                      try {
+                                        await apiClient.approveRewardRequest(request.id);
+                                        alert("Урамшуулал амжилттай батлагдлаа.");
+                                        await loadData();
+                                      } catch (err: any) {
+                                        alert(err.message || "Алдаа гарлаа");
+                                      }
+                                    }}
+                                    className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
+                                  >
+                                    Батлах
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллын хүсэлтийг татгалзахдаа итгэлтэй байна уу? Оноо agent-д буцаагдана.`)) {
+                                        return;
+                                      }
+
+                                      try {
+                                        await apiClient.rejectRewardRequest(request.id);
+                                        alert("Хүсэлт татгалзсан. Оноо agent-д буцаагдлаа.");
+                                        await loadData();
+                                      } catch (err: any) {
+                                        alert(err.message || "Алдаа гарлаа");
+                                      }
+                                    }}
+                                    className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
+                                  >
+                                    Татгалзах
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <div className="text-right">
-                            <p className="text-base font-semibold text-green-600">
-                              {request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(request.createdAt).toLocaleDateString("mn-MN", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
+                        ) : (
+                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
+                            Хүлээж байгаа урамшуулал хүсэлт байхгүй байна.
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              if (!confirm(`Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллыг батлахдаа итгэлтэй байна уу?`)) {
-                                return;
-                              }
-                              
-                              try {
-                                await apiClient.approveRewardRequest(request.id);
-                                alert("Урамшуулал амжилттай батлагдлаа.");
-                                await loadData();
-                              } catch (err: any) {
-                                alert(err.message || "Алдаа гарлаа");
-                              }
-                            }}
-                            className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
-                          >
-                            Батлах
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!confirm(`Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллын хүсэлтийг татгалзахдаа итгэлтэй байна уу? Оноо agent-д буцаагдана.`)) {
-                                return;
-                              }
-                              
-                              try {
-                                await apiClient.rejectRewardRequest(request.id);
-                                alert("Хүсэлт татгалзсан. Оноо agent-д буцаагдлаа.");
-                                await loadData();
-                              } catch (err: any) {
-                                alert(err.message || "Алдаа гарлаа");
-                              }
-                            }}
-                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
-                          >
-                            Татгалзах
-                          </button>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                    Хүлээж байгаа урамшуулал хүсэлт байхгүй байна.
-                  </div>
-                )}
+
+                      {/* Approved Requests */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Батлагдсан урамшууллууд ({approvedRequests.length})</h4>
+                        {approvedRequests.length > 0 ? (
+                          <div className="space-y-3">
+                            {approvedRequests.map((request) => (
+                              <div key={request.id} className="border border-green-200 rounded-xl p-4 bg-green-50">
+                                <div className="flex justify-between items-start mb-3 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      Agent: {request.agent?.profile?.name || request.agent?.email || "Unknown"}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Утас: {request.agent?.profile?.phone || "Байхгүй"}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Имэйл: {request.agent?.email}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-base font-semibold text-green-600">
+                                      {request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
+                                    </p>
+                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1 inline-block">
+                                      Батлагдсан
+                                    </span>
+                                    {request.approvedAt && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(request.approvedAt).toLocaleDateString("mn-MN", {
+                                          year: "numeric",
+                                          month: "long",
+                                          day: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
+                            Батлагдсан урамшуулал байхгүй байна.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rejected Requests */}
+                      {rejectedRequests.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">Татгалзсан хүсэлтүүд ({rejectedRequests.length})</h4>
+                          <div className="space-y-3">
+                            {rejectedRequests.map((request) => (
+                              <div key={request.id} className="border border-red-200 rounded-xl p-4 bg-red-50">
+                                <div className="flex justify-between items-start mb-3 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      Agent: {request.agent?.profile?.name || request.agent?.email || "Unknown"}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Утас: {request.agent?.profile?.phone || "Байхгүй"}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Имэйл: {request.agent?.email}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-base font-semibold text-red-600">
+                                      {request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮
+                                    </p>
+                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1 inline-block">
+                                      Татгалзсан
+                                    </span>
+                                    {request.rejectedAt && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(request.rejectedAt).toLocaleDateString("mn-MN", {
+                                          year: "numeric",
+                                          month: "long",
+                                          day: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

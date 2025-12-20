@@ -8,7 +8,7 @@ import { useApiClient } from "@/lib/useApiClient";
 async function uploadImageToCloudinary(base64Data: string, apiClient: any): Promise<{ url: string }> {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   const headers = await apiClient.getHeaders();
-  
+
   const response = await fetch(`${API_BASE_URL}/upload-image`, {
     method: "POST",
     headers: {
@@ -17,12 +17,12 @@ async function uploadImageToCloudinary(base64Data: string, apiClient: any): Prom
     },
     body: JSON.stringify({ image: base64Data }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: "Unknown error" }));
     throw new Error(error.error || "Failed to upload image");
   }
-  
+
   return response.json();
 }
 
@@ -122,7 +122,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
       // Upload image if selected
       if (fileInputRef.current?.files?.[0]) {
         const file = fileInputRef.current.files[0];
-        
+
         // Check file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           alert("Зураг хэт том байна. Дээд тал нь 5MB байна.");
@@ -132,22 +132,22 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
           }
           return;
         }
-        
+
         setUploadingImage(true);
         const reader = new FileReader();
-        
+
         reader.onloadend = async () => {
           try {
             const base64 = reader.result as string;
             const result = await uploadImageToCloudinary(base64, apiClient);
             imageUrl = result.url;
-            
+
             // Send message with image
             const message = await apiClient.sendMessage(order.id, {
               text: newMessage.trim() || undefined,
               imageUrl,
             });
-            
+
             setMessages((prev) => [...prev, message]);
             setNewMessage("");
             if (fileInputRef.current) {
@@ -161,7 +161,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
             setSending(false);
           }
         };
-        
+
         reader.readAsDataURL(file);
         return;
       }
@@ -170,7 +170,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
       const message = await apiClient.sendMessage(order.id, {
         text: newMessage.trim(),
       });
-      
+
       setMessages((prev) => [...prev, message]);
       setNewMessage("");
     } catch (error: any) {
@@ -192,13 +192,13 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 w-full h-full sm:h-auto sm:max-w-2xl sm:h-[80vh] flex flex-col">
+      <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 w-full h-full sm:h-auto sm:max-w-2xl sm:h-[80vh] flex flex-col max-h-screen">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Чат - {order.productName}</h2>
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">Чат - {order.productName}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors p-2 min-h-[40px] min-w-[40px]"
+            className="text-gray-500 hover:text-gray-700 transition-colors p-2 min-h-[40px] min-w-[40px] flex-shrink-0"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -207,7 +207,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
         </div>
 
         {/* Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 relative">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 relative min-h-0">
           {loading ? (
             <div className="text-center text-gray-500">Ачааллаж байна...</div>
           ) : messages.length === 0 ? (
@@ -221,11 +221,10 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                   className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md rounded-xl p-3 ${
-                      isOwnMessage
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 text-gray-900"
-                    }`}
+                    className={`max-w-xs lg:max-w-md rounded-xl p-3 ${isOwnMessage
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-900"
+                      }`}
                   >
                     {message.text && (
                       <p className="text-sm whitespace-pre-wrap">{message.text}</p>
@@ -255,7 +254,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                             e.stopPropagation();
                             const img = e.currentTarget;
                             const isZoomed = img.dataset.zoomed === "true";
-                            
+
                             if (isZoomed) {
                               // Zoom out - return to normal size immediately
                               img.style.position = "";
@@ -275,7 +274,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                               img.style.boxShadow = "";
                               img.style.filter = "";
                               img.dataset.zoomed = "false";
-                              
+
                               // Restore thumbnail URL
                               const url = message.imageUrl;
                               if (url) {
@@ -293,9 +292,9 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                             } else {
                               // Zoom in - full display immediately
                               const originalSrc = message.imageUrl;
-                              
+
                               if (!originalSrc) return;
-                              
+
                               // Use original image URL for zoom (without size limit)
                               const tempImg = new Image();
                               tempImg.crossOrigin = "anonymous";
@@ -303,22 +302,22 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                                 const naturalWidth = tempImg.naturalWidth;
                                 const naturalHeight = tempImg.naturalHeight;
                                 const aspectRatio = naturalWidth / naturalHeight;
-                                
+
                                 // Calculate optimal display size (max 90vw x 90vh)
                                 const maxWidth = window.innerWidth * 0.9;
                                 const maxHeight = window.innerHeight * 0.9;
-                                
+
                                 let displayWidth = maxWidth;
                                 let displayHeight = maxWidth / aspectRatio;
-                                
+
                                 if (displayHeight > maxHeight) {
                                   displayHeight = maxHeight;
                                   displayWidth = maxHeight * aspectRatio;
                                 }
-                                
+
                                 // Set image source
                                 img.src = originalSrc;
-                                
+
                                 img.style.position = "fixed";
                                 img.style.top = "50%";
                                 img.style.left = "50%";
@@ -394,7 +393,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 flex-shrink-0">
           <div className="flex gap-2 items-end">
             <input
               type="file"
@@ -429,7 +428,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Мессеж бичнэ үү..."
-                className="w-full px-4 py-3 pr-12 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none min-h-[44px]"
+                className="w-full px-4 py-3 pr-12 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none min-h-[44px] max-h-32 overflow-y-auto"
                 rows={1}
                 disabled={sending || uploadingImage}
               />
