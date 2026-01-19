@@ -19,22 +19,25 @@ export default function NewOrderPage() {
   ]);
   const [imagePreviews, setImagePreviews] = useState<string[][]>([[]]); // Array of arrays - each product can have up to 3 images
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, productIndex: number) => {
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    productIndex: number,
+  ) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
+
     const newPreviews = [...imagePreviews];
     const currentImages = newPreviews[productIndex] || [];
-    
+
     // Limit to 3 images total per product
     const remainingSlots = 3 - currentImages.length;
     if (remainingSlots <= 0) {
       alert("Дээд тал нь 3 зураг оруулах боломжтой");
       return;
     }
-    
+
     const filesToAdd = Array.from(files).slice(0, remainingSlots);
-    
+
     filesToAdd.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -43,9 +46,12 @@ export default function NewOrderPage() {
         if (!updatedPreviews[productIndex]) {
           updatedPreviews[productIndex] = [];
         }
-        updatedPreviews[productIndex] = [...updatedPreviews[productIndex], dataUrl];
+        updatedPreviews[productIndex] = [
+          ...updatedPreviews[productIndex],
+          dataUrl,
+        ];
         setImagePreviews(updatedPreviews);
-        
+
         // Update orders with imageUrls
         const newOrders = [...orders];
         if (!newOrders[productIndex].imageUrls) {
@@ -56,16 +62,18 @@ export default function NewOrderPage() {
       };
       reader.readAsDataURL(file);
     });
-    
+
     // Reset input
     e.target.value = "";
   };
 
   const removeImage = (productIndex: number, imageIndex: number) => {
     const newPreviews = [...imagePreviews];
-    newPreviews[productIndex] = newPreviews[productIndex].filter((_, i) => i !== imageIndex);
+    newPreviews[productIndex] = newPreviews[productIndex].filter(
+      (_, i) => i !== imageIndex,
+    );
     setImagePreviews(newPreviews);
-    
+
     const newOrders = [...orders];
     if (newOrders[productIndex].imageUrls) {
       newOrders[productIndex].imageUrls = newPreviews[productIndex];
@@ -80,9 +88,13 @@ export default function NewOrderPage() {
 
     try {
       // Validate that at least one order has required fields
-      const validOrders = orders.filter(order => order.productName && order.description);
+      const validOrders = orders.filter(
+        (order) => order.productName && order.description,
+      );
       if (validOrders.length === 0) {
-        setError("Хамгийн багадаа нэг барааны нэр болон тайлбар оруулах шаардлагатай");
+        setError(
+          "Хамгийн багадаа нэг барааны нэр болон тайлбар оруулах шаардлагатай",
+        );
         setLoading(false);
         return;
       }
@@ -102,7 +114,9 @@ export default function NewOrderPage() {
         } catch (orderErr: any) {
           // Continue creating other orders even if one fails
           // validOrders is already filtered to have productName, so it's safe to use !
-          setError(`Захиалга үүсгэхэд алдаа гарлаа: ${order.productName!} - ${orderErr.message || "Алдаа"}`);
+          setError(
+            `Захиалга үүсгэхэд алдаа гарлаа: ${order.productName!} - ${orderErr.message || "Алдаа"}`,
+          );
         }
       }
 
@@ -120,13 +134,21 @@ export default function NewOrderPage() {
   };
 
   const addProductField = () => {
-    setOrders([...orders, { id: Date.now() + Math.random(), productName: "", description: "", imageUrls: [] }]);
+    setOrders([
+      ...orders,
+      {
+        id: Date.now() + Math.random(),
+        productName: "",
+        description: "",
+        imageUrls: [],
+      },
+    ]);
     setImagePreviews([...imagePreviews, []]);
   };
 
   const removeProductField = (id: number) => {
     if (orders.length > 1) {
-      const index = orders.findIndex(o => o.id === id);
+      const index = orders.findIndex((o) => o.id === id);
       setOrders(orders.filter((_, i) => i !== index));
       setImagePreviews(imagePreviews.filter((_, i) => i !== index));
     }
@@ -137,10 +159,15 @@ export default function NewOrderPage() {
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link href="/user/dashboard" className="text-blue-500 hover:text-blue-600 text-base font-medium">
+            <Link
+              href="/user/dashboard"
+              className="text-blue-500 hover:text-blue-600 text-base font-medium"
+            >
               ← Буцах
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900">Захиалга үүсгэх</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Захиалга үүсгэх
+            </h1>
             <div></div>
           </div>
         </div>
@@ -148,130 +175,165 @@ export default function NewOrderPage() {
 
       <main className="max-w-4xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+              {error}
+            </div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-              {orders.map((order, index) => (
-                <div key={order.id} className="border border-gray-200 rounded-xl p-4 sm:p-5 space-y-4 bg-gray-50">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-gray-900 text-base">
-                      {index === 0 ? " Бараа #1" : `Бараа #${index + 1}`}
-                    </h3>
-                    {orders.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeProductField(order.id)}
-                        className="px-3 py-1.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 min-h-[36px]"
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {orders.map((order, index) => (
+              <div
+                key={order.id}
+                className="border border-gray-200 rounded-xl p-4 sm:p-5 space-y-4 bg-gray-50"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-gray-900 text-base">
+                    {index === 0 ? " Бараа #1" : `Бараа #${index + 1}`}
+                  </h3>
+                  {orders.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeProductField(order.id)}
+                      className="px-3 py-1.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1 min-h-[9]"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Устгах
-                      </button>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Зураг (Дээд тал нь 3 зураг)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => handleImageChange(e, index)}
-                      disabled={imagePreviews[index]?.length >= 3}
-                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    {imagePreviews[index] && imagePreviews[index].length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-3">
-                        {imagePreviews[index].map((preview, imgIndex) => (
-                          <div key={imgIndex} className="relative">
-                            <img
-                              src={preview}
-                              alt={`Preview ${index + 1}-${imgIndex + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index, imgIndex)}
-                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-[32px] min-w-[32px]"
-                              title="Устгах"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {imagePreviews[index]?.length >= 3 && (
-                      <p className="mt-2 text-sm text-gray-500">Дээд тал нь 3 зураг оруулах боломжтой</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Барааны нэр
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={order.productName}
-                      onChange={(e) => {
-                        const newOrders = [...orders];
-                        newOrders[index].productName = e.target.value;
-                        setOrders(newOrders);
-                      }}
-                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Барааны нэр оруулах"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Тайлбар
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={order.description}
-                      onChange={(e) => {
-                        const newOrders = [...orders];
-                        newOrders[index].description = e.target.value;
-                        setOrders(newOrders);
-                      }}
-                      className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
-                    />
-                  </div>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      Устгах
+                    </button>
+                  )}
                 </div>
-              ))}
 
-              <button
-                type="button"
-                onClick={addProductField}
-                className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[44px]"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Бараа нэмэх
-              </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    Зураг (Дээд тал нь 3 зураг)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageChange(e, index)}
+                    disabled={imagePreviews[index]?.length >= 3}
+                    className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {imagePreviews[index] && imagePreviews[index].length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-3">
+                      {imagePreviews[index].map((preview, imgIndex) => (
+                        <div key={imgIndex} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}-${imgIndex + 1}`}
+                            className="w-full h-32 object-cover rounded-xl border border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index, imgIndex)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-[8] min-w-[8]"
+                            title="Устгах"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {imagePreviews[index]?.length >= 3 && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      Дээд тал нь 3 зураг оруулах боломжтой
+                    </p>
+                  )}
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    Барааны нэр
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={order.productName}
+                    onChange={(e) => {
+                      const newOrders = [...orders];
+                      newOrders[index].productName = e.target.value;
+                      setOrders(newOrders);
+                    }}
+                    className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Барааны нэр оруулах"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
+                    Тайлбар
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={order.description}
+                    onChange={(e) => {
+                      const newOrders = [...orders];
+                      newOrders[index].description = e.target.value;
+                      setOrders(newOrders);
+                    }}
+                    className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
+                  />
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addProductField}
+              className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-[11]"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {loading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
-              </button>
-            </form>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Бараа нэмэх
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[11]"
+            >
+              {loading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
+            </button>
+          </form>
         </div>
       </main>
     </div>
