@@ -9,6 +9,7 @@ import {
   type Order,
   type OrderData,
   type AgentReport,
+  type BundleOrder,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import ProfileForm from "@/components/ProfileForm";
@@ -17,6 +18,7 @@ import ChatModal from "@/components/ChatModal";
 import NewOrderForm from "@/components/dashboard/NewOrderForm";
 import OrderHistorySection, { NotificationItem } from "@/components/dashboard/OrderHistorySection";
 import OrderModal from "@/components/dashboard/OrderModal";
+import BundleOrderDetailModal from "@/components/dashboard/BundleOrderDetailModal";
 
 export default function UserDashboardPage() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function UserDashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [bundleOrders, setBundleOrders] = useState<BundleOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -34,6 +37,8 @@ export default function UserDashboardPage() {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedBundleOrder, setSelectedBundleOrder] = useState<BundleOrder | null>(null);
+  const [showBundleOrderModal, setShowBundleOrderModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
   const [zoomedImageIndex, setZoomedImageIndex] = useState<number | null>(null);
@@ -154,6 +159,14 @@ export default function UserDashboardPage() {
         try {
           const ordersData = await apiClient.getOrders();
           setOrders(ordersData);
+
+          // Load bundle orders
+          try {
+            const bundleOrdersData = await apiClient.getBundleOrders();
+            setBundleOrders(bundleOrdersData);
+          } catch (err) {
+            console.error("Failed to load bundle orders:", err);
+          }
 
           // If modal is open and we have a selectedOrder, update it from fresh data
           // Preserve userPaymentVerified state if it was set locally
@@ -568,7 +581,7 @@ export default function UserDashboardPage() {
         <div className="space-y-6">
           {/* Order Section - Only show if profile is complete */}
           {isProfileComplete ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
               {/* Box 1: Омнох захиалгууд */}
 
               {/* Box 2: Шинэ захиалга үүсгэх */}
@@ -620,6 +633,7 @@ export default function UserDashboardPage() {
               </div>
               <OrderHistorySection
                 orders={orders}
+                bundleOrders={bundleOrders}
                 notifications={notifications}
                 hasOrderUpdates={hasOrderUpdates}
                 hasNewMessages={hasNewMessages}
@@ -628,9 +642,21 @@ export default function UserDashboardPage() {
                   setSelectedOrder(order);
                   setShowOrderModal(true);
                 }}
+                onSelectBundleOrder={(bundleOrder) => {
+                  setSelectedBundleOrder(bundleOrder);
+                  setShowBundleOrderModal(true);
+                }}
                 onOpenChat={(order) => {
                   setChatOrder(order);
                   setShowChatModal(true);
+                }}
+                onOpenBundleChat={(bundleOrder) => {
+                  // TODO: Open chat for bundle order
+                  console.log("Open chat for bundle:", bundleOrder);
+                }}
+                onViewReport={(order) => {
+                  setSelectedOrder(order);
+                  setShowOrderModal(true);
                 }}
                 onReload={loadData}
               />
@@ -1223,6 +1249,18 @@ export default function UserDashboardPage() {
             setChatOrder(null);
             setShowChatModal(false);
           }}
+        />
+      )}
+
+      {/* Bundle Order Detail Modal */}
+      {showBundleOrderModal && selectedBundleOrder && (
+        <BundleOrderDetailModal
+          bundleOrder={selectedBundleOrder}
+          onClose={() => {
+            setSelectedBundleOrder(null);
+            setShowBundleOrderModal(false);
+          }}
+          exchangeRate={adminSettings?.exchangeRate || 1}
         />
       )}
     </div>

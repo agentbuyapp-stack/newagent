@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { OrderData } from "@/lib/api";
+import { OrderData, BundleOrderData } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 
 interface NewOrderFormProps {
@@ -23,7 +23,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
   const [newOrderSuccess, setNewOrderSuccess] = useState(false);
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(
     new Set([Date.now()])
-  ); // Track which products are expanded
+  );
 
   const handleNewOrderImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -89,13 +89,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
       { id: newId, productName: "", description: "", imageUrls: [] },
     ]);
     setNewOrderImagePreviews([...newOrderImagePreviews, []]);
-    // Collapse first product when adding new one
-    if (newOrders.length > 0) {
-      const firstProductId = newOrders[0].id; // unused variable
-      setExpandedProducts(new Set([newId])); // Only expand the new product
-    } else {
-      setExpandedProducts(new Set([newId]));
-    }
+    setExpandedProducts(new Set([newId]));
   };
 
   const toggleProductExpand = (productId: number) => {
@@ -115,7 +109,6 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
       setNewOrderImagePreviews(
         newOrderImagePreviews.filter((_, i) => i !== index)
       );
-      // Remove from expanded set
       const newExpanded = new Set(expandedProducts);
       newExpanded.delete(id);
       setExpandedProducts(newExpanded);
@@ -129,7 +122,6 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
     setNewOrderSuccess(false);
 
     try {
-      // Validate that at least one order has required fields
       const validOrders = newOrders.filter(
         (order) => order.productName && order.description
       );
@@ -141,81 +133,47 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
         return;
       }
 
-      // Create one order with multiple products
-      const createdOrders: string[] = [];
-      const errors: string[] = [];
+      // Auto-determine: 1 item = single order, 2+ items = bundle order
+      if (validOrders.length > 1) {
+        // Create bundle order (2+ items)
+        const bundleData: BundleOrderData = {
+          items: validOrders.map((order) => ({
+            productName: order.productName!,
+            description: order.description!,
+            imageUrls: order.imageUrls || [],
+          })),
+        };
 
-      try {
-        // If multiple products, create one order with all products
-        if (validOrders.length > 1) {
-          const products = validOrders
-            .filter((order) => order.productName && order.description)
-            .map((order) => ({
-              productName: order.productName!,
-              description: order.description!,
-              imageUrls: order.imageUrls || [],
-            }));
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await apiClient.createOrder({ products } as any);
-          createdOrders.push(
-            ...validOrders
-              .filter((o) => o.productName)
-              .map((o) => o.productName!)
-          );
-        } else {
-          // Single product order
-          const { id, ...orderData } = validOrders[0]; // eslint-disable-line @typescript-eslint/no-unused-vars
-          // Ensure imageUrls is an array (can be empty)
-          if (!orderData.imageUrls) {
-            orderData.imageUrls = [];
-          }
-
-          await apiClient.createOrder(orderData);
-          if (validOrders[0].productName) {
-            createdOrders.push(validOrders[0].productName);
-          }
-        }
-      } catch (orderErr: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        console.error(`[DEBUG] Error creating order:`, {
-          message: orderErr.message,
-          stack: orderErr.stack,
-          response: orderErr.response,
-        });
-        errors.push(`Захиалга үүсгэхэд алдаа: ${orderErr.message || "Алдаа"}`);
-      }
-
-      if (createdOrders.length > 0) {
-        setNewOrderSuccess(true);
-        setNewOrders([
-          { id: Date.now(), productName: "", description: "", imageUrls: [] },
-        ]);
-        setNewOrderImagePreviews([[]]);
-
-        onSuccess();
-
-        // Show error message if some orders failed
-        if (errors.length > 0) {
-          setNewOrderError(
-            `Зарим захиалга үүсгэхэд алдаа гарлаа: ${errors.join(", ")}`
-          );
-        }
-
-        // Reset success message after 2 seconds
-        setTimeout(() => {
-          setNewOrderSuccess(false);
-        }, 2000);
+        await apiClient.createBundleOrder(bundleData);
       } else {
-        setNewOrderError(
-          `Бүх захиалга үүсгэхэд алдаа гарлаа: ${errors.join(", ")}`
-        );
+        // Create single order (1 item)
+        const { id, ...orderData } = validOrders[0];
+        if (!orderData.imageUrls) {
+          orderData.imageUrls = [];
+        }
+        await apiClient.createOrder(orderData);
       }
-    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      setNewOrderSuccess(true);
+      setNewOrders([
+        { id: Date.now(), productName: "", description: "", imageUrls: [] },
+      ]);
+      setNewOrderImagePreviews([[]]);
+      setExpandedProducts(new Set([Date.now()]));
+      onSuccess();
+
+      setTimeout(() => {
+        setNewOrderSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      console.error(`[DEBUG] Error creating order:`, err);
       setNewOrderError(err.message || "Алдаа гарлаа");
     } finally {
       setNewOrderLoading(false);
     }
   };
+
+  const isBundleOrder = newOrders.filter(o => o.productName && o.description).length > 1;
 
   return (
     <form onSubmit={handleNewOrderSubmit} className="space-y-4 sm:space-y-6">
@@ -411,12 +369,34 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
         Бараа нэмэх
       </button>
 
+      {/* Info about order type */}
+      {isBundleOrder && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <p className="text-xs text-purple-700">
+              <span className="font-medium">Багц захиалга:</span> {newOrders.filter(o => o.productName && o.description).length} бараа нэгтгэгдэнэ
+            </p>
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={newOrderLoading}
-        className="w-full px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 active:bg-green-700 disabled:opacity-50 transition-colors font-medium text-base min-h-[11]"
+        className={`w-full px-4 py-3 text-white rounded-xl disabled:opacity-50 transition-colors font-medium text-base min-h-11 ${
+          isBundleOrder
+            ? "bg-purple-500 hover:bg-purple-600 active:bg-purple-700"
+            : "bg-green-500 hover:bg-green-600 active:bg-green-700"
+        }`}
       >
-        {newOrderLoading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
+        {newOrderLoading
+          ? "Хадгалж байна..."
+          : isBundleOrder
+          ? `Багц захиалга үүсгэх (${newOrders.filter(o => o.productName && o.description).length} бараа)`
+          : "Захиалга үүсгэх"}
       </button>
     </form>
   );
