@@ -18,7 +18,7 @@ export const HomeSection = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };
