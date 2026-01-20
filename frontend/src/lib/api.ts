@@ -261,14 +261,19 @@ class ApiClient {
     return this.request<Cargo[]>("/cargos");
   }
 
-  async createCargo(data: { name: string; description?: string }): Promise<Cargo> {
+  async getPublicAgents(): Promise<PublicAgent[]> {
+    // Public endpoint - get approved agents with stats
+    return this.request<PublicAgent[]>("/agents/public");
+  }
+
+  async createCargo(data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
     return this.request<Cargo>("/admin/cargos", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updateCargo(cargoId: string, data: { name: string; description?: string }): Promise<Cargo> {
+  async updateCargo(cargoId: string, data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
     return this.request<Cargo>(`/admin/cargos/${cargoId}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -433,6 +438,15 @@ export interface Cargo {
   website?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PublicAgent {
+  id: string;
+  name: string;
+  email?: string;
+  orderCount: number;
+  agentPoints: number;
+  createdAt: string;
 }
 
 export interface Message {

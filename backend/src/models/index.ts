@@ -2,6 +2,7 @@
 export * from "./User";
 export * from "./Profile";
 export * from "./Order";
+export * from "./BundleOrder";
 export * from "./Cargo";
 export * from "./Message";
 export * from "./AgentReport";

@@ -216,10 +216,10 @@ export default function OrderHistorySection({
   const archivedCount = combinedArchivedOrders.length;
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-center mb-5 -mx-5 -mt-5 px-3 sm:px-5 pt-4 sm:pt-5 pb-3 rounded-t-2xl">
+    <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-20">
+      <div className="flex items-center justify-between">
         <div
-          className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer hover:bg-gray-50 -ml-2 sm:-ml-3 pl-2 sm:pl-3 py-2 rounded-xl transition-colors min-w-0"
+          className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer min-w-0"
           onClick={() => setShowOrderSection(!showOrderSection)}
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
@@ -237,28 +237,32 @@ export default function OrderHistorySection({
               />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate">
-            <span className="hidden xs:inline">Өмнөх захиалгууд</span>
-            <span className="xs:hidden">Захиалгууд</span>
-            <span className="ml-1">({totalOrdersCount})</span>
-          </h2>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">
+              Өмнөх захиалгууд
+            </h3>
+            <p className="text-xs text-gray-500">
+              Нийт захиалга ({totalOrdersCount})
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <svg
-            className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 shrink-0 transition-transform duration-200 ${showOrderSection ? "rotate-90" : ""}`}
+            className={`w-5 h-5 text-gray-500 cursor-pointer transition-transform duration-200 ${showOrderSection ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            onClick={() => setShowOrderSection(!showOrderSection)}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M9 5l7 7-7 7"
+              d="M19 9l-7 7-7-7"
             />
           </svg>
-        </div>
-        <div className="flex items-center gap-2">
           {(hasOrderUpdates || hasNewMessages || notificationCount > 0) && (
-            <div className="relative" ref={notificationDropdownRef}>
+            <div className="relative z-50" ref={notificationDropdownRef}>
               <button
                 onClick={() =>
                   setShowNotificationDropdown(!showNotificationDropdown)
@@ -287,7 +291,7 @@ export default function OrderHistorySection({
               </button>
 
               {showNotificationDropdown && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-[100] border border-gray-200 max-h-96 overflow-y-auto">
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Мэдэгдлүүд
@@ -375,7 +379,7 @@ export default function OrderHistorySection({
       </div>
 
       {showOrderSection && (
-        <div className="space-y-2">
+        <div className="mt-4 space-y-2">
           {/* Category tabs */}
           <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
             <div className="flex items-center justify-start sm:justify-center border-b border-gray-200 min-w-max sm:min-w-0 gap-2 pt-2">

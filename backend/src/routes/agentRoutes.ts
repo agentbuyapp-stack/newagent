@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { registerAsAgent, createRewardRequest, getMyRewardRequests } from "../controllers/agentController";
+import { registerAsAgent, createRewardRequest, getMyRewardRequests, getPublicAgents } from "../controllers/agentController";
 import { requireRole } from "../middleware/requireRole";
 
 const router = Router();
+
+// Public endpoint - get all approved agents with stats (no auth required)
+router.get("/public", getPublicAgents);
 
 // Agent registration - DISABLED: Only admin can assign agent role
 // router.post("/register", requireRole("user"), registerAsAgent);

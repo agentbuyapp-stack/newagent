@@ -36,7 +36,7 @@ export const getAdminCargos = async (req: Request, res: Response) => {
 
 export const createCargo = async (req: Request, res: Response) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, phone, location, website } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ error: "Name is required" });
@@ -45,6 +45,9 @@ export const createCargo = async (req: Request, res: Response) => {
     const cargo = await Cargo.create({
       name: name.trim(),
       description: description ? description.trim() : undefined,
+      phone: phone ? phone.trim() : undefined,
+      location: location ? location.trim() : undefined,
+      website: website ? website.trim() : undefined,
     });
 
     res.status(201).json({
@@ -63,7 +66,7 @@ export const createCargo = async (req: Request, res: Response) => {
 export const updateCargo = async (req: Request, res: Response) => {
   try {
     const cargoId = req.params.id;
-    const { name, description } = req.body;
+    const { name, description, phone, location, website } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(cargoId)) {
       return res.status(400).json({ error: "Invalid cargo ID" });
@@ -73,12 +76,27 @@ export const updateCargo = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Name is required" });
     }
 
+    const updateData: Record<string, string | undefined> = {
+      name: name.trim(),
+    };
+
+    // Only update fields that were provided in the request
+    if (description !== undefined) {
+      updateData.description = description ? description.trim() : undefined;
+    }
+    if (phone !== undefined) {
+      updateData.phone = phone ? phone.trim() : undefined;
+    }
+    if (location !== undefined) {
+      updateData.location = location ? location.trim() : undefined;
+    }
+    if (website !== undefined) {
+      updateData.website = website ? website.trim() : undefined;
+    }
+
     const cargo = await Cargo.findByIdAndUpdate(
       cargoId,
-      {
-        name: name.trim(),
-        description: description !== undefined ? (description ? description.trim() : undefined) : undefined,
-      },
+      updateData,
       { new: true, runValidators: true }
     ).lean();
 
