@@ -2,23 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser, SignOutButton } from "@clerk/nextjs";
-import { type User, type Profile, type Order, type Cargo, type AdminSettings, type AdminSettingsData, type AgentReport, type RewardRequest } from "@/lib/api";
+import { useUser } from "@clerk/nextjs";
+import { type User, type Order, type Cargo, type AdminSettings, type AdminSettingsData, type AgentReport, type RewardRequest } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
-import ProfileForm from "@/components/ProfileForm";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user: clerkUser, isLoaded } = useUser();
   const apiClient = useApiClient();
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [agents, setAgents] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showProfileForm, setShowProfileForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"agents" | "orders" | "cargos" | "settings" | "rewards">("agents");
   const [rewardRequests, setRewardRequests] = useState<RewardRequest[]>([]);
   const [orderFilter, setOrderFilter] = useState<"active" | "completed">("active");
@@ -47,6 +44,7 @@ export default function AdminDashboardPage() {
     if (isLoaded && clerkUser) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, clerkUser, router]);
 
   const loadData = async (includeRewards = true) => {
@@ -63,9 +61,6 @@ export default function AdminDashboardPage() {
       try {
         const userData = await apiClient.getMe();
         setUser(userData);
-        if (userData.profile) {
-          setProfile(userData.profile);
-        }
 
         if (userData.role !== "admin") {
           setError("Та admin эрхгүй байна");
@@ -75,7 +70,7 @@ export default function AdminDashboardPage() {
 
         // Load agents, orders, cargos, admin settings, and reward requests
         try {
-          const promises: Promise<any>[] = [
+          const promises: Promise<unknown>[] = [
             apiClient.getAgents(),
             apiClient.getAdminOrders(),
             apiClient.getCargos(),
@@ -87,7 +82,7 @@ export default function AdminDashboardPage() {
           }
 
           const results = await Promise.all(promises);
-          const [agentsData, ordersData, cargosData, settingsData, rewardRequestsData] = results;
+          const [agentsData, ordersData, cargosData, settingsData, rewardRequestsData] = results as [User[], Order[], Cargo[], AdminSettings, RewardRequest[] | undefined];
 
           // Debug: Log agents for production debugging
           console.log("[DEBUG] Admin Dashboard: Loaded agents:", agentsData.length);
@@ -120,34 +115,37 @@ export default function AdminDashboardPage() {
               try {
                 const report = await apiClient.getAgentReport(order.id);
                 reports[order.id] = report;
-              } catch (err) {
+              } catch {
                 reports[order.id] = null;
               }
             }
           }
           setAgentReports(reports);
-        } catch (fetchErr: any) {
+        } catch (fetchErr: unknown) {
           console.error("Error fetching data:", fetchErr);
-          setError(fetchErr.message || "Мэдээлэл татахад алдаа гарлаа");
+          const errorMessage = fetchErr instanceof Error ? fetchErr.message : "Мэдээлэл татахад алдаа гарлаа";
+          setError(errorMessage);
           // Set empty arrays on error
           setAgents([]);
           setOrders([]);
           setCargos([]);
         }
-      } catch (err: any) {
-        console.error("Error in loadData:", err);
-        setError(err.message || "Алдаа гарлаа");
+      } catch (e: unknown) {
+        console.error("Error in loadData:", e);
+        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+        setError(errorMessage);
       }
-    } catch (err: any) {
-      setError(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProfileSuccess = async () => {
     await loadData();
-    setShowProfileForm(false);
   };
 
   const handleAddAgent = async (e: React.FormEvent) => {
@@ -163,8 +161,9 @@ export default function AdminDashboardPage() {
       setNewAgentEmail("");
       await loadData();
       alert("Agent амжилттай нэмэгдлээ!");
-    } catch (err: any) {
-      alert(err.message || "Agent нэмэхэд алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Agent нэмэхэд алдаа гарлаа";
+      alert(errorMessage);
     } finally {
       setAddingAgent(false);
     }
@@ -177,9 +176,10 @@ export default function AdminDashboardPage() {
       console.log(`[DEBUG] Admin Dashboard: Agent updated:`, updatedAgent);
       await loadData();
       alert(`Agent ${approved ? "батлагдлаа" : "цуцлагдлаа"}`);
-    } catch (err: any) {
-      console.error(`[DEBUG] Admin Dashboard: Error approving agent:`, err);
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      console.error(`[DEBUG] Admin Dashboard: Error approving agent:`, e);
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     }
   };
 
@@ -189,8 +189,9 @@ export default function AdminDashboardPage() {
       await loadData(); // Reload data to get updated order status
       alert("User төлбөр батлагдлаа");
       // Don't change orderFilter - keep it on current tab so user can see the update
-    } catch (err: any) {
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     }
   };
 
@@ -200,8 +201,8 @@ export default function AdminDashboardPage() {
       await loadData();
       setOrderFilter("completed"); // Switch to completed tab after payment
       alert("Agent төлбөр төлөгдсөн гэж тэмдэглэгдлээ. Agent-ийн оноо нэмэгдлээ.");
-    } catch (err: any) {
-      const errorMessage = err.message || "Алдаа гарлаа";
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       if (errorMessage.includes("no assigned agent")) {
         alert("Энэ захиалгад agent томилогдоогүй байна. Эхлээд agent захиалгыг авсан эсэхийг шалгана уу.");
       } else {
@@ -221,8 +222,9 @@ export default function AdminDashboardPage() {
       setShowCargoForm(false);
       await loadData();
       alert("Cargo амжилттай үүслээ");
-    } catch (err: any) {
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     }
   };
 
@@ -234,8 +236,9 @@ export default function AdminDashboardPage() {
       setCargoFormData({ name: "", description: "" });
       await loadData();
       alert("Cargo амжилттай шинэчлэгдлээ");
-    } catch (err: any) {
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     }
   };
 
@@ -247,8 +250,9 @@ export default function AdminDashboardPage() {
       await apiClient.deleteCargo(cargoId);
       await loadData();
       alert("Cargo амжилттай устгагдлаа");
-    } catch (err: any) {
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     }
   };
 
@@ -262,8 +266,9 @@ export default function AdminDashboardPage() {
       setTimeout(() => {
         setSettingsSaved(false);
       }, 3000);
-    } catch (err: any) {
-      alert(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
     } finally {
       setSavingSettings(false);
     }
@@ -316,7 +321,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
 
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
@@ -386,13 +391,13 @@ export default function AdminDashboardPage() {
                       value={newAgentEmail}
                       onChange={(e) => setNewAgentEmail(e.target.value)}
                       placeholder="Agent email оруулах (жишээ: agent@example.com)"
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base min-h-[44px]"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base min-h-11"
                       disabled={addingAgent}
                     />
                     <button
                       type="submit"
                       disabled={addingAgent || !newAgentEmail.trim()}
-                      className="px-6 py-2.5 text-sm sm:text-base text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="px-6 py-2.5 text-sm sm:text-base text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-11 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                       {addingAgent ? "Нэмж байна..." : "Agent нэмэх"}
                     </button>
@@ -425,7 +430,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <button
                             onClick={() => handleApproveAgent(agent.id, false)}
-                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
+                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
                           >
                             Цуцлах
                           </button>
@@ -452,7 +457,7 @@ export default function AdminDashboardPage() {
                 <div className="flex gap-2 border-b border-gray-200">
                   <button
                     onClick={() => setOrderFilter("active")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${orderFilter === "active"
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 ${orderFilter === "active"
                       ? "text-blue-600 bg-blue-50"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                       }`}
@@ -461,7 +466,7 @@ export default function AdminDashboardPage() {
                   </button>
                   <button
                     onClick={() => setOrderFilter("completed")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${orderFilter === "completed"
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 ${orderFilter === "completed"
                       ? "text-blue-600 bg-blue-50"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                       }`}
@@ -528,7 +533,7 @@ export default function AdminDashboardPage() {
                                     href={report.paymentLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 hover:underline truncate block max-w-[200px]"
+                                    className="text-sm text-blue-600 hover:underline truncate block max-w-50"
                                   >
                                     {report.paymentLink}
                                   </a>
@@ -577,7 +582,7 @@ export default function AdminDashboardPage() {
                                       </span>
                                       <button
                                         onClick={() => handleVerifyPayment(order.id)}
-                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
+                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-8"
                                       >
                                         Батлах
                                       </button>
@@ -589,7 +594,7 @@ export default function AdminDashboardPage() {
                                       </span>
                                       <button
                                         onClick={() => handleVerifyPayment(order.id)}
-                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
+                                        className="px-3 py-1.5 text-xs text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium whitespace-nowrap min-h-8"
                                       >
                                         Батлах
                                       </button>
@@ -603,7 +608,7 @@ export default function AdminDashboardPage() {
                                 {order.userPaymentVerified && !order.agentPaymentPaid && (
                                   <button
                                     onClick={() => handleAgentPayment(order.id)}
-                                    className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium whitespace-nowrap min-h-[32px]"
+                                    className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium whitespace-nowrap min-h-8"
                                   >
                                     Agent төлбөр
                                   </button>
@@ -634,7 +639,7 @@ export default function AdminDashboardPage() {
                       setCargoFormData({ name: "", description: "" });
                       setShowCargoForm(!showCargoForm);
                     }}
-                    className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[40px]"
+                    className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
                   >
                     {showCargoForm ? "Хаах" : "Cargo нэмэх"}
                   </button>
@@ -666,7 +671,7 @@ export default function AdminDashboardPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={editingCargo ? handleUpdateCargo : handleCreateCargo}
-                          className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[44px]"
+                          className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-11"
                         >
                           {editingCargo ? "Шинэчлэх" : "Үүсгэх"}
                         </button>
@@ -676,7 +681,7 @@ export default function AdminDashboardPage() {
                               setEditingCargo(null);
                               setCargoFormData({ name: "", description: "" });
                             }}
-                            className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
+                            className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
                           >
                             Цуцлах
                           </button>
@@ -701,13 +706,13 @@ export default function AdminDashboardPage() {
                               setCargoFormData({ name: cargo.name, description: cargo.description || "" });
                               setShowCargoForm(true);
                             }}
-                            className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[32px]"
+                            className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-8"
                           >
                             Засах
                           </button>
                           <button
                             onClick={() => handleDeleteCargo(cargo.id)}
-                            className="px-3 py-1.5 text-xs text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[32px]"
+                            className="px-3 py-1.5 text-xs text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-8"
                           >
                             Устгах
                           </button>
@@ -731,7 +736,7 @@ export default function AdminDashboardPage() {
                   {!isEditingSettings && (
                     <button
                       onClick={handleEditSettings}
-                      className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[40px]"
+                      className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
                     >
                       Засах
                     </button>
@@ -810,7 +815,7 @@ export default function AdminDashboardPage() {
                         <button
                           onClick={handleSaveSettings}
                           disabled={savingSettings}
-                          className="flex-1 px-4 py-2.5 text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                          className="flex-1 px-4 py-2.5 text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-11"
                         >
                           {savingSettings ? "Хадгалж байна..." : "Хадгалах"}
                         </button>
@@ -824,7 +829,7 @@ export default function AdminDashboardPage() {
                               exchangeRate: adminSettings?.exchangeRate || 1,
                             });
                           }}
-                          className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
+                          className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
                         >
                           Цуцлах
                         </button>
@@ -921,11 +926,12 @@ export default function AdminDashboardPage() {
                                         await apiClient.approveRewardRequest(request.id);
                                         alert("Урамшуулал амжилттай батлагдлаа.");
                                         await loadData();
-                                      } catch (err: any) {
-                                        alert(err.message || "Алдаа гарлаа");
+                                      } catch (e: unknown) {
+                                        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+                                        alert(errorMessage);
                                       }
                                     }}
-                                    className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-[40px]"
+                                    className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-10"
                                   >
                                     Батлах
                                   </button>
@@ -939,11 +945,12 @@ export default function AdminDashboardPage() {
                                         await apiClient.rejectRewardRequest(request.id);
                                         alert("Хүсэлт татгалзсан. Оноо agent-д буцаагдлаа.");
                                         await loadData();
-                                      } catch (err: any) {
-                                        alert(err.message || "Алдаа гарлаа");
+                                      } catch (e: unknown) {
+                                        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+                                        alert(errorMessage);
                                       }
                                     }}
-                                    className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[40px]"
+                                    className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
                                   >
                                     Татгалзах
                                   </button>

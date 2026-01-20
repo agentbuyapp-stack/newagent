@@ -125,7 +125,7 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        let errorData: any;
+        let errorData: { error?: string; message?: string } = {};
         try {
           errorData = await response.json();
         } catch {
@@ -144,13 +144,15 @@ class ApiClient {
       }
 
       return response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Enhanced error logging
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error("API Request failed:", {
         endpoint,
         url,
-        error: error.message,
-        stack: error.stack,
+        error: errorMessage,
+        stack: errorStack,
       });
       throw error;
     }
@@ -322,6 +324,13 @@ class ApiClient {
     });
   }
 
+  async updateAgentReport(orderId: string, data: AgentReportUpdateData): Promise<AgentReport> {
+    return this.request<AgentReport>(`/orders/${orderId}/report`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Reward request endpoints (agent)
   async getMyRewardRequests(): Promise<RewardRequest[]> {
     return this.request<RewardRequest[]>("/agents/reward-requests");
@@ -354,6 +363,56 @@ class ApiClient {
   async healthCheck(): Promise<{ status: string }> {
     return this.request<{ status: string }>("/health");
   }
+
+  // Bundle Order endpoints
+  async getBundleOrders(): Promise<BundleOrder[]> {
+    return this.request<BundleOrder[]>("/bundle-orders");
+  }
+
+  async getBundleOrder(orderId: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}`);
+  }
+
+  async createBundleOrder(data: BundleOrderData): Promise<BundleOrder> {
+    return this.request<BundleOrder>("/bundle-orders", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBundleOrderStatus(orderId: string, status: OrderStatus): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async updateBundleItemStatus(orderId: string, itemId: string, status: OrderStatus): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/items/${itemId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async createBundleItemReport(orderId: string, itemId: string, data: BundleItemReportData): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/items/${itemId}/report`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBundleTrackCode(orderId: string, trackCode: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/track-code`, {
+      method: "PUT",
+      body: JSON.stringify({ trackCode }),
+    });
+  }
+
+  async deleteBundleOrder(orderId: string): Promise<void> {
+    return this.request<void>(`/bundle-orders/${orderId}`, {
+      method: "DELETE",
+    });
+  }
 }
 
 export interface Cargo {
@@ -373,6 +432,13 @@ export interface Message {
   createdAt: string;
 }
 
+export interface AgentReportEditHistory {
+  editedAt: string;
+  previousAmount: number;
+  newAmount: number;
+  reason?: string;
+}
+
 export interface AgentReport {
   id: string;
   orderId: string;
@@ -381,6 +447,7 @@ export interface AgentReport {
   additionalImages: string[];
   additionalDescription?: string;
   quantity?: number;
+  editHistory?: AgentReportEditHistory[];
   createdAt: string;
   updatedAt: string;
 }
@@ -391,6 +458,14 @@ export interface AgentReportData {
   additionalImages?: string[];
   additionalDescription?: string;
   quantity?: number;
+}
+
+export interface AgentReportUpdateData {
+  userAmount?: number;
+  paymentLink?: string;
+  additionalDescription?: string;
+  quantity?: number;
+  editReason?: string;
 }
 
 export interface AdminSettings {
@@ -411,6 +486,59 @@ export interface AdminSettingsData {
 }
 
 export type RewardRequestStatus = "pending" | "approved" | "rejected";
+
+// Bundle Order types
+export interface BundleItem {
+  id: string;
+  productName: string;
+  description: string;
+  imageUrls: string[];
+  status: OrderStatus;
+  agentReport?: {
+    userAmount: number;
+    paymentLink?: string;
+    additionalImages: string[];
+    additionalDescription?: string;
+    quantity?: number;
+    createdAt: string;
+  };
+}
+
+export interface BundleOrder {
+  id: string;
+  userId: string;
+  agentId?: string;
+  userSnapshot: {
+    name: string;
+    phone: string;
+    cargo: string;
+  };
+  items: BundleItem[];
+  status: OrderStatus;
+  userPaymentVerified?: boolean;
+  agentPaymentPaid?: boolean;
+  trackCode?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+  agent?: User;
+}
+
+export interface BundleOrderData {
+  items: Array<{
+    productName: string;
+    description: string;
+    imageUrls?: string[];
+  }>;
+}
+
+export interface BundleItemReportData {
+  userAmount: number;
+  paymentLink?: string;
+  additionalImages?: string[];
+  additionalDescription?: string;
+  quantity?: number;
+}
 
 export interface RewardRequest {
   id: string;

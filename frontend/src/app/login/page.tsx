@@ -25,8 +25,9 @@ export default function LoginPage() {
       } else {
         router.push("/user");
       }
-    } catch (err: any) {
-      setError(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
+              className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-11"
             >
               {loading ? "Түр хүлээнэ үү..." : "Нэвтрэх"}
             </button>

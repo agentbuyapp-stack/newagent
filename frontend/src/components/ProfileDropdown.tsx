@@ -21,6 +21,7 @@ export default function ProfileDropdown() {
     if (clerkUser) {
       loadProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clerkUser]);
 
   // For agents, refresh points periodically and on window focus
@@ -41,6 +42,7 @@ export default function ProfileDropdown() {
         window.removeEventListener('focus', handleFocus);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
 
   // Close dropdown when clicking outside
@@ -69,11 +71,13 @@ export default function ProfileDropdown() {
       if (userData.profile) {
         setProfile(userData.profile);
       }
-    } catch (err: any) {
-      console.error("Failed to load profile:", err);
+    } catch (e: unknown) {
+      console.error("Failed to load profile:", e);
+      const errorMessage = e instanceof Error ? e.message : "Unknown error";
+      const errorStack = e instanceof Error ? e.stack : undefined;
       console.error("Error details:", {
-        message: err.message,
-        stack: err.stack,
+        message: errorMessage,
+        stack: errorStack,
       });
       // Don't show error to user, just log it
     } finally {
@@ -113,8 +117,9 @@ export default function ProfileDropdown() {
                 alert("Оноо амжилттай зарагдлаа. Admin-д хүсэлт илгээгдлээ.");
                 // Reload profile to update points
                 await loadProfile();
-              } catch (err: any) {
-                alert(err.message || "Алдаа гарлаа");
+              } catch (e: unknown) {
+                const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+                alert(errorMessage);
               }
             } : undefined}
             title={displayPoints > 0 ? "Оноо зарах - Дарах" : "Оноо байхгүй"}
@@ -132,7 +137,7 @@ export default function ProfileDropdown() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors min-h-[40px] min-w-[40px]"
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors min-h-10 min-w-10"
           title="Миний мэдээлэл"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,7 +152,7 @@ export default function ProfileDropdown() {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">Миний мэдээлэл</h3>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 min-h-[32px] min-w-[32px]"
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 min-h-8 min-w-8"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -162,7 +167,7 @@ export default function ProfileDropdown() {
                   <ProfileForm profile={profile} onSuccess={handleProfileSuccess} hideCargo={user?.role === "agent"} />
                   <button
                     onClick={handleCancelForm}
-                    className="mt-3 w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
+                    className="mt-3 w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
                   >
                     Цуцлах
                   </button>
@@ -215,7 +220,7 @@ export default function ProfileDropdown() {
 
                       <button
                         onClick={() => setShowProfileForm(true)}
-                        className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
+                        className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-11"
                       >
                         Профайл засах
                       </button>
@@ -227,7 +232,7 @@ export default function ProfileDropdown() {
                       </div>
                       <button
                         onClick={() => setShowProfileForm(true)}
-                        className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px]"
+                        className="w-full px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-11"
                       >
                         Профайл үүсгэх
                       </button>
@@ -238,7 +243,7 @@ export default function ProfileDropdown() {
                     <div className="pt-4 border-t border-gray-200 space-y-2">
                       <Link
                         href="/admin/dashboard"
-                        className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-[40px]"
+                        className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-10"
                         onClick={() => setIsOpen(false)}
                       >
                         Admin Dashboard

@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IEditHistory {
+  editedAt: Date;
+  previousAmount: number;
+  newAmount: number;
+  reason?: string;
+}
+
 export interface IAgentReport extends Document {
   orderId: mongoose.Types.ObjectId;
   userAmount: number;
@@ -7,6 +14,7 @@ export interface IAgentReport extends Document {
   additionalImages: string[];
   additionalDescription?: string;
   quantity?: number;
+  editHistory: IEditHistory[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +44,15 @@ const AgentReportSchema = new Schema<IAgentReport>(
     },
     quantity: {
       type: Number,
+    },
+    editHistory: {
+      type: [{
+        editedAt: { type: Date, default: Date.now },
+        previousAmount: { type: Number, required: true },
+        newAmount: { type: Number, required: true },
+        reason: { type: String },
+      }],
+      default: [],
     },
   },
   {
