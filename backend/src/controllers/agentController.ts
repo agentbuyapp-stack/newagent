@@ -1,6 +1,71 @@
 import { Request, Response } from "express";
-import { User, RewardRequest } from "../models";
+import { User, RewardRequest, Order, Profile } from "../models";
 import mongoose from "mongoose";
+
+// Public endpoint - get all approved agents with stats
+export const getPublicAgents = async (req: Request, res: Response) => {
+  try {
+    // Get all approved agents
+    const agents = await User.find({ role: "agent", isApproved: true })
+      .select("_id email agentPoints createdAt")
+      .lean();
+
+    if (agents.length === 0) {
+      return res.json([]);
+    }
+
+    const agentIds = agents.map(a => a._id);
+
+    // Get profiles for agents
+    const profiles = await Profile.find({ userId: { $in: agentIds } }).lean();
+    const profileMap = new Map(profiles.map(p => [p.userId.toString(), p]));
+
+    // Get order stats for each agent (only successful orders)
+    const orderStats = await Order.aggregate([
+      {
+        $match: {
+          agentId: { $in: agentIds },
+          status: "amjilttai_zahialga"
+        }
+      },
+      {
+        $group: {
+          _id: "$agentId",
+          orderCount: { $sum: 1 }
+        }
+      }
+    ]);
+    const orderStatsMap = new Map(orderStats.map(s => [s._id.toString(), s.orderCount]));
+
+    // Format response
+    const agentsWithStats = agents.map(agent => {
+      const profile = profileMap.get(agent._id.toString());
+      const orderCount = orderStatsMap.get(agent._id.toString()) || 0;
+
+      return {
+        id: agent._id.toString(),
+        name: profile?.name || "Агент",
+        email: agent.email,
+        orderCount,
+        agentPoints: agent.agentPoints || 0,
+        createdAt: agent.createdAt,
+      };
+    });
+
+    // Sort by orderCount (desc), then by agentPoints (desc)
+    agentsWithStats.sort((a, b) => {
+      if (b.orderCount !== a.orderCount) {
+        return b.orderCount - a.orderCount;
+      }
+      return b.agentPoints - a.agentPoints;
+    });
+
+    res.json(agentsWithStats);
+  } catch (error: any) {
+    console.error("Error in GET /agents/public:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const registerAsAgent = async (req: Request, res: Response) => {
   try {

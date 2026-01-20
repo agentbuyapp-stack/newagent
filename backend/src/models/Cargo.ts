@@ -3,6 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ICargo extends Document {
   name: string;
   description?: string;
+  phone?: string;
+  location?: string;
+  website?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +19,18 @@ const CargoSchema = new Schema<ICargo>(
       trim: true,
     },
     description: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    location: {
+      type: String,
+      trim: true,
+    },
+    website: {
       type: String,
       trim: true,
     },

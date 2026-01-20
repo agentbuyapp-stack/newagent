@@ -52,6 +52,8 @@ export interface Order {
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
   trackCode?: string; // Track code for successful orders
+  archivedByUser?: boolean; // User archived this order
+  archivedByAgent?: boolean; // Agent archived this order
   createdAt: string;
   updatedAt: string;
   user?: User;
@@ -221,6 +223,13 @@ class ApiClient {
     });
   }
 
+  // Archive order (user or agent)
+  async archiveOrder(orderId: string): Promise<Order> {
+    return this.request<Order>(`/orders/${orderId}/archive`, {
+      method: "PUT",
+    });
+  }
+
   // Agent endpoints
   async registerAsAgent(): Promise<User> {
     return this.request<User>("/agents/register", {
@@ -252,14 +261,19 @@ class ApiClient {
     return this.request<Cargo[]>("/cargos");
   }
 
-  async createCargo(data: { name: string; description?: string }): Promise<Cargo> {
+  async getPublicAgents(): Promise<PublicAgent[]> {
+    // Public endpoint - get approved agents with stats
+    return this.request<PublicAgent[]>("/agents/public");
+  }
+
+  async createCargo(data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
     return this.request<Cargo>("/admin/cargos", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updateCargo(cargoId: string, data: { name: string; description?: string }): Promise<Cargo> {
+  async updateCargo(cargoId: string, data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
     return this.request<Cargo>(`/admin/cargos/${cargoId}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -419,8 +433,20 @@ export interface Cargo {
   id: string;
   name: string;
   description?: string;
+  phone?: string;
+  location?: string;
+  website?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PublicAgent {
+  id: string;
+  name: string;
+  email?: string;
+  orderCount: number;
+  agentPoints: number;
+  createdAt: string;
 }
 
 export interface Message {
@@ -468,12 +494,28 @@ export interface AgentReportUpdateData {
   editReason?: string;
 }
 
+export interface FooterSettings {
+  aboutUs?: string;
+  termsOfService?: string;
+  faq?: string;
+  email?: string;
+  phone?: string;
+  tutorial?: string;
+  agentRegistration?: string;
+  helpCenter?: string;
+  facebook?: string;
+  youtube?: string;
+  instagram?: string;
+  twitter?: string;
+}
+
 export interface AdminSettings {
   id: string;
   accountNumber?: string;
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  footer?: FooterSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -483,6 +525,7 @@ export interface AdminSettingsData {
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  footer?: FooterSettings;
 }
 
 export type RewardRequestStatus = "pending" | "approved" | "rejected";

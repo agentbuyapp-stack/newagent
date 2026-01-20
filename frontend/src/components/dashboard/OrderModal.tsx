@@ -122,7 +122,7 @@ export default function OrderModal({
               Захиалгын ID
             </label>
             <p className="text-lg font-mono text-gray-900 mt-1">
-              {order.id}
+              #{order.id.slice(-4).toUpperCase()}
             </p>
           </div>
 

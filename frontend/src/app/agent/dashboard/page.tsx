@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
@@ -34,7 +34,7 @@ export default function AgentDashboardPage() {
   const [showRewards, setShowRewards] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
   const [orderFilter, setOrderFilter] = useState<
-    "active" | "completed" | "cancelled"
+    "active" | "completed" | "cancelled" | "archived"
   >("active");
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
@@ -58,6 +58,42 @@ export default function AgentDashboardPage() {
   const [editReportAmount, setEditReportAmount] = useState<number>(0);
   const [editReportReason, setEditReportReason] = useState("");
   const [editReportLoading, setEditReportLoading] = useState(false);
+
+  // Notification states for Agent
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      type: "new_order" | "payment_confirmed" | "message" | "order_update";
+      title: string;
+      message: string;
+      orderId?: string;
+      createdAt: Date;
+    }>
+  >([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
+  const notificationDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationDropdownRef.current &&
+        !notificationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowNotificationDropdown(false);
+      }
+    };
+
+    if (showNotificationDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotificationDropdown]);
 
   // Load agent report when order modal opens
   useEffect(() => {
@@ -199,6 +235,100 @@ export default function AgentDashboardPage() {
             }
           }
           setAgentReports(reports);
+
+          // Generate notifications for agent
+          const generatedNotifications: Array<{
+            id: string;
+            type:
+              | "new_order"
+              | "payment_confirmed"
+              | "message"
+              | "order_update";
+            title: string;
+            message: string;
+            orderId?: string;
+            createdAt: Date;
+          }> = [];
+
+          const userAgentId = String(userData.id || "").trim();
+
+          ordersData.forEach((order) => {
+            const orderDate = new Date(order.updatedAt);
+            const now = new Date();
+            const hoursSinceUpdate =
+              (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
+
+            // Get order's agentId
+            let orderAgentId = "";
+            if (typeof order.agentId === "string") {
+              orderAgentId = order.agentId.trim();
+            } else if (order.agentId && typeof order.agentId === "object") {
+              const agentIdObj = order.agentId as Record<string, unknown>;
+              orderAgentId = String(
+                agentIdObj.id || agentIdObj._id || "",
+              ).trim();
+            } else {
+              orderAgentId = String(order.agentId || "").trim();
+            }
+
+            // Notification for new published orders (visible to all agents)
+            if (
+              hoursSinceUpdate < 24 &&
+              order.status === "niitlegdsen" &&
+              (userData.isApproved || userData.role === "admin")
+            ) {
+              generatedNotifications.push({
+                id: `new-order-${order.id}`,
+                type: "new_order",
+                title: "Шинэ захиалга",
+                message: `"${order.productName}" захиалга нийтлэгдлээ`,
+                orderId: order.id,
+                createdAt: new Date(order.createdAt),
+              });
+            }
+
+            // Notifications for agent's own orders
+            if (orderAgentId === userAgentId) {
+              // Payment confirmed notification
+              if (
+                hoursSinceUpdate < 24 &&
+                order.status === "tolbor_huleej_bn" &&
+                order.userPaymentVerified
+              ) {
+                generatedNotifications.push({
+                  id: `payment-${order.id}`,
+                  type: "payment_confirmed",
+                  title: "Төлбөр баталгаажсан",
+                  message: `"${order.productName}" захиалгын төлбөр хэрэглэгчээс баталгаажсан`,
+                  orderId: order.id,
+                  createdAt: new Date(order.updatedAt),
+                });
+              }
+
+              // Order completed notification
+              if (
+                hoursSinceUpdate < 24 &&
+                order.status === "amjilttai_zahialga"
+              ) {
+                generatedNotifications.push({
+                  id: `completed-${order.id}`,
+                  type: "order_update",
+                  title: "Захиалга амжилттай",
+                  message: `"${order.productName}" захиалга амжилттай дууслаа`,
+                  orderId: order.id,
+                  createdAt: new Date(order.updatedAt),
+                });
+              }
+            }
+          });
+
+          // Sort by date (newest first)
+          generatedNotifications.sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+          );
+
+          setNotifications(generatedNotifications);
+          setNotificationCount(generatedNotifications.length);
         } catch {
           console.log("No orders found");
         }
@@ -361,6 +491,33 @@ export default function AgentDashboardPage() {
     }
   };
 
+  const handleArchiveOrder = async (orderId: string) => {
+    if (!confirm("Та энэ захиалгыг архивлахдаа итгэлтэй байна уу?")) {
+      return;
+    }
+
+    try {
+      await apiClient.archiveOrder(orderId);
+      await loadData();
+      setShowOrderModal(false);
+      alert("Захиалга амжилттай архивлагдлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
+    }
+  };
+
+  const canArchiveOrder = (order: Order) => {
+    // Only completed or cancelled orders can be archived
+    // Agent can only archive orders they handled
+    return (
+      (order.status === "amjilttai_zahialga" ||
+        order.status === "tsutsalsan_zahialga") &&
+      !order.archivedByAgent &&
+      order.agentId === user?.id
+    );
+  };
+
   const getStatusText = (status: OrderStatus) => {
     switch (status) {
       case "niitlegdsen":
@@ -390,16 +547,21 @@ export default function AgentDashboardPage() {
     return orders.filter((order) => order.status === "niitlegdsen");
   }, [orders, user?.role]);
 
-  // Agent's all orders (excluding published/niitlegdsen)
+  // Agent's all orders (excluding published/niitlegdsen and archived)
   const myOrders = useMemo(() => {
-    // For admin, show all orders that are not "niitlegdsen"
+    // For admin, show all orders that are not "niitlegdsen" and not archived
     if (user?.role === "admin") {
-      return orders.filter((order) => order.status !== "niitlegdsen");
+      return orders.filter(
+        (order) => order.status !== "niitlegdsen" && !order.archivedByAgent,
+      );
     }
-    // For agents, show all their assigned orders (excluding niitlegdsen)
+    // For agents, show all their assigned orders (excluding niitlegdsen and archived)
     const filtered = orders.filter((order) => {
       // Check if order has agentId and it matches current user's id
       if (!order.agentId || !user?.id) return false;
+
+      // Skip archived orders
+      if (order.archivedByAgent) return false;
 
       // Extract agentId - handle both string and object types
       let orderAgentId: string = "";
@@ -460,8 +622,39 @@ export default function AgentDashboardPage() {
     return filtered;
   }, [orders, user?.role, user?.id]);
 
+  // Memoize archived orders for agent
+  const archivedOrders = useMemo(() => {
+    // For admin, show all archived orders
+    if (user?.role === "admin") {
+      return orders.filter((order) => order.archivedByAgent);
+    }
+    // For agents, show their archived orders
+    return orders.filter((order) => {
+      if (!order.agentId || !user?.id) return false;
+      if (!order.archivedByAgent) return false;
+
+      let orderAgentId: string = "";
+      if (typeof order.agentId === "string") {
+        orderAgentId = order.agentId.trim();
+      } else if (order.agentId && typeof order.agentId === "object") {
+        const agentIdObj = order.agentId as Record<string, unknown>;
+        orderAgentId = String(agentIdObj.id || agentIdObj._id || "").trim();
+      } else {
+        orderAgentId = String(order.agentId || "").trim();
+      }
+
+      const userId = String(user.id || "").trim();
+      return orderAgentId === userId;
+    });
+  }, [orders, user?.role, user?.id]);
+
   // Memoize filtered orders for "My Orders" section
   const filteredMyOrders = useMemo(() => {
+    // For archived filter, use archivedOrders
+    if (orderFilter === "archived") {
+      return archivedOrders;
+    }
+
     return myOrders.filter((order) => {
       if (orderFilter === "active") {
         // Идэвхтэй: agent судлахаар авсан захиалга
@@ -480,7 +673,20 @@ export default function AgentDashboardPage() {
       }
       return false;
     });
-  }, [myOrders, orderFilter]);
+  }, [myOrders, archivedOrders, orderFilter]);
+
+  // Count orders by category for "My Orders" section
+  const myActiveCount = myOrders.filter(
+    (order) =>
+      order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn",
+  ).length;
+  const myCompletedCount = myOrders.filter(
+    (order) => order.status === "amjilttai_zahialga",
+  ).length;
+  const myCancelledCount = myOrders.filter(
+    (order) => order.status === "tsutsalsan_zahialga",
+  ).length;
+  const myArchivedCount = archivedOrders.length;
 
   const handleClearCancelledOrder = async (orderId: string) => {
     if (!confirm("Та энэ цуцлагдсан захиалгыг устгахдаа итгэлтэй байна уу?")) {
@@ -522,6 +728,34 @@ export default function AgentDashboardPage() {
       await loadData();
       alert(
         `${cancelledOrders.length} цуцлагдсан захиалга амжилттай устгагдлаа`,
+      );
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
+    }
+  };
+
+  const handleClearAllArchivedOrders = async () => {
+    if (archivedOrders.length === 0) {
+      alert("Архивласан захиалга байхгүй байна");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Та ${archivedOrders.length} архивласан захиалгыг бүгдийг нь устгахдаа итгэлтэй байна уу?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        archivedOrders.map((order) => apiClient.cancelOrder(order.id)),
+      );
+      await loadData();
+      alert(
+        `${archivedOrders.length} архивласан захиалга амжилттай устгагдлаа`,
       );
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
@@ -624,99 +858,8 @@ export default function AgentDashboardPage() {
     );
   }
 
-  // Count orders needing attention
-  const ordersNeedingReport = filteredMyOrders.filter(
-    (order) => order.status === "agent_sudlaj_bn" && !agentReports[order.id],
-  ).length;
-  const ordersWaitingPayment = filteredMyOrders.filter(
-    (order) => order.status === "tolbor_huleej_bn",
-  ).length;
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Agent Header with Stats - Compact */}
-      <div className="bg-linear-to-r from-indigo-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between gap-3">
-            {/* Agent Info - Compact */}
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-base font-bold">
-                  {user?.role === "admin" ? "Admin" : "Agent"}
-                </h1>
-                <p className="text-white/70 text-xs truncate max-w-30 sm:max-w-none">
-                  {clerkUser?.primaryEmailAddress?.emailAddress}
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Stats - Compact inline */}
-            <div className="flex items-center gap-2 overflow-x-auto">
-              {/* New Orders */}
-              <div className="bg-white/10 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shrink-0">
-                <span className="text-lg font-bold">
-                  {publishedOrders.length}
-                </span>
-                <span className="text-[10px] text-white/70">Нээлттэй</span>
-              </div>
-
-              {/* Need Report */}
-              {ordersNeedingReport > 0 && (
-                <div className="bg-amber-500/30 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shrink-0">
-                  <span className="text-lg font-bold text-amber-200">
-                    {ordersNeedingReport}
-                  </span>
-                  <span className="text-[10px] text-amber-200/80">Тайлан</span>
-                </div>
-              )}
-
-              {/* Waiting Payment */}
-              {ordersWaitingPayment > 0 && (
-                <div className="bg-blue-500/30 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shrink-0">
-                  <span className="text-lg font-bold text-blue-200">
-                    {ordersWaitingPayment}
-                  </span>
-                  <span className="text-[10px] text-blue-200/80">Төлбөр</span>
-                </div>
-              )}
-
-              {/* My Active Orders */}
-              <div className="bg-white/10 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shrink-0">
-                <span className="text-lg font-bold">{myOrders.length}</span>
-                <span className="text-[10px] text-white/70">Миний</span>
-              </div>
-
-              {/* Agent Points - only for agents */}
-              {user?.role === "agent" && (
-                <div className="bg-emerald-500/30 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shrink-0">
-                  <span className="text-lg font-bold text-emerald-200">
-                    {(user?.agentPoints || 0).toLocaleString(undefined, {
-                      maximumFractionDigits: 0,
-                    })}
-                  </span>
-                  <span className="text-[10px] text-emerald-200/80">Оноо</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
           {/* Approval Status - Only show for agents, not admins */}
@@ -743,28 +886,29 @@ export default function AgentDashboardPage() {
           {/* Box 1: Нийтэлсэн захиалгууд */}
           {(user?.role === "admin" || isApproved) && (
             <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
+              <div
+                className="flex items-center gap-2 mb-4 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
+                onClick={() => setShowPublishedOrders(!showPublishedOrders)}
+              >
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Нээлттэй захиалгууд
+                  Нээлттэй захиалгууд{" "}
+                  <span className="text-indigo-600">
+                    ({publishedOrders.length})
+                  </span>
                 </h2>
-                <button
-                  onClick={() => setShowPublishedOrders(!showPublishedOrders)}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                <svg
+                  className={`w-5 h-5 text-gray-500 transition-transform ${showPublishedOrders ? "rotate-90" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className={`w-5 h-5 transition-transform ${showPublishedOrders ? "rotate-90" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </div>
 
               {showPublishedOrders && (
@@ -940,15 +1084,16 @@ export default function AgentDashboardPage() {
           {/* Box 2: Миний захиалгууд */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
             <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                Миний захиалгууд
-              </h2>
-              <button
+              <div
+                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
                 onClick={() => setShowMyOrders(!showMyOrders)}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
               >
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                  Миний захиалгууд{" "}
+                  <span className="text-indigo-600">({myOrders.length})</span>
+                </h2>
                 <svg
-                  className={`w-5 h-5 transition-transform ${showMyOrders ? "rotate-90" : ""}`}
+                  className={`w-5 h-5 text-gray-500 transition-transform ${showMyOrders ? "rotate-90" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -960,42 +1105,208 @@ export default function AgentDashboardPage() {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Notification Bell - Always visible */}
+                <div className="relative" ref={notificationDropdownRef}>
+                  <button
+                    onClick={() =>
+                      setShowNotificationDropdown(!showNotificationDropdown)
+                    }
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative"
+                    title="Мэдэгдлүүд"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                    {notificationCount > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                        {notificationCount > 9 ? "9+" : notificationCount}
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  {showNotificationDropdown && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
+                      <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Мэдэгдлүүд
+                        </h3>
+                        <button
+                          onClick={() => setShowNotificationDropdown(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className="p-4 hover:bg-gray-50 cursor-pointer transition"
+                              onClick={() => {
+                                if (notification.orderId) {
+                                  const order = orders.find(
+                                    (o) => o.id === notification.orderId,
+                                  );
+                                  if (order) {
+                                    setSelectedOrder(order);
+                                    setShowOrderModal(true);
+                                    setShowNotificationDropdown(false);
+                                  }
+                                }
+                              }}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div
+                                  className={`shrink-0 w-2 h-2 rounded-full mt-2 ${
+                                    notification.type === "new_order"
+                                      ? "bg-indigo-500"
+                                      : notification.type ===
+                                          "payment_confirmed"
+                                        ? "bg-green-500"
+                                        : notification.type === "message"
+                                          ? "bg-blue-500"
+                                          : "bg-yellow-500"
+                                  }`}
+                                ></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(
+                                      notification.createdAt,
+                                    ).toLocaleDateString("mn-MN", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-sm text-gray-500">
+                            Мэдэгдэл байхгүй байна.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {showMyOrders && (
               <div className="space-y-4">
                 {/* Category tabs */}
-                <div className="flex gap-2 border-b border-gray-200">
+                <div className="flex gap-2 border-b border-gray-200 pt-2">
                   <button
                     onClick={() => setOrderFilter("active")}
-                    className={`px-4 py-2 text-sm font-medium transition ${
+                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${
                       orderFilter === "active"
                         ? "text-blue-600 border-b-2 border-blue-600"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Идэвхтэй захиалга
+                    Идэвхтэй
+                    <span
+                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "active"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {myActiveCount}
+                    </span>
                   </button>
                   <button
                     onClick={() => setOrderFilter("completed")}
-                    className={`px-4 py-2 text-sm font-medium transition ${
+                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${
                       orderFilter === "completed"
                         ? "text-blue-600 border-b-2 border-blue-600"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Амжилттай захиалга
+                    Амжилттай
+                    <span
+                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "completed"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {myCompletedCount}
+                    </span>
                   </button>
                   <button
                     onClick={() => setOrderFilter("cancelled")}
-                    className={`px-4 py-2 text-sm font-medium transition ${
+                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${
                       orderFilter === "cancelled"
                         ? "text-blue-600 border-b-2 border-blue-600"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Цуцлагдсан захиалга
+                    Цуцлагдсан
+                    <span
+                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "cancelled"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {myCancelledCount}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setOrderFilter("archived")}
+                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${
+                      orderFilter === "archived"
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Архив
+                    <span
+                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "archived"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {myArchivedCount}
+                    </span>
                   </button>
                 </div>
 
@@ -1007,6 +1318,18 @@ export default function AgentDashboardPage() {
                       className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
                     >
                       Бүгдийг устгах (Clear All)
+                    </button>
+                  </div>
+                )}
+
+                {/* Clear All button for archived orders */}
+                {orderFilter === "archived" && filteredMyOrders.length > 0 && (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={handleClearAllArchivedOrders}
+                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
+                    >
+                      Бүгдийг устгах
                     </button>
                   </div>
                 )}
@@ -1118,34 +1441,29 @@ export default function AgentDashboardPage() {
                               </div>
                             </div>
 
-                            {/* Price or Track Code */}
-                            {(agentReports[order.id] ||
-                              (order.status === "amjilttai_zahialga" &&
-                                order.trackCode)) && (
-                              <div className="mt-2 flex items-center gap-2">
-                                {agentReports[order.id] && (
-                                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                                    {(() => {
-                                      const exchangeRate =
-                                        adminSettings?.exchangeRate || 1;
-                                      const calculatedAmount =
-                                        calculateUserPaymentAmount(
-                                          agentReports[order.id],
-                                          exchangeRate,
-                                        );
-                                      return calculatedAmount.toLocaleString();
-                                    })()}{" "}
-                                    ₮
-                                  </span>
-                                )}
-                                {order.status === "amjilttai_zahialga" &&
-                                  order.trackCode && (
-                                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                      {order.trackCode}
-                                    </span>
-                                  )}
-                              </div>
-                            )}
+                            {/* Price and Track Code - Always visible */}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              {agentReports[order.id] && (
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                                  {(() => {
+                                    const exchangeRate =
+                                      adminSettings?.exchangeRate || 1;
+                                    const calculatedAmount =
+                                      calculateUserPaymentAmount(
+                                        agentReports[order.id],
+                                        exchangeRate,
+                                      );
+                                    return calculatedAmount.toLocaleString();
+                                  })()}{" "}
+                                  ₮
+                                </span>
+                              )}
+                              {order.trackCode && (
+                                <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                                  🚚 {order.trackCode}
+                                </span>
+                              )}
+                            </div>
 
                             {/* Buttons - Bottom */}
                             <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100">
@@ -1225,7 +1543,8 @@ export default function AgentDashboardPage() {
                                   Тайлан
                                 </button>
                               )}
-                              {order.status === "tsutsalsan_zahialga" && (
+                              {(order.status === "tsutsalsan_zahialga" ||
+                                order.archivedByAgent) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1247,6 +1566,30 @@ export default function AgentDashboardPage() {
                                     />
                                   </svg>
                                   Устгах
+                                </button>
+                              )}
+                              {canArchiveOrder(order) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchiveOrder(order.id);
+                                  }}
+                                  className="h-7 px-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                                    />
+                                  </svg>
+                                  Архив
                                 </button>
                               )}
                             </div>
@@ -1276,6 +1619,8 @@ export default function AgentDashboardPage() {
                           "Амжилттай захиалга байхгүй"}
                         {orderFilter === "cancelled" &&
                           "Цуцлагдсан захиалга байхгүй"}
+                        {orderFilter === "archived" &&
+                          "Архивласан захиалга байхгүй"}
                       </p>
                     </div>
                   )}
@@ -1287,28 +1632,26 @@ export default function AgentDashboardPage() {
           {/* Box 3: Урамшуулал */}
           {user?.role === "agent" && (
             <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <div
+                className="flex items-center gap-2 mb-3 sm:mb-4 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
+                onClick={() => setShowRewards(!showRewards)}
+              >
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                   Урамшуулал
                 </h2>
-                <button
-                  onClick={() => setShowRewards(!showRewards)}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                <svg
+                  className={`w-5 h-5 text-gray-500 transition-transform ${showRewards ? "rotate-90" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className={`w-5 h-5 transition-transform ${showRewards ? "rotate-90" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </div>
 
               {showRewards && (
@@ -1469,7 +1812,7 @@ export default function AgentDashboardPage() {
                         </span>
                       </div>
                       <p className="text-xs text-white/70 mt-1.5 font-mono">
-                        #{selectedOrder.id.slice(-8)}
+                        #{selectedOrder.id.slice(-4).toUpperCase()}
                       </p>
                     </div>
 
@@ -1496,13 +1839,13 @@ export default function AgentDashboardPage() {
                 </div>
 
                 <div className="p-4 sm:p-6 space-y-5">
-                  {/* IMPORTANT: User Contact Info for Agent - Always visible at top */}
+                  {/* IMPORTANT: User Contact Info for Agent - Compact */}
                   {selectedOrder.user?.profile && (
-                    <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                        <span className="flex items-center gap-1.5">
                           <svg
-                            className="w-4 h-4 text-white"
+                            className="w-4 h-4 text-blue-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -1514,39 +1857,22 @@ export default function AgentDashboardPage() {
                               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                             />
                           </svg>
-                        </div>
-                        <h3 className="font-semibold text-gray-900">
-                          Хэрэглэгчийн мэдээлэл
-                        </h3>
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                          Каргод оруулах
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.user.profile.name || "-"}
+                          </span>
                         </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {/* Name */}
-                        <div className="bg-white rounded-lg p-3 border border-blue-100">
-                          <p className="text-xs text-gray-500 mb-1">Нэр</p>
-                          <p className="font-semibold text-gray-900">
-                            {selectedOrder.user.profile.name || "Байхгүй"}
-                          </p>
-                        </div>
-
-                        {/* Phone */}
-                        <div className="bg-white rounded-lg p-3 border border-blue-100">
-                          <p className="text-xs text-gray-500 mb-1">Утас</p>
-                          <p className="font-semibold text-gray-900">
-                            {selectedOrder.user.profile.phone || "Байхгүй"}
-                          </p>
-                        </div>
-
-                        {/* Cargo */}
-                        <div className="bg-white rounded-lg p-3 border border-blue-100">
-                          <p className="text-xs text-gray-500 mb-1">Карго</p>
-                          <p className="font-semibold text-blue-600">
-                            {selectedOrder.user.profile.cargo || "Сонгоогүй"}
-                          </p>
-                        </div>
+                        <span className="text-gray-600">
+                          Утас:{" "}
+                          <span className="font-medium text-gray-900">
+                            {selectedOrder.user.profile.phone || "-"}
+                          </span>
+                        </span>
+                        <span className="text-gray-600">
+                          Карго:{" "}
+                          <span className="font-medium text-blue-600">
+                            {selectedOrder.user.profile.cargo || "-"}
+                          </span>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1832,7 +2158,9 @@ export default function AgentDashboardPage() {
                               if (!report) return null;
 
                               // Check if can edit (before user payment)
-                              const canEdit = selectedOrder.status === "tolbor_huleej_bn" && !selectedOrder.userPaymentVerified;
+                              const canEdit =
+                                selectedOrder.status === "tolbor_huleej_bn" &&
+                                !selectedOrder.userPaymentVerified;
 
                               return (
                                 <>
@@ -1844,9 +2172,12 @@ export default function AgentDashboardPage() {
                                       </label>
                                       {canEdit && !isEditingReport && (
                                         <button
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             setIsEditingReport(true);
-                                            setEditReportAmount(report.userAmount);
+                                            setEditReportAmount(
+                                              report.userAmount,
+                                            );
                                             setEditReportReason("");
                                           }}
                                           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -1863,14 +2194,22 @@ export default function AgentDashboardPage() {
                                           step="1"
                                           min="0"
                                           value={editReportAmount || ""}
-                                          onChange={(e) => setEditReportAmount(Math.round(parseFloat(e.target.value)) || 0)}
+                                          onChange={(e) =>
+                                            setEditReportAmount(
+                                              Math.round(
+                                                parseFloat(e.target.value),
+                                              ) || 0,
+                                            )
+                                          }
                                           className="w-full px-3 py-2 text-base text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                           placeholder="Юань дүн оруулна уу"
                                         />
                                         <input
                                           type="text"
                                           value={editReportReason}
-                                          onChange={(e) => setEditReportReason(e.target.value)}
+                                          onChange={(e) =>
+                                            setEditReportReason(e.target.value)
+                                          }
                                           className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                           placeholder="Засварын шалтгаан (заавал биш)"
                                         />
@@ -1885,17 +2224,26 @@ export default function AgentDashboardPage() {
                                             Цуцлах
                                           </button>
                                           <button
-                                            onClick={() => handleUpdateReport(selectedOrder.id)}
+                                            onClick={() =>
+                                              handleUpdateReport(
+                                                selectedOrder.id,
+                                              )
+                                            }
                                             disabled={editReportLoading}
                                             className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium disabled:opacity-50"
                                           >
-                                            {editReportLoading ? "Хадгалж байна..." : "Хадгалах"}
+                                            {editReportLoading
+                                              ? "Хадгалж байна..."
+                                              : "Хадгалах"}
                                           </button>
                                         </div>
                                       </div>
                                     ) : (
                                       <p className="text-lg font-semibold text-amber-600 mt-1">
-                                        ¥{Math.round(report.userAmount).toLocaleString()}
+                                        ¥
+                                        {Math.round(
+                                          report.userAmount,
+                                        ).toLocaleString()}
                                       </p>
                                     )}
                                   </div>
@@ -1914,28 +2262,54 @@ export default function AgentDashboardPage() {
                                             report,
                                             exchangeRate,
                                           );
-                                        return Math.round(calculatedAmount).toLocaleString();
+                                        return Math.round(
+                                          calculatedAmount,
+                                        ).toLocaleString();
                                       })()}{" "}
                                       ₮
                                     </p>
                                   </div>
 
                                   {/* Edit History - Text only */}
-                                  {report.editHistory && report.editHistory.length > 0 && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                      <label className="text-sm font-medium text-amber-700 block mb-2">
-                                        Засварын түүх:
-                                      </label>
-                                      <div className="space-y-1 text-xs text-amber-800">
-                                        {report.editHistory.map((edit, idx) => (
-                                          <p key={idx}>
-                                            • {new Date(edit.editedAt).toLocaleDateString("mn-MN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}: ¥{Math.round(edit.previousAmount).toLocaleString()} → ¥{Math.round(edit.newAmount).toLocaleString()}
-                                            {edit.reason && <span className="text-amber-600"> ({edit.reason})</span>}
-                                          </p>
-                                        ))}
+                                  {report.editHistory &&
+                                    report.editHistory.length > 0 && (
+                                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <label className="text-sm font-medium text-amber-700 block mb-2">
+                                          Засварын түүх:
+                                        </label>
+                                        <div className="space-y-1 text-xs text-amber-800">
+                                          {report.editHistory.map(
+                                            (edit, idx) => (
+                                              <p key={idx}>
+                                                •{" "}
+                                                {new Date(
+                                                  edit.editedAt,
+                                                ).toLocaleDateString("mn-MN", {
+                                                  month: "short",
+                                                  day: "numeric",
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })}
+                                                : ¥
+                                                {Math.round(
+                                                  edit.previousAmount,
+                                                ).toLocaleString()}{" "}
+                                                → ¥
+                                                {Math.round(
+                                                  edit.newAmount,
+                                                ).toLocaleString()}
+                                                {edit.reason && (
+                                                  <span className="text-amber-600">
+                                                    {" "}
+                                                    ({edit.reason})
+                                                  </span>
+                                                )}
+                                              </p>
+                                            ),
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
+                                    )}
 
                                   {report.paymentLink && (
                                     <div>
@@ -2002,44 +2376,6 @@ export default function AgentDashboardPage() {
                       )}
                     </div>
                   )}
-
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        Үүсгэсэн огноо
-                      </label>
-                      <p className="text-gray-700 mt-1">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString(
-                          "mn-MN",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        Шинэчлэгдсэн огноо
-                      </label>
-                      <p className="text-gray-700 mt-1">
-                        {new Date(selectedOrder.updatedAt).toLocaleDateString(
-                          "mn-MN",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </p>
-                    </div>
-                  </div>
 
                   {/* Track Code Section - Show for successful orders */}
                   {selectedOrder.status === "amjilttai_zahialga" &&
@@ -2282,6 +2618,29 @@ export default function AgentDashboardPage() {
                           />
                         </svg>
                         Тайлан илгээх
+                      </button>
+                    )}
+
+                    {/* Archive Button - for completed/cancelled orders */}
+                    {canArchiveOrder(selectedOrder) && (
+                      <button
+                        onClick={() => handleArchiveOrder(selectedOrder.id)}
+                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                          />
+                        </svg>
+                        Архивлах
                       </button>
                     )}
                   </div>
