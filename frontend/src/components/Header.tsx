@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { SignedIn } from "@clerk/nextjs";
 import ProfileDropdown from "@/components/ProfileDropdown";
@@ -30,7 +29,7 @@ export default function Header() {
     <header className="border-b border-gray-200 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2 sm:gap-3">
-          <Image src="/icon.png" alt="AgentBuy" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
+          <img src="/icon.png" alt="AgentBuy" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
           <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">Agentbuy.mn</span>
         </Link>
         {!isPublicPage && (
