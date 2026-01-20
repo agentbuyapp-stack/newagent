@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiClient, type Profile, type ProfileData, type Cargo } from "@/lib/api";
+import {
+  apiClient,
+  type Profile,
+  type ProfileData,
+  type Cargo,
+} from "@/lib/api";
 
 interface ProfileFormProps {
   profile?: Profile | null;
@@ -9,7 +14,11 @@ interface ProfileFormProps {
   hideCargo?: boolean; // Hide cargo field for agents, show accountNumber instead
 }
 
-export default function ProfileForm({ profile, onSuccess, hideCargo = false }: ProfileFormProps) {
+export default function ProfileForm({
+  profile,
+  onSuccess,
+  hideCargo = false,
+}: ProfileFormProps) {
   const [formData, setFormData] = useState<ProfileData>({
     name: profile?.name || "",
     phone: profile?.phone || "",
@@ -79,7 +88,10 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
       )}
 
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-900 mb-1">
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium text-gray-900 mb-1"
+        >
           Нэр
         </label>
         <input
@@ -94,7 +106,10 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-900 mb-1">
+        <label
+          htmlFor="phone"
+          className="block text-sm font-medium text-gray-900 mb-1"
+        >
           Утас
         </label>
         <input
@@ -109,7 +124,10 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-1">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-900 mb-1"
+        >
           Имэйл
         </label>
         <input
@@ -125,20 +143,26 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
 
       {!hideCargo ? (
         <div>
-          <label htmlFor="cargo" className="block text-sm font-medium text-gray-900 mb-1">
-            Ачаа сонгох
+          <label
+            htmlFor="cargo"
+            className="block text-sm font-medium text-gray-900 mb-1"
+          >
+            Карго сонгох
           </label>
           {loadingCargos ? (
-            <p className="text-sm text-gray-500">Ачааны төрлүүдийг ачааллаж байна...</p>
+            <p className="text-sm text-gray-500">
+              Ачааны төрлүүдийг ачааллаж байна...
+            </p>
           ) : (
             <select
               id="cargo"
               required
               value={formData.cargo}
-              onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, cargo: e.target.value })
+              }
               className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
-              <option value="">Ачаа сонгох</option>
               {cargos.map((cargo) => (
                 <option key={cargo.id} value={cargo.name}>
                   {cargo.name}
@@ -147,19 +171,26 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
             </select>
           )}
           {!loadingCargos && cargos.length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">Ачааны төрөл байхгүй байна. Admin-аас нэмэх хэрэгтэй.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Ачааны төрөл байхгүй байна. Admin-аас нэмэх хэрэгтэй.
+            </p>
           )}
         </div>
       ) : (
         <div>
-          <label htmlFor="accountNumber" className="block text-sm font-medium text-gray-900 mb-1">
+          <label
+            htmlFor="accountNumber"
+            className="block text-sm font-medium text-gray-900 mb-1"
+          >
             Дансны дугаар
           </label>
           <input
             id="accountNumber"
             type="text"
             value={formData.accountNumber}
-            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, accountNumber: e.target.value })
+            }
             className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="Жишээ: 1234567890"
           />
@@ -176,4 +207,3 @@ export default function ProfileForm({ profile, onSuccess, hideCargo = false }: P
     </form>
   );
 }
-

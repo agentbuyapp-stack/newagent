@@ -25,6 +25,7 @@ type CombinedOrder =
 interface OrderHistorySectionProps {
   orders: Order[];
   bundleOrders: BundleOrder[];
+  archivedOrders?: Order[];
   notifications: NotificationItem[];
   hasOrderUpdates: boolean;
   hasNewMessages: boolean;
@@ -36,12 +37,14 @@ interface OrderHistorySectionProps {
   onViewReport?: (order: Order) => void;
   onDeleteOrder?: (order: Order) => void;
   onDeleteBundleOrder?: (bundleOrder: BundleOrder) => void;
+  onArchiveOrder?: (order: Order) => void;
   onReload: () => void;
 }
 
 export default function OrderHistorySection({
   orders,
   bundleOrders,
+  archivedOrders = [],
   notifications,
   hasOrderUpdates,
   hasNewMessages,
@@ -53,15 +56,17 @@ export default function OrderHistorySection({
   onViewReport,
   onDeleteOrder,
   onDeleteBundleOrder,
+  onArchiveOrder,
   onReload,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
   const [orderFilter, setOrderFilter] = useState<
-    "all" | "active" | "completed" | "cancelled"
+    "all" | "active" | "completed" | "cancelled" | "archived"
   >("all");
   const [orderViewMode, setOrderViewMode] = useState<"list" | "card">("card");
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -86,18 +91,43 @@ export default function OrderHistorySection({
 
   // Combine and filter orders
   const combinedOrders = useMemo((): CombinedOrder[] => {
-    const singleOrders: CombinedOrder[] = orders.map((o) => ({ type: "single", data: o }));
-    const bundleOrdersList: CombinedOrder[] = bundleOrders.map((o) => ({ type: "bundle", data: o }));
+    const singleOrders: CombinedOrder[] = orders.map((o) => ({
+      type: "single",
+      data: o,
+    }));
+    const bundleOrdersList: CombinedOrder[] = bundleOrders.map((o) => ({
+      type: "bundle",
+      data: o,
+    }));
     return [...singleOrders, ...bundleOrdersList];
   }, [orders, bundleOrders]);
 
+  // Archived orders (single only for now)
+  const combinedArchivedOrders = useMemo((): CombinedOrder[] => {
+    return archivedOrders.map((o) => ({ type: "single", data: o }));
+  }, [archivedOrders]);
+
   const filteredOrders = useMemo(() => {
+    // For archived filter, use archived orders list
+    if (orderFilter === "archived") {
+      return combinedArchivedOrders.sort((a, b) => {
+        return (
+          new Date(b.data.createdAt).getTime() -
+          new Date(a.data.createdAt).getTime()
+        );
+      });
+    }
+
     return combinedOrders
       .filter((item) => {
         const status = item.data.status;
         if (orderFilter === "all") return true;
         if (orderFilter === "active") {
-          return ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn"].includes(status);
+          return [
+            "niitlegdsen",
+            "agent_sudlaj_bn",
+            "tolbor_huleej_bn",
+          ].includes(status);
         }
         if (orderFilter === "completed") {
           return status === "amjilttai_zahialga";
@@ -108,9 +138,12 @@ export default function OrderHistorySection({
         return true;
       })
       .sort((a, b) => {
-        return new Date(b.data.createdAt).getTime() - new Date(a.data.createdAt).getTime();
+        return (
+          new Date(b.data.createdAt).getTime() -
+          new Date(a.data.createdAt).getTime()
+        );
       });
-  }, [combinedOrders, orderFilter]);
+  }, [combinedOrders, combinedArchivedOrders, orderFilter]);
 
   // Reset to page 1 when filter changes
   React.useEffect(() => {
@@ -130,8 +163,12 @@ export default function OrderHistorySection({
     }
 
     try {
-      const cancelledSingle = orders.filter((o) => o.status === "tsutsalsan_zahialga");
-      const cancelledBundle = bundleOrders.filter((o) => o.status === "tsutsalsan_zahialga");
+      const cancelledSingle = orders.filter(
+        (o) => o.status === "tsutsalsan_zahialga",
+      );
+      const cancelledBundle = bundleOrders.filter(
+        (o) => o.status === "tsutsalsan_zahialga",
+      );
 
       await Promise.all([
         ...cancelledSingle.map((o) => apiClient.cancelOrder(o.id)),
@@ -146,18 +183,48 @@ export default function OrderHistorySection({
     }
   };
 
+  const handleClearAllArchivedOrders = async () => {
+    if (!confirm("Та бүх архивласан захиалгыг устгахдаа итгэлтэй байна уу?")) {
+      return;
+    }
+
+    try {
+      await Promise.all(archivedOrders.map((o) => apiClient.cancelOrder(o.id)));
+
+      onReload();
+      alert("Архивласан захиалгууд амжилттай устгагдлаа.");
+    } catch (error) {
+      console.error("Error clearing archived orders:", error);
+      alert("Алдаа гарлаа. Дахин оролдоно уу.");
+    }
+  };
+
   const totalOrdersCount = orders.length + bundleOrders.length;
+
+  // Count orders by category
+  const activeCount = combinedOrders.filter((item) =>
+    ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn"].includes(
+      item.data.status,
+    ),
+  ).length;
+  const completedCount = combinedOrders.filter(
+    (item) => item.data.status === "amjilttai_zahialga",
+  ).length;
+  const cancelledCount = combinedOrders.filter(
+    (item) => item.data.status === "tsutsalsan_zahialga",
+  ).length;
+  const archivedCount = combinedArchivedOrders.length;
 
   return (
     <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-center mb-5 -mx-5 -mt-5 px-5 pt-5 pb-3 rounded-t-2xl">
+      <div className="flex justify-between items-center mb-5 -mx-5 -mt-5 px-3 sm:px-5 pt-4 sm:pt-5 pb-3 rounded-t-2xl">
         <div
-          className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-gray-50 -ml-3 pl-3 py-2 rounded-xl transition-colors"
+          className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer hover:bg-gray-50 -ml-2 sm:-ml-3 pl-2 sm:pl-3 py-2 rounded-xl transition-colors min-w-0"
           onClick={() => setShowOrderSection(!showOrderSection)}
         >
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
             <svg
-              className="w-5 h-5 text-white"
+              className="w-4 h-4 sm:w-5 sm:h-5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -170,11 +237,13 @@ export default function OrderHistorySection({
               />
             </svg>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            Өмнөх захиалгууд ({totalOrdersCount})
+          <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 truncate">
+            <span className="hidden xs:inline">Өмнөх захиалгууд</span>
+            <span className="xs:hidden">Захиалгууд</span>
+            <span className="ml-1">({totalOrdersCount})</span>
           </h2>
           <svg
-            className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showOrderSection ? "rotate-90" : ""}`}
+            className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 shrink-0 transition-transform duration-200 ${showOrderSection ? "rotate-90" : ""}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -191,11 +260,18 @@ export default function OrderHistorySection({
           {(hasOrderUpdates || hasNewMessages || notificationCount > 0) && (
             <div className="relative" ref={notificationDropdownRef}>
               <button
-                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                onClick={() =>
+                  setShowNotificationDropdown(!showNotificationDropdown)
+                }
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative min-h-10 min-w-10"
                 title="Мэдэгдлүүд"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -213,13 +289,25 @@ export default function OrderHistorySection({
               {showNotificationDropdown && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-900">Мэдэгдлүүд</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Мэдэгдлүүд
+                    </h3>
                     <button
                       onClick={() => setShowNotificationDropdown(false)}
                       className="text-gray-400 hover:text-gray-600"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -231,7 +319,9 @@ export default function OrderHistorySection({
                           className="p-4 hover:bg-gray-50 cursor-pointer transition"
                           onClick={() => {
                             if (notification.orderId) {
-                              const order = orders.find((o) => o.id === notification.orderId);
+                              const order = orders.find(
+                                (o) => o.id === notification.orderId,
+                              );
                               if (order) {
                                 onSelectOrder(order);
                                 setShowNotificationDropdown(false);
@@ -245,15 +335,21 @@ export default function OrderHistorySection({
                                 notification.type === "order_update"
                                   ? "bg-yellow-500"
                                   : notification.type === "message"
-                                  ? "bg-blue-500"
-                                  : "bg-green-500"
+                                    ? "bg-blue-500"
+                                    : "bg-green-500"
                               }`}
                             ></div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
-                              <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {notification.message}
+                              </p>
                               <p className="text-xs text-gray-400 mt-1">
-                                {new Date(notification.createdAt).toLocaleDateString("mn-MN", {
+                                {new Date(
+                                  notification.createdAt,
+                                ).toLocaleDateString("mn-MN", {
                                   year: "numeric",
                                   month: "short",
                                   day: "numeric",
@@ -266,7 +362,9 @@ export default function OrderHistorySection({
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">Мэдэгдэл байхгүй байна.</div>
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        Мэдэгдэл байхгүй байна.
+                      </div>
                     )}
                   </div>
                 </div>
@@ -279,39 +377,104 @@ export default function OrderHistorySection({
       {showOrderSection && (
         <div className="space-y-2">
           {/* Category tabs */}
-          <div className="flex items-center justify-center border-b border-gray-200">
-            <button
-              onClick={() => setOrderFilter("all")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-10 ${
-                orderFilter === "all" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Бүгд
-            </button>
-            <button
-              onClick={() => setOrderFilter("active")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-10 ${
-                orderFilter === "active" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Идэвхтэй
-            </button>
-            <button
-              onClick={() => setOrderFilter("completed")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-10 ${
-                orderFilter === "completed" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Амжилттай
-            </button>
-            <button
-              onClick={() => setOrderFilter("cancelled")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-10 ${
-                orderFilter === "cancelled" ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Цуцлагдсан
-            </button>
+          <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
+            <div className="flex items-center justify-start sm:justify-center border-b border-gray-200 min-w-max sm:min-w-0 gap-2 pt-2">
+              <button
+                onClick={() => setOrderFilter("all")}
+                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                  orderFilter === "all"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Бүгд
+                <span
+                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                    orderFilter === "all"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {totalOrdersCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setOrderFilter("active")}
+                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                  orderFilter === "active"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Идэвхтэй
+                <span
+                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                    orderFilter === "active"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {activeCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setOrderFilter("completed")}
+                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                  orderFilter === "completed"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Амжилттай
+                <span
+                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                    orderFilter === "completed"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {completedCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setOrderFilter("cancelled")}
+                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                  orderFilter === "cancelled"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Цуцлагдсан
+                <span
+                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                    orderFilter === "cancelled"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {cancelledCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setOrderFilter("archived")}
+                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                  orderFilter === "archived"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Архив
+                <span
+                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
+                    orderFilter === "archived"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {archivedCount}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Clear All button for cancelled orders */}
@@ -319,7 +482,19 @@ export default function OrderHistorySection({
             <div className="flex justify-end mb-2">
               <button
                 onClick={handleClearAllCancelledOrders}
-                className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
+                className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-9 sm:min-h-10"
+              >
+                Бүгдийг устгах
+              </button>
+            </div>
+          )}
+
+          {/* Clear All button for archived orders */}
+          {orderFilter === "archived" && filteredOrders.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={handleClearAllArchivedOrders}
+                className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-9 sm:min-h-10"
               >
                 Бүгдийг устгах
               </button>
@@ -327,27 +502,48 @@ export default function OrderHistorySection({
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-gray-500">Харах хэлбэр:</span>
-            <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <span className="text-xs sm:text-sm text-gray-500 shrink-0">
+              Харах:
+            </span>
+            <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
               <button
                 onClick={() => setOrderViewMode("list")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  orderViewMode === "list" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  orderViewMode === "list"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
                 </svg>
-                Жагсаалт
+                <span className="hidden xs:inline">Жагсаалт</span>
               </button>
               <button
                 onClick={() => setOrderViewMode("card")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  orderViewMode === "card" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  orderViewMode === "card"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -355,7 +551,7 @@ export default function OrderHistorySection({
                     d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
                   />
                 </svg>
-                Карт
+                <span className="hidden xs:inline">Карт</span>
               </button>
             </div>
           </div>
@@ -364,7 +560,11 @@ export default function OrderHistorySection({
           <div>
             {filteredOrders.length > 0 ? (
               <>
-                <div className={orderViewMode === "list" ? "space-y-2" : "space-y-3"}>
+                <div
+                  className={
+                    orderViewMode === "list" ? "space-y-2" : "space-y-3"
+                  }
+                >
                   {paginatedOrders.map((item) => {
                     if (item.type === "single") {
                       return (
@@ -376,6 +576,7 @@ export default function OrderHistorySection({
                           onOpenChat={onOpenChat}
                           onViewReport={onViewReport}
                           onDelete={onDeleteOrder}
+                          onArchive={onArchiveOrder}
                         />
                       );
                     } else {
@@ -395,58 +596,93 @@ export default function OrderHistorySection({
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                        let page: number;
-                        if (totalPages <= 5) {
-                          page = i + 1;
-                        } else if (currentPage <= 3) {
-                          page = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          page = totalPages - 4 + i;
-                        } else {
-                          page = currentPage - 2 + i;
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2 mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <button
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 1))
                         }
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors min-h-10 min-w-10 ${
-                              currentPage === page
-                                ? "bg-blue-500 text-white"
-                                : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      })}
+                        disabled={currentPage === 1}
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-9 sm:min-h-10"
+                      >
+                        <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      <div className="flex items-center gap-0.5 sm:gap-1">
+                        {Array.from(
+                          { length: Math.min(totalPages, 5) },
+                          (_, i) => {
+                            let page: number;
+                            if (totalPages <= 5) {
+                              page = i + 1;
+                            } else if (currentPage <= 3) {
+                              page = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              page = totalPages - 4 + i;
+                            } else {
+                              page = currentPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors min-h-8 sm:min-h-10 min-w-8 sm:min-w-10 ${
+                                  currentPage === page
+                                    ? "bg-blue-500 text-white"
+                                    : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(prev + 1, totalPages),
+                          )
+                        }
+                        disabled={currentPage === totalPages}
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-9 sm:min-h-10"
+                      >
+                        <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-
-                    <span className="ml-4 text-sm text-gray-500">
-                      {filteredOrders.length} захиалгаас {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
-                      {Math.min(currentPage * ITEMS_PER_PAGE, filteredOrders.length)}
+                    <span className="text-xs sm:text-sm text-gray-500">
+                      {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                      {Math.min(
+                        currentPage * ITEMS_PER_PAGE,
+                        filteredOrders.length,
+                      )}{" "}
+                      / {filteredOrders.length}
                     </span>
                   </div>
                 )}
@@ -455,9 +691,14 @@ export default function OrderHistorySection({
               <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
                 <p>
                   {orderFilter === "all" && "Өмнөх захиалга байхгүй байна."}
-                  {orderFilter === "active" && "Идэвхтэй захиалга байхгүй байна."}
-                  {orderFilter === "completed" && "Амжилттай захиалга байхгүй байна."}
-                  {orderFilter === "cancelled" && "Цуцлагдсан захиалга байхгүй байна."}
+                  {orderFilter === "active" &&
+                    "Идэвхтэй захиалга байхгүй байна."}
+                  {orderFilter === "completed" &&
+                    "Амжилттай захиалга байхгүй байна."}
+                  {orderFilter === "cancelled" &&
+                    "Цуцлагдсан захиалга байхгүй байна."}
+                  {orderFilter === "archived" &&
+                    "Архивласан захиалга байхгүй байна."}
                 </p>
               </div>
             )}

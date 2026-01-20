@@ -10,6 +10,7 @@ import {
   type Order,
   type AgentReport,
   type BundleOrder,
+  type Cargo,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import ChatModal from "@/components/ChatModal";
@@ -26,16 +27,19 @@ export default function UserDashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [bundleOrders, setBundleOrders] = useState<BundleOrder[]>([]);
+  const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [, setShowProfileForm] = useState(false);
   const [, setShowProfileSection] = useState(false);
 
   const [showNewOrderSection, setShowNewOrderSection] = useState(true);
+  const [showCargos, setShowCargos] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [selectedBundleOrder, setSelectedBundleOrder] = useState<BundleOrder | null>(null);
+  const [selectedBundleOrder, setSelectedBundleOrder] =
+    useState<BundleOrder | null>(null);
   const [showBundleOrderModal, setShowBundleOrderModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
@@ -43,9 +47,7 @@ export default function UserDashboardPage() {
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
   >({});
-  const [showPaymentInfo] = useState<
-    Record<string, boolean>
-  >({});
+  const [showPaymentInfo] = useState<Record<string, boolean>>({});
   const [paymentInfo, setPaymentInfo] = useState<
     Record<
       string,
@@ -80,7 +82,6 @@ export default function UserDashboardPage() {
       createdAt: Date;
     }>
   >([]);
-
 
   // Demo: Check for notifications (can be replaced with real API calls)
   useEffect(() => {
@@ -149,6 +150,14 @@ export default function UserDashboardPage() {
           setAdminSettings(settings);
         } catch (err) {
           console.error("Failed to load admin settings:", err);
+        }
+
+        // Load cargos
+        try {
+          const cargosData = await apiClient.getCargos();
+          setCargos(cargosData);
+        } catch (err) {
+          console.error("Failed to load cargos:", err);
         }
 
         // Load orders
@@ -278,7 +287,8 @@ export default function UserDashboardPage() {
               setProfile(userData.profile);
             }
           } catch (retryErr: unknown) {
-            const errorMessage = retryErr instanceof Error ? retryErr.message : "Алдаа гарлаа";
+            const errorMessage =
+              retryErr instanceof Error ? retryErr.message : "Алдаа гарлаа";
             setError(errorMessage);
           }
         }, 1000);
@@ -404,7 +414,9 @@ export default function UserDashboardPage() {
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (!confirm(`"${order.productName}" захиалгыг устгахдаа итгэлтэй байна уу?`)) {
+    if (
+      !confirm(`"${order.productName}" захиалгыг устгахдаа итгэлтэй байна уу?`)
+    ) {
       return;
     }
 
@@ -419,7 +431,11 @@ export default function UserDashboardPage() {
   };
 
   const handleDeleteBundleOrder = async (bundleOrder: BundleOrder) => {
-    if (!confirm(`Багц захиалга (${bundleOrder.items.length} бараа)-г устгахдаа итгэлтэй байна уу?`)) {
+    if (
+      !confirm(
+        `Багц захиалга (${bundleOrder.items.length} бараа)-г устгахдаа итгэлтэй байна уу?`,
+      )
+    ) {
       return;
     }
 
@@ -431,6 +447,31 @@ export default function UserDashboardPage() {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
     }
+  };
+
+  const handleArchiveOrder = async (orderId: string) => {
+    if (!confirm("Та энэ захиалгыг архивлахдаа итгэлтэй байна уу?")) {
+      return;
+    }
+
+    try {
+      await apiClient.archiveOrder(orderId);
+      await loadData();
+      setShowOrderModal(false);
+      alert("Захиалга амжилттай архивлагдлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
+    }
+  };
+
+  const canArchiveOrder = (order: Order) => {
+    // Only completed or cancelled orders can be archived
+    return (
+      (order.status === "amjilttai_zahialga" ||
+        order.status === "tsutsalsan_zahialga") &&
+      !order.archivedByUser
+    );
   };
 
   const loadPaymentInfo = async (orderId: string) => {
@@ -500,17 +541,11 @@ export default function UserDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showOrderModal, selectedOrder?.id]);
 
-
-
   // Memoize profile completion check
   const isProfileComplete = useMemo(
     () => profile && profile.name && profile.phone && profile.cargo,
     [profile],
   );
-
-
-
-
 
   if (!isLoaded || loading) {
     return (
@@ -609,8 +644,6 @@ export default function UserDashboardPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-[#E8F5FF] via-[#F5F9FF] to-[#EEF2FF]">
-      
-
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Order Section - Only show if profile is complete */}
@@ -666,8 +699,9 @@ export default function UserDashboardPage() {
                 )}
               </div>
               <OrderHistorySection
-                orders={orders}
+                orders={orders.filter((o) => !o.archivedByUser)}
                 bundleOrders={bundleOrders}
+                archivedOrders={orders.filter((o) => o.archivedByUser)}
                 notifications={notifications}
                 hasOrderUpdates={hasOrderUpdates}
                 hasNewMessages={hasNewMessages}
@@ -694,8 +728,142 @@ export default function UserDashboardPage() {
                 }}
                 onDeleteOrder={handleDeleteOrder}
                 onDeleteBundleOrder={handleDeleteBundleOrder}
+                onArchiveOrder={(order) => handleArchiveOrder(order.id)}
                 onReload={loadData}
               />
+
+              {/* Box 3: Cargonууд */}
+              {cargos.length > 0 && (
+                <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+                      <svg
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                        Cargonууд
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Түншлэгч карго компаниуд
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {cargos.map((cargo) => (
+                      <div
+                        key={cargo.id}
+                        className="bg-linear-to-br from-white to-orange-50/50 border border-orange-100 rounded-xl p-4 hover:border-orange-200 hover:shadow-md transition-all"
+                      >
+                        <h4 className="font-semibold text-gray-900 text-sm sm:text-base">
+                          {cargo.name}
+                        </h4>
+                        {cargo.description && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {cargo.description}
+                          </p>
+                        )}
+
+                        <div className="mt-3 space-y-2">
+                          {cargo.phone && (
+                            <a
+                              href={`tel:${cargo.phone}`}
+                              className="flex items-center gap-2 text-xs text-gray-600 hover:text-orange-600 transition-colors"
+                            >
+                              <svg
+                                className="w-4 h-4 text-orange-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                />
+                              </svg>
+                              <span className="font-medium">{cargo.phone}</span>
+                            </a>
+                          )}
+
+                          {cargo.website && (
+                            <a
+                              href={
+                                cargo.website.startsWith("http")
+                                  ? cargo.website
+                                  : `https://${cargo.website}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-xs text-gray-600 hover:text-orange-600 transition-colors"
+                            >
+                              <svg
+                                className="w-4 h-4 text-orange-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                                />
+                              </svg>
+                              <span className="font-medium truncate">
+                                {cargo.website}
+                              </span>
+                            </a>
+                          )}
+
+                          {cargo.location && (
+                            <a
+                              href={cargo.location}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-xs text-gray-600 hover:text-orange-600 transition-colors"
+                            >
+                              <svg
+                                className="w-4 h-4 text-orange-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                              </svg>
+                              <span className="font-medium">Байршил харах</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -723,40 +891,94 @@ export default function UserDashboardPage() {
           // Status helper functions
           const getStatusColor = (status: string) => {
             switch (status) {
-              case "niitlegdsen": return "bg-gray-100 text-gray-700";
-              case "agent_sudlaj_bn": return "bg-amber-100 text-amber-700";
-              case "tolbor_huleej_bn": return "bg-blue-100 text-blue-700";
-              case "amjilttai_zahialga": return "bg-emerald-100 text-emerald-700";
-              case "tsutsalsan_zahialga": return "bg-red-100 text-red-700";
-              default: return "bg-gray-100 text-gray-700";
+              case "niitlegdsen":
+                return "bg-gray-100 text-gray-700";
+              case "agent_sudlaj_bn":
+                return "bg-amber-100 text-amber-700";
+              case "tolbor_huleej_bn":
+                return "bg-blue-100 text-blue-700";
+              case "amjilttai_zahialga":
+                return "bg-emerald-100 text-emerald-700";
+              case "tsutsalsan_zahialga":
+                return "bg-red-100 text-red-700";
+              default:
+                return "bg-gray-100 text-gray-700";
             }
           };
 
           const getStatusText = (status: string) => {
             switch (status) {
-              case "niitlegdsen": return "Шинэ захиалга";
-              case "agent_sudlaj_bn": return "Судлагдаж байна";
-              case "tolbor_huleej_bn": return "Төлбөр хүлээж байна";
-              case "amjilttai_zahialga": return "Амжилттай";
-              case "tsutsalsan_zahialga": return "Цуцлагдсан";
-              default: return status;
+              case "niitlegdsen":
+                return "Шинэ захиалга";
+              case "agent_sudlaj_bn":
+                return "Судлагдаж байна";
+              case "tolbor_huleej_bn":
+                return "Төлбөр хүлээж байна";
+              case "amjilttai_zahialga":
+                return "Амжилттай";
+              case "tsutsalsan_zahialga":
+                return "Цуцлагдсан";
+              default:
+                return status;
             }
           };
 
           const getStatusIcon = (status: string) => {
             switch (status) {
               case "niitlegdsen":
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                );
               case "agent_sudlaj_bn":
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                );
               case "tolbor_huleej_bn":
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                );
               case "amjilttai_zahialga":
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                );
               case "tsutsalsan_zahialga":
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                );
               default:
-                return <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />;
+                return (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                );
             }
           };
 
@@ -777,8 +999,18 @@ export default function UserDashboardPage() {
                       </div>
                     ) : (
                       <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl flex items-center justify-center border-2 border-white/30">
-                        <svg className="w-8 h-8 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <svg
+                          className="w-8 h-8 text-white/70"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
                         </svg>
                       </div>
                     )}
@@ -789,19 +1021,29 @@ export default function UserDashboardPage() {
                         {selectedOrder.productName}
                       </h2>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusColor(selectedOrder.status)}`}>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusColor(selectedOrder.status)}`}
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
                             {getStatusIcon(selectedOrder.status)}
                           </svg>
                           {getStatusText(selectedOrder.status)}
                         </span>
                       </div>
                       <p className="text-xs text-white/70 mt-1.5">
-                        {new Date(selectedOrder.createdAt).toLocaleDateString("mn-MN", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {new Date(selectedOrder.createdAt).toLocaleDateString(
+                          "mn-MN",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
                       </p>
                     </div>
 
@@ -810,8 +1052,18 @@ export default function UserDashboardPage() {
                       onClick={() => setShowOrderModal(false)}
                       className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all min-h-10 min-w-10"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -819,126 +1071,214 @@ export default function UserDashboardPage() {
 
                 <div className="p-4 sm:p-6 space-y-5">
                   {/* Track Code - Priority display for successful orders */}
-                  {selectedOrder.status === "amjilttai_zahialga" && selectedOrder.trackCode && (
-                    <div className="bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
+                  {selectedOrder.status === "amjilttai_zahialga" &&
+                    selectedOrder.trackCode && (
+                      <div className="bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
+                            <svg
+                              className="w-5 h-5 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">
+                              Трак код
+                            </p>
+                            <p className="text-lg font-bold text-emerald-800 font-mono truncate">
+                              {selectedOrder.trackCode}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                selectedOrder.trackCode || "",
+                              );
+                              alert("Track code хуулагдлаа!");
+                            }}
+                            className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                            Хуулах
+                          </button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Трак код</p>
-                          <p className="text-lg font-bold text-emerald-800 font-mono truncate">{selectedOrder.trackCode}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(selectedOrder.trackCode || "");
-                            alert("Track code хуулагдлаа!");
-                          }}
-                          className="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          Хуулах
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Product Details Card */}
                   <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
                     <button
-                      onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
+                      onClick={() =>
+                        setShowUserInfoInModal(!showUserInfoInModal)
+                      }
                       className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          <svg
+                            className="w-5 h-5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
                           </svg>
                         </div>
-                        <span className="font-semibold text-gray-900">Барааны мэдээлэл</span>
+                        <span className="font-semibold text-gray-900">
+                          Барааны мэдээлэл
+                        </span>
                       </div>
                       <svg
                         className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showUserInfoInModal ? "rotate-180" : ""}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
 
                     {showUserInfoInModal && (
                       <div className="border-t border-gray-200 p-4 space-y-4 bg-white">
                         {/* Images Gallery */}
-                        {selectedOrder.imageUrls && selectedOrder.imageUrls.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Зурагнууд</p>
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                              {selectedOrder.imageUrls.map((imgUrl, index) => (
+                        {selectedOrder.imageUrls &&
+                          selectedOrder.imageUrls.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                                Зурагнууд
+                              </p>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {selectedOrder.imageUrls.map(
+                                  (imgUrl, index) => (
+                                    <div
+                                      key={index}
+                                      className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-blue-300"
+                                      onClick={() =>
+                                        setZoomedImageIndex(
+                                          zoomedImageIndex === index
+                                            ? null
+                                            : index,
+                                        )
+                                      }
+                                    >
+                                      <img
+                                        src={imgUrl}
+                                        alt={`${selectedOrder.productName} - ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                              {/* Zoomed Image Modal */}
+                              {zoomedImageIndex !== null && (
                                 <div
-                                  key={index}
-                                  className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-blue-300"
-                                  onClick={() => setZoomedImageIndex(zoomedImageIndex === index ? null : index)}
+                                  className="fixed inset-0 bg-black/90 flex items-center justify-center z-70 p-4"
+                                  onClick={() => setZoomedImageIndex(null)}
                                 >
                                   <img
-                                    src={imgUrl}
-                                    alt={`${selectedOrder.productName} - ${index + 1}`}
-                                    className="w-full h-full object-cover"
+                                    src={
+                                      selectedOrder.imageUrls[zoomedImageIndex]
+                                    }
+                                    alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
+                                    className="max-w-full max-h-full object-contain rounded-xl"
                                   />
+                                  <button
+                                    onClick={() => setZoomedImageIndex(null)}
+                                    className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                  >
+                                    <svg
+                                      className="w-6 h-6"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
+                                    </svg>
+                                  </button>
                                 </div>
-                              ))}
+                              )}
                             </div>
-                            {/* Zoomed Image Modal */}
-                            {zoomedImageIndex !== null && (
-                              <div
-                                className="fixed inset-0 bg-black/90 flex items-center justify-center z-70 p-4"
-                                onClick={() => setZoomedImageIndex(null)}
-                              >
-                                <img
-                                  src={selectedOrder.imageUrls[zoomedImageIndex]}
-                                  alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
-                                  className="max-w-full max-h-full object-contain rounded-xl"
-                                />
-                                <button
-                                  onClick={() => setZoomedImageIndex(null)}
-                                  className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-                                >
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          )}
 
                         {/* Product Name */}
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Барааны нэр</p>
-                          <p className="text-base font-semibold text-gray-900 mt-1">{selectedOrder.productName}</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Барааны нэр
+                          </p>
+                          <p className="text-base font-semibold text-gray-900 mt-1">
+                            {selectedOrder.productName}
+                          </p>
                         </div>
 
                         {/* Description */}
                         <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Тайлбар</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                            Тайлбар
+                          </p>
                           {selectedOrder.description &&
                           selectedOrder.description.includes(":") &&
                           selectedOrder.description.split("\n\n").length > 1 ? (
                             <div className="space-y-2">
-                              {selectedOrder.description.split("\n\n").map((productDesc, idx) => {
-                                const [productName, ...descParts] = productDesc.split(": ");
-                                const productDescription = descParts.join(": ");
-                                return (
-                                  <div key={idx} className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                                    <p className="text-sm font-medium text-gray-900">{productName}</p>
-                                    {productDescription && (
-                                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{productDescription}</p>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                              {selectedOrder.description
+                                .split("\n\n")
+                                .map((productDesc, idx) => {
+                                  const [productName, ...descParts] =
+                                    productDesc.split(": ");
+                                  const productDescription =
+                                    descParts.join(": ");
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="bg-blue-50 border border-blue-100 rounded-lg p-3"
+                                    >
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {productName}
+                                      </p>
+                                      {productDescription && (
+                                        <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                                          {productDescription}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 border border-gray-100">
@@ -949,8 +1289,12 @@ export default function UserDashboardPage() {
 
                         {/* Order ID */}
                         <div className="pt-2 border-t border-gray-100">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Захиалгын ID</p>
-                          <p className="text-xs font-mono text-gray-600 mt-1 break-all">{selectedOrder.id}</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                            Захиалгын ID
+                          </p>
+                          <p className="text-xs font-mono text-gray-600 mt-1">
+                            #{selectedOrder.id.slice(-4).toUpperCase()}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -961,39 +1305,68 @@ export default function UserDashboardPage() {
                     <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden shadow-sm">
                       <div className="px-4 py-3 bg-linear-to-r from-indigo-500 to-purple-500">
                         <div className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
                           </svg>
-                          <h3 className="font-semibold text-white">Agent тайлан</h3>
+                          <h3 className="font-semibold text-white">
+                            Agent тайлан
+                          </h3>
                         </div>
                       </div>
 
                       <div className="p-4 space-y-4">
                         {/* Payment Amount */}
                         <div className="bg-white rounded-xl p-4 border border-indigo-100">
-                          <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Төлөх дүн</p>
+                          <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
+                            Төлөх дүн
+                          </p>
                           <p className="text-2xl font-bold text-gray-900 mt-1">
                             {(() => {
-                              const exchangeRate = adminSettings?.exchangeRate || paymentInfo[selectedOrder.id]?.exchangeRate || 1;
-                              const calculatedAmount = calculateUserPaymentAmount(currentReport, exchangeRate);
+                              const exchangeRate =
+                                adminSettings?.exchangeRate ||
+                                paymentInfo[selectedOrder.id]?.exchangeRate ||
+                                1;
+                              const calculatedAmount =
+                                calculateUserPaymentAmount(
+                                  currentReport,
+                                  exchangeRate,
+                                );
                               return calculatedAmount.toLocaleString();
                             })()}
-                            <span className="text-lg font-semibold text-gray-500 ml-1">₮</span>
+                            <span className="text-lg font-semibold text-gray-500 ml-1">
+                              ₮
+                            </span>
                           </p>
                         </div>
 
                         {/* Quantity */}
                         {currentReport.quantity && (
                           <div className="flex items-center justify-between py-2 border-b border-indigo-100">
-                            <span className="text-sm text-gray-600">Тоо ширхэг</span>
-                            <span className="font-semibold text-gray-900">{currentReport.quantity}</span>
+                            <span className="text-sm text-gray-600">
+                              Тоо ширхэг
+                            </span>
+                            <span className="font-semibold text-gray-900">
+                              {currentReport.quantity}
+                            </span>
                           </div>
                         )}
 
                         {/* Additional Description */}
                         {currentReport.additionalDescription && (
                           <div>
-                            <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Нэмэлт тайлбар</p>
+                            <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">
+                              Нэмэлт тайлбар
+                            </p>
                             <p className="text-sm text-gray-700 bg-white rounded-lg p-3 border border-indigo-100 whitespace-pre-wrap">
                               {currentReport.additionalDescription}
                             </p>
@@ -1001,18 +1374,30 @@ export default function UserDashboardPage() {
                         )}
 
                         {/* Additional Images */}
-                        {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Нэмэлт зурагнууд</p>
-                            <div className="grid grid-cols-3 gap-2">
-                              {currentReport.additionalImages.map((imgUrl, idx) => (
-                                <div key={idx} className="aspect-square bg-white rounded-lg overflow-hidden border border-indigo-100">
-                                  <img src={imgUrl} alt={`Additional ${idx + 1}`} className="w-full h-full object-cover" />
-                                </div>
-                              ))}
+                        {currentReport.additionalImages &&
+                          currentReport.additionalImages.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">
+                                Нэмэлт зурагнууд
+                              </p>
+                              <div className="grid grid-cols-3 gap-2">
+                                {currentReport.additionalImages.map(
+                                  (imgUrl, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="aspect-square bg-white rounded-lg overflow-hidden border border-indigo-100"
+                                    >
+                                      <img
+                                        src={imgUrl}
+                                        alt={`Additional ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ),
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     </div>
                   )}
@@ -1024,16 +1409,29 @@ export default function UserDashboardPage() {
                       <div className="bg-linear-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 overflow-hidden">
                         <div className="px-4 py-3 bg-linear-to-r from-amber-500 to-orange-500">
                           <div className="flex items-center gap-2">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            <svg
+                              className="w-5 h-5 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                              />
                             </svg>
-                            <h3 className="font-semibold text-white">Төлбөр шилжүүлэх данс</h3>
+                            <h3 className="font-semibold text-white">
+                              Төлбөр шилжүүлэх данс
+                            </h3>
                           </div>
                         </div>
 
                         <div className="p-4 space-y-3">
                           {(() => {
-                            const accountInfo = paymentInfo[selectedOrder.id] || adminSettings;
+                            const accountInfo =
+                              paymentInfo[selectedOrder.id] || adminSettings;
                             if (!accountInfo && !adminSettings) {
                               if (!showPaymentInfo[selectedOrder.id]) {
                                 loadPaymentInfo(selectedOrder.id);
@@ -1049,21 +1447,33 @@ export default function UserDashboardPage() {
                               <>
                                 <div className="bg-white rounded-lg p-3 border border-amber-100">
                                   <p className="text-xs text-gray-500">Банк</p>
-                                  <p className="font-semibold text-gray-900">{info?.bank}</p>
+                                  <p className="font-semibold text-gray-900">
+                                    {info?.bank}
+                                  </p>
                                 </div>
                                 <div className="bg-white rounded-lg p-3 border border-amber-100">
-                                  <p className="text-xs text-gray-500">Дансны нэр</p>
-                                  <p className="font-semibold text-gray-900">{info?.accountName}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Дансны нэр
+                                  </p>
+                                  <p className="font-semibold text-gray-900">
+                                    {info?.accountName}
+                                  </p>
                                 </div>
                                 <div className="bg-white rounded-lg p-3 border border-amber-100">
                                   <div className="flex items-center justify-between">
                                     <div>
-                                      <p className="text-xs text-gray-500">Дансны дугаар</p>
-                                      <p className="font-bold text-gray-900 font-mono text-lg">{info?.accountNumber}</p>
+                                      <p className="text-xs text-gray-500">
+                                        Дансны дугаар
+                                      </p>
+                                      <p className="font-bold text-gray-900 font-mono text-lg">
+                                        {info?.accountNumber}
+                                      </p>
                                     </div>
                                     <button
                                       onClick={() => {
-                                        navigator.clipboard.writeText(info?.accountNumber || "");
+                                        navigator.clipboard.writeText(
+                                          info?.accountNumber || "",
+                                        );
                                         alert("Дансны дугаар хуулагдлаа!");
                                       }}
                                       className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors"
@@ -1082,13 +1492,27 @@ export default function UserDashboardPage() {
                       {selectedOrder.userPaymentVerified && (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
                           <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
-                            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg
+                              className="w-5 h-5 text-yellow-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
                             </svg>
                           </div>
                           <div>
-                            <p className="font-semibold text-yellow-800">Төлбөр баталгаажуулахыг хүлээж байна</p>
-                            <p className="text-sm text-yellow-700 mt-1">Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ.</p>
+                            <p className="font-semibold text-yellow-800">
+                              Төлбөр баталгаажуулахыг хүлээж байна
+                            </p>
+                            <p className="text-sm text-yellow-700 mt-1">
+                              Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ.
+                            </p>
                           </div>
                         </div>
                       )}
@@ -1100,8 +1524,18 @@ export default function UserDashboardPage() {
                             onClick={() => handlePaymentPaid(selectedOrder.id)}
                             className="flex-1 px-4 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                             Төлбөр төлсөн
                           </button>
@@ -1119,23 +1553,53 @@ export default function UserDashboardPage() {
                   {/* Dates Section */}
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
                       <span>
-                        {new Date(selectedOrder.createdAt).toLocaleDateString("mn-MN", {
-                          year: "numeric", month: "short", day: "numeric"
-                        })}
+                        {new Date(selectedOrder.createdAt).toLocaleDateString(
+                          "mn-MN",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
                       </svg>
                       <span>
-                        {new Date(selectedOrder.updatedAt).toLocaleDateString("mn-MN", {
-                          year: "numeric", month: "short", day: "numeric"
-                        })}
+                        {new Date(selectedOrder.updatedAt).toLocaleDateString(
+                          "mn-MN",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1151,10 +1615,43 @@ export default function UserDashboardPage() {
                         }}
                         className="w-full px-4 py-3 bg-linear-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                          />
                         </svg>
                         Чат нээх
+                      </button>
+                    )}
+
+                    {/* Archive Button - for completed/cancelled orders */}
+                    {canArchiveOrder(selectedOrder) && (
+                      <button
+                        onClick={() => handleArchiveOrder(selectedOrder.id)}
+                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                          />
+                        </svg>
+                        Архивлах
                       </button>
                     )}
 
@@ -1164,8 +1661,18 @@ export default function UserDashboardPage() {
                         onClick={() => handleCancelOrder(selectedOrder.id)}
                         className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Захиалга устгах
                       </button>

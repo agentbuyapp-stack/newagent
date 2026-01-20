@@ -52,6 +52,8 @@ export interface Order {
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
   trackCode?: string; // Track code for successful orders
+  archivedByUser?: boolean; // User archived this order
+  archivedByAgent?: boolean; // Agent archived this order
   createdAt: string;
   updatedAt: string;
   user?: User;
@@ -218,6 +220,13 @@ class ApiClient {
     return this.request<Order>(`/orders/${orderId}/track-code`, {
       method: "PUT",
       body: JSON.stringify({ trackCode }),
+    });
+  }
+
+  // Archive order (user or agent)
+  async archiveOrder(orderId: string): Promise<Order> {
+    return this.request<Order>(`/orders/${orderId}/archive`, {
+      method: "PUT",
     });
   }
 
@@ -419,6 +428,9 @@ export interface Cargo {
   id: string;
   name: string;
   description?: string;
+  phone?: string;
+  location?: string;
+  website?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -468,12 +480,28 @@ export interface AgentReportUpdateData {
   editReason?: string;
 }
 
+export interface FooterSettings {
+  aboutUs?: string;
+  termsOfService?: string;
+  faq?: string;
+  email?: string;
+  phone?: string;
+  tutorial?: string;
+  agentRegistration?: string;
+  helpCenter?: string;
+  facebook?: string;
+  youtube?: string;
+  instagram?: string;
+  twitter?: string;
+}
+
 export interface AdminSettings {
   id: string;
   accountNumber?: string;
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  footer?: FooterSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -483,6 +511,7 @@ export interface AdminSettingsData {
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  footer?: FooterSettings;
 }
 
 export type RewardRequestStatus = "pending" | "approved" | "rejected";
