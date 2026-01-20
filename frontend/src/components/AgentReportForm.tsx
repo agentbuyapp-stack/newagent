@@ -1,10 +1,16 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
 import { type Order, type AgentReportData } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
+
+interface ApiClientLike {
+  getHeaders: () => Promise<HeadersInit>;
+}
+
 // Upload image via backend API
-async function uploadImageToCloudinary(base64Data: string, apiClient: any): Promise<{ url: string }> {
+async function uploadImageToCloudinary(base64Data: string, apiClient: ApiClientLike): Promise<{ url: string }> {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   const headers = await apiClient.getHeaders();
   
@@ -87,8 +93,8 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
         };
         reader.readAsDataURL(file);
       }
-    } catch (err: any) {
-      console.error("Error processing images:", err);
+    } catch (e) {
+      console.error("Error processing images:", e);
       setUploadingImages(false);
     }
     
@@ -123,8 +129,9 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      setError(err.message || "Тайлан илгээхэд алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Тайлан илгээхэд алдаа гарлаа";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -140,18 +147,18 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
 
       <div>
         <label htmlFor="userAmount" className="block text-sm font-medium text-gray-900 mb-1">
-          User дүн <span className="text-red-500">*</span>
+          Юань дүн <span className="text-red-500">*</span>
         </label>
         <input
           id="userAmount"
           type="number"
-          step="0.01"
+          step="1"
           min="0"
           required
           value={formData.userAmount || ""}
-          onChange={(e) => setFormData({ ...formData, userAmount: parseFloat(e.target.value) || 0 })}
+          onChange={(e) => setFormData({ ...formData, userAmount: Math.round(parseFloat(e.target.value)) || 0 })}
           className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          placeholder="0.00"
+          placeholder="Юань дүн оруулна уу"
         />
       </div>
 
@@ -225,7 +232,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-[32px] min-w-[32px]"
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 active:bg-red-700 transition-colors min-h-8 min-w-8"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -242,7 +249,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px]"
+            className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
           >
             Цуцлах
           </button>
@@ -250,7 +257,7 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
         <button
           type="submit"
           disabled={loading || uploadingImages}
-          className="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+          className="flex-1 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-11"
         >
           {loading ? "Илгээж байна..." : "Тайлан илгээх"}
         </button>

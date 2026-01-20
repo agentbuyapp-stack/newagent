@@ -125,7 +125,7 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        let errorData: any;
+        let errorData: { error?: string; message?: string } = {};
         try {
           errorData = await response.json();
         } catch {
@@ -144,13 +144,15 @@ class ApiClient {
       }
 
       return response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Enhanced error logging
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
       console.error("API Request failed:", {
         endpoint,
         url,
-        error: error.message,
-        stack: error.stack,
+        error: errorMessage,
+        stack: errorStack,
       });
       throw error;
     }
@@ -322,6 +324,13 @@ class ApiClient {
     });
   }
 
+  async updateAgentReport(orderId: string, data: AgentReportUpdateData): Promise<AgentReport> {
+    return this.request<AgentReport>(`/orders/${orderId}/report`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Reward request endpoints (agent)
   async getMyRewardRequests(): Promise<RewardRequest[]> {
     return this.request<RewardRequest[]>("/agents/reward-requests");
@@ -423,6 +432,13 @@ export interface Message {
   createdAt: string;
 }
 
+export interface AgentReportEditHistory {
+  editedAt: string;
+  previousAmount: number;
+  newAmount: number;
+  reason?: string;
+}
+
 export interface AgentReport {
   id: string;
   orderId: string;
@@ -431,6 +447,7 @@ export interface AgentReport {
   additionalImages: string[];
   additionalDescription?: string;
   quantity?: number;
+  editHistory?: AgentReportEditHistory[];
   createdAt: string;
   updatedAt: string;
 }
@@ -441,6 +458,14 @@ export interface AgentReportData {
   additionalImages?: string[];
   additionalDescription?: string;
   quantity?: number;
+}
+
+export interface AgentReportUpdateData {
+  userAmount?: number;
+  paymentLink?: string;
+  additionalDescription?: string;
+  quantity?: number;
+  editReason?: string;
 }
 
 export interface AdminSettings {

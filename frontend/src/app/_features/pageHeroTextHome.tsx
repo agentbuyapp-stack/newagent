@@ -2,7 +2,7 @@ export const HomePageHeroText = () => {
   return (
     <div className="flex flex-col justify-center items-center gap-2 sm:gap-3 md:gap-4 w-full px-4">
       <h1
-        className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#0b4ce5] via-[#4a90e2] to-[#00d4ff] font-black text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight text-center leading-none"
+        className="w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl text-transparent bg-clip-text bg-linear-to-r from-[#0b4ce5] via-[#4a90e2] to-[#00d4ff] font-black text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl tracking-tight text-center leading-none"
         style={{
           backgroundSize: "200% 200%",
           animation: "gradient-shift 3s ease infinite",

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -23,9 +24,11 @@ export default function OrderModal({
 }: OrderModalProps) {
   const apiClient = useApiClient();
   const [report, setReport] = useState<AgentReport | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loadingReport, setLoadingReport] = useState(false);
   const [zoomedImageIndex, setZoomedImageIndex] = useState<number | null>(null);
   const [showUserInfoInModal, setShowUserInfoInModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [paymentInfo, setPaymentInfo] = useState<{
     accountNumber?: string;
     accountName?: string;

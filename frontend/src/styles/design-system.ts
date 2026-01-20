@@ -54,10 +54,10 @@ export const cardStyles = {
 };
 
 export const buttonStyles = {
-  primary: 'bg-blue-500 text-white rounded-xl px-4 py-2.5 min-h-[44px] font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
-  secondary: 'bg-white border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 min-h-[44px] font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors',
-  danger: 'bg-red-500 text-white rounded-xl px-4 py-2.5 min-h-[44px] font-medium hover:bg-red-600 active:bg-red-700 transition-colors',
-  success: 'bg-green-500 text-white rounded-xl px-4 py-2.5 min-h-[44px] font-medium hover:bg-green-600 active:bg-green-700 transition-colors',
+  primary: 'bg-blue-500 text-white rounded-xl px-4 py-2.5 min-h-11 font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+  secondary: 'bg-white border border-gray-300 text-gray-700 rounded-xl px-4 py-2.5 min-h-11 font-medium hover:bg-gray-50 active:bg-gray-100 transition-colors',
+  danger: 'bg-red-500 text-white rounded-xl px-4 py-2.5 min-h-11 font-medium hover:bg-red-600 active:bg-red-700 transition-colors',
+  success: 'bg-green-500 text-white rounded-xl px-4 py-2.5 min-h-11 font-medium hover:bg-green-600 active:bg-green-700 transition-colors',
 };
 
 export const inputStyles = {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Order, BundleOrder } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import OrderCard from "@/components/OrderCard";
@@ -34,6 +34,8 @@ interface OrderHistorySectionProps {
   onOpenChat: (order: Order) => void;
   onOpenBundleChat: (bundleOrder: BundleOrder) => void;
   onViewReport?: (order: Order) => void;
+  onDeleteOrder?: (order: Order) => void;
+  onDeleteBundleOrder?: (bundleOrder: BundleOrder) => void;
   onReload: () => void;
 }
 
@@ -49,6 +51,8 @@ export default function OrderHistorySection({
   onOpenChat,
   onOpenBundleChat,
   onViewReport,
+  onDeleteOrder,
+  onDeleteBundleOrder,
   onReload,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
@@ -108,7 +112,8 @@ export default function OrderHistorySection({
       });
   }, [combinedOrders, orderFilter]);
 
-  useEffect(() => {
+  // Reset to page 1 when filter changes
+  React.useEffect(() => {
     setCurrentPage(1);
   }, [orderFilter]);
 
@@ -150,7 +155,7 @@ export default function OrderHistorySection({
           className="flex items-center gap-3 flex-1 cursor-pointer hover:bg-gray-50 -ml-3 pl-3 py-2 rounded-xl transition-colors"
           onClick={() => setShowOrderSection(!showOrderSection)}
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
             <svg
               className="w-5 h-5 text-white"
               fill="none"
@@ -370,6 +375,7 @@ export default function OrderHistorySection({
                           onViewDetails={onSelectOrder}
                           onOpenChat={onOpenChat}
                           onViewReport={onViewReport}
+                          onDelete={onDeleteOrder}
                         />
                       );
                     } else {
@@ -377,8 +383,10 @@ export default function OrderHistorySection({
                         <BundleOrderCard
                           key={`bundle-${item.data.id}`}
                           bundleOrder={item.data}
+                          viewMode={orderViewMode}
                           onViewDetails={onSelectBundleOrder}
                           onOpenChat={onOpenBundleChat}
+                          onDelete={onDeleteBundleOrder}
                         />
                       );
                     }
@@ -391,7 +399,7 @@ export default function OrderHistorySection({
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px]"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -414,7 +422,7 @@ export default function OrderHistorySection({
                           <button
                             key={page}
                             onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors min-h-[40px] min-w-[40px] ${
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors min-h-10 min-w-10 ${
                               currentPage === page
                                 ? "bg-blue-500 text-white"
                                 : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
@@ -429,7 +437,7 @@ export default function OrderHistorySection({
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px]"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

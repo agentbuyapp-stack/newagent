@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
@@ -13,6 +14,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     description: "",
     imageUrl: "",
   });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,8 +65,9 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
           onSuccess(order);
         }, 1000);
       }
-    } catch (err: any) {
-      setError(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,7 +142,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-[44px]"
+        className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-11"
       >
         {loading ? "Хадгалж байна..." : "Захиалга үүсгэх"}
       </button>

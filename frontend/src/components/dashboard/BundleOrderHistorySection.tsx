@@ -19,6 +19,7 @@ export default function BundleOrderHistorySection({
   bundleOrders,
   onSelectBundleOrder,
   onOpenChat,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewItemReport,
   onReload,
 }: BundleOrderHistorySectionProps) {
@@ -97,7 +98,7 @@ export default function BundleOrderHistorySection({
         onClick={() => setShowSection(!showSection)}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl">
+          <div className="p-2 bg-linear-to-br from-purple-100 to-indigo-100 rounded-xl">
             <svg
               className="w-5 h-5 text-purple-600"
               fill="none"
@@ -198,9 +199,9 @@ export default function BundleOrderHistorySection({
                     <BundleOrderCard
                       key={bundleOrder.id}
                       bundleOrder={bundleOrder}
+                      viewMode="card"
                       onViewDetails={onSelectBundleOrder}
                       onOpenChat={onOpenChat}
-                      onViewReport={onViewItemReport}
                     />
                   ))}
                 </div>
@@ -211,7 +212,7 @@ export default function BundleOrderHistorySection({
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px]"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -223,7 +224,7 @@ export default function BundleOrderHistorySection({
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors min-h-[40px] min-w-[40px] ${
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors min-h-10 min-w-10 ${
                             currentPage === page
                               ? "bg-purple-500 text-white"
                               : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
@@ -237,7 +238,7 @@ export default function BundleOrderHistorySection({
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[40px]"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-10"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

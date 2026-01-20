@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
@@ -5,6 +6,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApiClient } from "@/lib/useApiClient";
 import { type OrderData } from "@/lib/api";
+
+// Helper to generate unique IDs - initialized outside component for stability
+let nextId = 1;
+const getNextId = () => nextId++;
 
 export default function NewOrderPage() {
   const router = useRouter();
@@ -14,8 +19,9 @@ export default function NewOrderPage() {
 
   // Products order state - start with one product (Дан бараа)
   // Use unique IDs to prevent React from losing state when adding products
-  const [orders, setOrders] = useState<Array<OrderData & { id: number }>>([
-    { id: Date.now(), productName: "", description: "", imageUrls: [] },
+  // Use lazy initial state to only call getNextId once
+  const [orders, setOrders] = useState<Array<OrderData & { id: number }>>(() => [
+    { id: getNextId(), productName: "", description: "", imageUrls: [] },
   ]);
   const [imagePreviews, setImagePreviews] = useState<string[][]>([[]]); // Array of arrays - each product can have up to 3 images
 
@@ -103,7 +109,8 @@ export default function NewOrderPage() {
       const createdOrders: string[] = [];
       for (const order of validOrders) {
         try {
-          const { id, ...orderData } = order;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id: _id, ...orderData } = order;
           // Ensure imageUrls is an array (can be empty)
           if (!orderData.imageUrls) {
             orderData.imageUrls = [];
@@ -111,11 +118,12 @@ export default function NewOrderPage() {
           await apiClient.createOrder(orderData);
           // validOrders is already filtered to have productName, so it's safe to use !
           createdOrders.push(order.productName!);
-        } catch (orderErr: any) {
+        } catch (orderErr: unknown) {
           // Continue creating other orders even if one fails
           // validOrders is already filtered to have productName, so it's safe to use !
+          const errorMessage = orderErr instanceof Error ? orderErr.message : "Алдаа";
           setError(
-            `Захиалга үүсгэхэд алдаа гарлаа: ${order.productName!} - ${orderErr.message || "Алдаа"}`,
+            `Захиалга үүсгэхэд алдаа гарлаа: ${order.productName!} - ${errorMessage}`,
           );
         }
       }
@@ -127,8 +135,9 @@ export default function NewOrderPage() {
         setError("Бүх захиалга үүсгэхэд алдаа гарлаа");
         setLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -137,7 +146,7 @@ export default function NewOrderPage() {
     setOrders([
       ...orders,
       {
-        id: Date.now() + Math.random(),
+        id: getNextId(),
         productName: "",
         description: "",
         imageUrls: [],

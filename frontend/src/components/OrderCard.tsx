@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React from "react";
@@ -9,6 +10,7 @@ interface OrderCardProps {
   onViewDetails: (order: Order) => void;
   onOpenChat: (order: Order) => void;
   onViewReport?: (order: Order) => void;
+  onDelete?: (order: Order) => void;
 }
 
 // Helper functions
@@ -40,7 +42,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onViewDetails,
   onOpenChat,
   onViewReport,
+  onDelete,
 }) => {
+  // Can delete only if status is "niitlegdsen" (before agent review)
+  const canDelete = order.status === "niitlegdsen";
   // Check if order has agent report (status indicates agent has submitted report)
   const hasReport = order.status === "tolbor_huleej_bn" || order.status === "amjilttai_zahialga";
   const mainImage =
@@ -99,6 +104,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               Чат
             </button>
           )}
+          {canDelete && onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(order);
+              }}
+              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Устгах
+            </button>
+          )}
         </div>
       </div>
     );
@@ -106,7 +125,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   // Card View
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-md hover:shadow-xl hover:border-blue-300 hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4">
+    <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-md hover:shadow-xl hover:border-blue-300 hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4">
       <div className="flex gap-4">
         {/* Thumbnail */}
         {mainImage && (
@@ -182,6 +201,21 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             Чат
+          </button>
+        )}
+
+        {canDelete && onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(order);
+            }}
+            className="h-8 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Устгах
           </button>
         )}
       </div>

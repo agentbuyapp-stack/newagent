@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState } from "react";
@@ -147,7 +148,8 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
         await apiClient.createBundleOrder(bundleData);
       } else {
         // Create single order (1 item)
-        const { id, ...orderData } = validOrders[0];
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id: _id, ...orderData } = validOrders[0];
         if (!orderData.imageUrls) {
           orderData.imageUrls = [];
         }
@@ -165,9 +167,10 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
       setTimeout(() => {
         setNewOrderSuccess(false);
       }, 2000);
-    } catch (err: any) {
-      console.error(`[DEBUG] Error creating order:`, err);
-      setNewOrderError(err.message || "Алдаа гарлаа");
+    } catch (e: unknown) {
+      console.error(`[DEBUG] Error creating order:`, e);
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      setNewOrderError(errorMessage);
     } finally {
       setNewOrderLoading(false);
     }
