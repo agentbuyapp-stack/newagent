@@ -36,7 +36,7 @@ export const getAdminCargos = async (req: Request, res: Response) => {
 
 export const createCargo = async (req: Request, res: Response) => {
   try {
-    const { name, description, phone, location, website } = req.body;
+    const { name, description, phone, location, website, imageUrl } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ error: "Name is required" });
@@ -48,6 +48,7 @@ export const createCargo = async (req: Request, res: Response) => {
       phone: phone ? phone.trim() : undefined,
       location: location ? location.trim() : undefined,
       website: website ? website.trim() : undefined,
+      imageUrl: imageUrl ? imageUrl.trim() : undefined,
     });
 
     res.status(201).json({
@@ -66,7 +67,7 @@ export const createCargo = async (req: Request, res: Response) => {
 export const updateCargo = async (req: Request, res: Response) => {
   try {
     const cargoId = req.params.id;
-    const { name, description, phone, location, website } = req.body;
+    const { name, description, phone, location, website, imageUrl } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(cargoId)) {
       return res.status(400).json({ error: "Invalid cargo ID" });
@@ -92,6 +93,9 @@ export const updateCargo = async (req: Request, res: Response) => {
     }
     if (website !== undefined) {
       updateData.website = website ? website.trim() : undefined;
+    }
+    if (imageUrl !== undefined) {
+      updateData.imageUrl = imageUrl ? imageUrl.trim() : undefined;
     }
 
     const cargo = await Cargo.findByIdAndUpdate(

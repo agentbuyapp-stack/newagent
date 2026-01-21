@@ -41,6 +41,7 @@ export default function AdminDashboardPage() {
     location: "",
     website: "",
     facebook: "",
+    imageUrl: "",
   });
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
@@ -59,6 +60,47 @@ export default function AdminDashboardPage() {
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [addingAgent, setAddingAgent] = useState(false);
+  const [uploadingCargoImage, setUploadingCargoImage] = useState(false);
+
+  // Cargo зураг upload хийх
+  const handleCargoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Зөвхөн зураг оруулах боломжтой');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Зурагны хэмжээ 5MB-аас бага байх ёстой');
+      return;
+    }
+
+    setUploadingCargoImage(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          const result = await apiClient.uploadImage(base64);
+          setCargoFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
+        } catch (err) {
+          console.error('Upload error:', err);
+          alert('Зураг upload хийхэд алдаа гарлаа');
+        } finally {
+          setUploadingCargoImage(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('File read error:', err);
+      setUploadingCargoImage(false);
+    }
+  };
 
   useEffect(() => {
     if (isLoaded && !clerkUser) {
@@ -304,7 +346,7 @@ export default function AdminDashboardPage() {
         return;
       }
       await apiClient.createCargo(cargoFormData);
-      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "" });
+      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
       setShowCargoForm(false);
       await loadData();
       alert("Cargo амжилттай үүслээ");
@@ -319,7 +361,7 @@ export default function AdminDashboardPage() {
     try {
       await apiClient.updateCargo(editingCargo.id, cargoFormData);
       setEditingCargo(null);
-      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "" });
+      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
       await loadData();
       alert("Cargo амжилттай шинэчлэгдлээ");
     } catch (e: unknown) {
@@ -908,7 +950,7 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={() => {
                       setEditingCargo(null);
-                      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "" });
+                      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
                       setShowCargoForm(!showCargoForm);
                     }}
                     className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
@@ -1024,6 +1066,49 @@ export default function AdminDashboardPage() {
                           placeholder="https://facebook.com/..."
                         />
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Зураг
+                        </label>
+                        <div className="flex items-center gap-3">
+                          {cargoFormData.imageUrl ? (
+                            <div className="relative">
+                              <img
+                                src={cargoFormData.imageUrl}
+                                alt="Preview"
+                                className="w-20 h-20 object-cover rounded-lg border"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCargoFormData(prev => ({ ...prev, imageUrl: "" }))}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+                              {uploadingCargoImage ? (
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                              ) : (
+                                <>
+                                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                  <span className="text-xs text-gray-500 mt-1">Зураг</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleCargoImageUpload}
+                                className="hidden"
+                                disabled={uploadingCargoImage}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={
@@ -1037,7 +1122,7 @@ export default function AdminDashboardPage() {
                           <button
                             onClick={() => {
                               setEditingCargo(null);
-                              setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "" });
+                              setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
                             }}
                             className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
                           >
@@ -1056,9 +1141,20 @@ export default function AdminDashboardPage() {
                         key={cargo.id}
                         className="border border-gray-200 rounded-xl p-4 bg-white"
                       >
-                        <h4 className="font-semibold text-gray-900">
-                          {cargo.name}
-                        </h4>
+                        <div className="flex items-start gap-3">
+                          {cargo.imageUrl && (
+                            <img
+                              src={cargo.imageUrl}
+                              alt={cargo.name}
+                              className="w-12 h-12 object-cover rounded-lg shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900">
+                              {cargo.name}
+                            </h4>
+                          </div>
+                        </div>
                         {cargo.description && (
                           <p className="text-sm text-gray-600 mt-1">
                             {cargo.description}
@@ -1110,6 +1206,7 @@ export default function AdminDashboardPage() {
                                 location: cargo.location || "",
                                 website: cargo.website || "",
                                 facebook: cargo.facebook || "",
+                                imageUrl: cargo.imageUrl || "",
                               });
                               setShowCargoForm(true);
                             }}

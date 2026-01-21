@@ -176,7 +176,7 @@ export default function OrderHistorySection({
           className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer min-w-0"
           onClick={() => setShowOrderSection(!showOrderSection)}
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
             <svg
               className="w-4 h-4 sm:w-5 sm:h-5 text-white"
               fill="none"
@@ -406,7 +406,7 @@ export default function OrderHistorySection({
               <>
                 <div
                   className={
-                    orderViewMode === "list" ? "space-y-2" : "space-y-3"
+                    orderViewMode === "list" ? "space-y-2" : "space-y-4"
                   }
                 >
                   {paginatedOrders.map((item) => {
