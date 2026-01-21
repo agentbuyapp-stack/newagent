@@ -50,9 +50,10 @@ export default function NotificationDropdown() {
     try {
       const response = await apiClient.getNotifications(1, 10);
       // Handle both response formats: { data: notifications[] } or { data: { notifications: [] } }
-      const notifs = Array.isArray(response.data)
-        ? response.data
-        : (response.data?.notifications || []);
+      const data = response.data as Notification[] | { notifications: Notification[] };
+      const notifs = Array.isArray(data)
+        ? data
+        : (data?.notifications || []);
       setNotifications(notifs);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
