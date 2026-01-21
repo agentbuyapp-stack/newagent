@@ -18,6 +18,7 @@ import adminCargoRoutes from "./routes/adminCargoRoutes";
 import agentRoutes from "./routes/agentRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import bundleOrderRoutes from "./routes/bundleOrderRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 const app = express();
 
@@ -70,6 +71,7 @@ app.use("/cargos", cargoRoutes);
 app.use("/agents", agentRoutes);
 app.use("/upload-image", uploadRoutes);
 app.use("/bundle-orders", bundleOrderRoutes);
+app.use("/notifications", notificationRoutes);
 
 // 404 handler
 app.use((_req, res) => {
