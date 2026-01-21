@@ -164,15 +164,15 @@ export default function AgentReportForm({ order, onSuccess, onCancel }: AgentRep
 
       <div>
         <label htmlFor="paymentLink" className="block text-sm font-medium text-gray-900 mb-1">
-          Төлбөрийн холбоос
+          Төлбөрийн холбоос / мэдээлэл
         </label>
         <input
           id="paymentLink"
-          type="url"
+          type="text"
           value={formData.paymentLink || ""}
           onChange={(e) => setFormData({ ...formData, paymentLink: e.target.value })}
           className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          placeholder="https://..."
+          placeholder="Холбоос эсвэл текст оруулах"
         />
       </div>
 

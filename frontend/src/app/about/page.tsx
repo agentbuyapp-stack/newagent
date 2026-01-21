@@ -1,7 +1,5 @@
 "use client";
 
-import Footer from "@/components/Footer";
-
 export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -80,8 +78,6 @@ export default function AboutPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

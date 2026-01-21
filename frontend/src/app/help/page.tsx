@@ -212,8 +212,6 @@ export default function HelpPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

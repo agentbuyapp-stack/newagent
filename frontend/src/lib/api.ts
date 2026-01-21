@@ -21,6 +21,7 @@ export interface Profile {
   email: string;
   cargo?: string;
   accountNumber?: string; // For agents
+  emailNotificationsEnabled?: boolean; // Email мэдэгдэл on/off
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +37,7 @@ export interface ProfileData {
   email: string;
   cargo?: string;
   accountNumber?: string; // For agents
+  emailNotificationsEnabled?: boolean; // Email мэдэгдэл on/off
 }
 
 export type OrderStatus = "niitlegdsen" | "agent_sudlaj_bn" | "tolbor_huleej_bn" | "amjilttai_zahialga" | "tsutsalsan_zahialga";
@@ -52,6 +54,7 @@ export interface Order {
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
   trackCode?: string; // Track code for successful orders
+  cancelReason?: string; // Reason for cancellation
   archivedByUser?: boolean; // User archived this order
   archivedByAgent?: boolean; // Agent archived this order
   createdAt: string;
@@ -208,10 +211,10 @@ class ApiClient {
     });
   }
 
-  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
+  async updateOrderStatus(orderId: string, status: OrderStatus, cancelReason?: string): Promise<Order> {
     return this.request<Order>(`/orders/${orderId}/status`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, cancelReason }),
     });
   }
 
@@ -266,14 +269,14 @@ class ApiClient {
     return this.request<PublicAgent[]>("/agents/public");
   }
 
-  async createCargo(data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
+  async createCargo(data: { name: string; description?: string; phone?: string; location?: string; website?: string; facebook?: string }): Promise<Cargo> {
     return this.request<Cargo>("/admin/cargos", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updateCargo(cargoId: string, data: { name: string; description?: string; phone?: string; location?: string; website?: string }): Promise<Cargo> {
+  async updateCargo(cargoId: string, data: { name: string; description?: string; phone?: string; location?: string; website?: string; facebook?: string }): Promise<Cargo> {
     return this.request<Cargo>(`/admin/cargos/${cargoId}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -378,6 +381,39 @@ class ApiClient {
     return this.request<{ status: string }>("/health");
   }
 
+  // Notification endpoints
+  async getNotifications(page: number = 1, limit: number = 20): Promise<NotificationsResponse> {
+    return this.request<NotificationsResponse>(`/notifications?page=${page}&limit=${limit}`);
+  }
+
+  async getNotificationCount(): Promise<{ success: boolean; data: { unreadCount: number } }> {
+    return this.request<{ success: boolean; data: { unreadCount: number } }>("/notifications/count");
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<{ success: boolean; data: Notification }> {
+    return this.request<{ success: boolean; data: Notification }>(`/notifications/${notificationId}/read`, {
+      method: "PUT",
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>("/notifications/read-all", {
+      method: "PUT",
+    });
+  }
+
+  async deleteNotification(notificationId: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/notifications/${notificationId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async sendTestEmail(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>("/notifications/test-email", {
+      method: "POST",
+    });
+  }
+
   // Bundle Order endpoints
   async getBundleOrders(): Promise<BundleOrder[]> {
     return this.request<BundleOrder[]>("/bundle-orders");
@@ -436,6 +472,7 @@ export interface Cargo {
   phone?: string;
   location?: string;
   website?: string;
+  facebook?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -595,6 +632,42 @@ export interface RewardRequest {
   createdAt: string;
   updatedAt: string;
   agent?: User;
+}
+
+// Notification types
+export type NotificationType =
+  | "agent_report_sent"
+  | "agent_cancelled_order"
+  | "admin_cancelled_order"
+  | "agent_added_track_code"
+  | "new_order_available"
+  | "payment_verified"
+  | "payment_verification_request"
+  | "reward_request";
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  orderId?: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface NotificationsResponse {
+  success: boolean;
+  data: Notification[];
+  pagination: NotificationPagination;
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
