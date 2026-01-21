@@ -25,18 +25,32 @@ export default function ProfileForm({
     email: profile?.email || "",
     cargo: profile?.cargo || "",
     accountNumber: profile?.accountNumber || "",
+    emailNotificationsEnabled: profile?.emailNotificationsEnabled ?? true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loadingCargos, setLoadingCargos] = useState(true);
-
   useEffect(() => {
     if (!hideCargo) {
       loadCargos();
     }
   }, [hideCargo]);
+
+  // Update form data when profile changes
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        phone: profile.phone || "",
+        email: profile.email || "",
+        cargo: profile.cargo || "",
+        accountNumber: profile.accountNumber || "",
+        emailNotificationsEnabled: profile.emailNotificationsEnabled ?? true,
+      });
+    }
+  }, [profile]);
 
   const loadCargos = async () => {
     setLoadingCargos(true);
@@ -74,15 +88,15 @@ export default function ProfileForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
           Профайл амжилттай шинэчлэгдлээ!
         </div>
       )}
@@ -100,7 +114,7 @@ export default function ProfileForm({
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Жишээ: Бат"
         />
       </div>
@@ -118,7 +132,7 @@ export default function ProfileForm({
           required
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="99112233"
         />
       </div>
@@ -136,7 +150,7 @@ export default function ProfileForm({
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="example@email.com"
         />
       </div>
@@ -161,7 +175,7 @@ export default function ProfileForm({
               onChange={(e) =>
                 setFormData({ ...formData, cargo: e.target.value })
               }
-              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               {cargos.map((cargo) => (
                 <option key={cargo.id} value={cargo.name}>
@@ -191,16 +205,56 @@ export default function ProfileForm({
             onChange={(e) =>
               setFormData({ ...formData, accountNumber: e.target.value })
             }
-            className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="Жишээ: 1234567890"
           />
         </div>
       )}
 
+      {/* Email notification toggle */}
+      <div className="p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <label
+              htmlFor="emailNotifications"
+              className="text-sm font-medium text-gray-900"
+            >
+              Email мэдэгдэл
+            </label>
+            <p className="text-xs text-gray-500">
+              Захиалгын статус өөрчлөгдөхөд email авах
+            </p>
+          </div>
+          <button
+            type="button"
+            id="emailNotifications"
+            onClick={() =>
+              setFormData({
+                ...formData,
+                emailNotificationsEnabled: !formData.emailNotificationsEnabled,
+              })
+            }
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              formData.emailNotificationsEnabled ? "bg-blue-500" : "bg-gray-300"
+            }`}
+            role="switch"
+            aria-checked={formData.emailNotificationsEnabled}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                formData.emailNotificationsEnabled
+                  ? "translate-x-4"
+                  : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-base min-h-11"
+        className="w-full px-3 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors font-medium text-sm"
       >
         {loading ? "Хадгалж байна..." : profile ? "Шинэчлэх" : "Үүсгэх"}
       </button>

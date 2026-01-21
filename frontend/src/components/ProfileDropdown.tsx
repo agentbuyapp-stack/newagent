@@ -188,9 +188,9 @@ export default function ProfileDropdown() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl border border-gray-200 z-50 max-h-[80vh] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl border border-gray-200 z-50 max-h-[85vh] overflow-y-auto shadow-lg">
             <div className="p-3 sm:p-4">
-              <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <div className="flex justify-between items-center mb-2 sm:mb-3 sticky top-0 bg-white pb-2 border-b border-gray-100">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                   Миний мэдээлэл
                 </h3>
@@ -219,7 +219,7 @@ export default function ProfileDropdown() {
                   Ачааллаж байна...
                 </div>
               ) : showProfileForm ? (
-                <div>
+                <div className="max-h-[70vh] overflow-y-auto">
                   <ProfileForm
                     profile={profile}
                     onSuccess={handleProfileSuccess}
@@ -301,6 +301,16 @@ export default function ProfileDropdown() {
                               </p>
                             </div>
                           )}
+
+                      {/* Email notification status */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600">
+                          Email мэдэгдэл
+                        </label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {profile.emailNotificationsEnabled !== false ? "Идэвхтэй" : "Идэвхгүй"}
+                        </p>
+                      </div>
 
                       <button
                         onClick={() => setShowProfileForm(true)}

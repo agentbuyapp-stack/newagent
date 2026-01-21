@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Order, BundleOrder } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import OrderCard from "@/components/OrderCard";
@@ -8,14 +8,6 @@ import BundleOrderCard from "@/components/BundleOrderCard";
 
 const ITEMS_PER_PAGE = 10;
 
-export interface NotificationItem {
-  id: string;
-  type: "order_update" | "message" | "track_code";
-  title: string;
-  message: string;
-  orderId?: string;
-  createdAt: Date;
-}
 
 // Combined type for both single and bundle orders
 type CombinedOrder =
@@ -26,10 +18,6 @@ interface OrderHistorySectionProps {
   orders: Order[];
   bundleOrders: BundleOrder[];
   archivedOrders?: Order[];
-  notifications: NotificationItem[];
-  hasOrderUpdates: boolean;
-  hasNewMessages: boolean;
-  notificationCount: number;
   onSelectOrder: (order: Order) => void;
   onSelectBundleOrder: (bundleOrder: BundleOrder) => void;
   onOpenChat: (order: Order) => void;
@@ -39,16 +27,13 @@ interface OrderHistorySectionProps {
   onDeleteBundleOrder?: (bundleOrder: BundleOrder) => void;
   onArchiveOrder?: (order: Order) => void;
   onReload: () => void;
+  deleteLoading?: boolean;
 }
 
 export default function OrderHistorySection({
   orders,
   bundleOrders,
   archivedOrders = [],
-  notifications,
-  hasOrderUpdates,
-  hasNewMessages,
-  notificationCount,
   onSelectOrder,
   onSelectBundleOrder,
   onOpenChat,
@@ -58,6 +43,7 @@ export default function OrderHistorySection({
   onDeleteBundleOrder,
   onArchiveOrder,
   onReload,
+  deleteLoading = false,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
@@ -65,29 +51,7 @@ export default function OrderHistorySection({
     "all" | "active" | "completed" | "cancelled" | "archived"
   >("all");
   const [orderViewMode, setOrderViewMode] = useState<"list" | "card">("card");
-  const [showNotificationDropdown, setShowNotificationDropdown] =
-    useState(false);
-  const notificationDropdownRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationDropdownRef.current &&
-        !notificationDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowNotificationDropdown(false);
-      }
-    };
-
-    if (showNotificationDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showNotificationDropdown]);
 
   // Combine and filter orders
   const combinedOrders = useMemo((): CombinedOrder[] => {
@@ -158,10 +122,6 @@ export default function OrderHistorySection({
   }, [filteredOrders, currentPage]);
 
   const handleClearAllCancelledOrders = async () => {
-    if (!confirm("Та бүх цуцлагдсан захиалгыг устгахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
     try {
       const cancelledSingle = orders.filter(
         (o) => o.status === "tsutsalsan_zahialga",
@@ -176,7 +136,6 @@ export default function OrderHistorySection({
       ]);
 
       onReload();
-      alert("Цуцлагдсан захиалгууд амжилттай устгагдлаа.");
     } catch (error) {
       console.error("Error clearing cancelled orders:", error);
       alert("Алдаа гарлаа. Дахин оролдоно уу.");
@@ -184,15 +143,10 @@ export default function OrderHistorySection({
   };
 
   const handleClearAllArchivedOrders = async () => {
-    if (!confirm("Та бүх архивласан захиалгыг устгахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
     try {
       await Promise.all(archivedOrders.map((o) => apiClient.cancelOrder(o.id)));
 
       onReload();
-      alert("Архивласан захиалгууд амжилттай устгагдлаа.");
     } catch (error) {
       console.error("Error clearing archived orders:", error);
       alert("Алдаа гарлаа. Дахин оролдоно уу.");
@@ -261,120 +215,6 @@ export default function OrderHistorySection({
               d="M19 9l-7 7-7-7"
             />
           </svg>
-          {(hasOrderUpdates || hasNewMessages || notificationCount > 0) && (
-            <div className="relative z-50" ref={notificationDropdownRef}>
-              <button
-                onClick={() =>
-                  setShowNotificationDropdown(!showNotificationDropdown)
-                }
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative min-h-10 min-w-10"
-                title="Мэдэгдлүүд"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-                {notificationCount > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {notificationCount > 9 ? "9+" : notificationCount}
-                  </div>
-                )}
-              </button>
-
-              {showNotificationDropdown && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-[100] border border-gray-200 max-h-96 overflow-y-auto">
-                  <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Мэдэгдлүүд
-                    </h3>
-                    <button
-                      onClick={() => setShowNotificationDropdown(false)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {notifications.length > 0 ? (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className="p-4 hover:bg-gray-50 cursor-pointer transition"
-                          onClick={() => {
-                            if (notification.orderId) {
-                              const order = orders.find(
-                                (o) => o.id === notification.orderId,
-                              );
-                              if (order) {
-                                onSelectOrder(order);
-                                setShowNotificationDropdown(false);
-                              }
-                            }
-                          }}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={`shrink-0 w-2 h-2 rounded-full mt-2 ${
-                                notification.type === "order_update"
-                                  ? "bg-yellow-500"
-                                  : notification.type === "message"
-                                    ? "bg-blue-500"
-                                    : "bg-green-500"
-                              }`}
-                            ></div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {notification.title}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                {new Date(
-                                  notification.createdAt,
-                                ).toLocaleDateString("mn-MN", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-sm text-gray-500">
-                        Мэдэгдэл байхгүй байна.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -581,6 +421,7 @@ export default function OrderHistorySection({
                           onViewReport={onViewReport}
                           onDelete={onDeleteOrder}
                           onArchive={onArchiveOrder}
+                          deleteLoading={deleteLoading}
                         />
                       );
                     } else {

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
@@ -10,6 +10,7 @@ import {
   type OrderStatus,
   type AgentReport,
   type RewardRequest,
+  type Cargo,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import ChatModal from "@/components/ChatModal";
@@ -52,6 +53,8 @@ export default function AgentDashboardPage() {
   const [isEditingTrackCode, setIsEditingTrackCode] = useState(false);
   const [trackCodeLoading, setTrackCodeLoading] = useState(false);
   const [rewardRequests, setRewardRequests] = useState<RewardRequest[]>([]);
+  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [showCargos, setShowCargos] = useState(false);
 
   // Edit report states
   const [isEditingReport, setIsEditingReport] = useState(false);
@@ -59,41 +62,16 @@ export default function AgentDashboardPage() {
   const [editReportReason, setEditReportReason] = useState("");
   const [editReportLoading, setEditReportLoading] = useState(false);
 
-  // Notification states for Agent
-  const [notifications, setNotifications] = useState<
-    Array<{
-      id: string;
-      type: "new_order" | "payment_confirmed" | "message" | "order_update";
-      title: string;
-      message: string;
-      orderId?: string;
-      createdAt: Date;
-    }>
-  >([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [showNotificationDropdown, setShowNotificationDropdown] =
-    useState(false);
-  const notificationDropdownRef = useRef<HTMLDivElement>(null);
+  // Action loading states
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
 
-  // Close notification dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationDropdownRef.current &&
-        !notificationDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowNotificationDropdown(false);
-      }
-    };
-
-    if (showNotificationDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showNotificationDropdown]);
+  // Cancel order modal states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Load agent report when order modal opens
   useEffect(() => {
@@ -235,100 +213,6 @@ export default function AgentDashboardPage() {
             }
           }
           setAgentReports(reports);
-
-          // Generate notifications for agent
-          const generatedNotifications: Array<{
-            id: string;
-            type:
-              | "new_order"
-              | "payment_confirmed"
-              | "message"
-              | "order_update";
-            title: string;
-            message: string;
-            orderId?: string;
-            createdAt: Date;
-          }> = [];
-
-          const userAgentId = String(userData.id || "").trim();
-
-          ordersData.forEach((order) => {
-            const orderDate = new Date(order.updatedAt);
-            const now = new Date();
-            const hoursSinceUpdate =
-              (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
-
-            // Get order's agentId
-            let orderAgentId = "";
-            if (typeof order.agentId === "string") {
-              orderAgentId = order.agentId.trim();
-            } else if (order.agentId && typeof order.agentId === "object") {
-              const agentIdObj = order.agentId as Record<string, unknown>;
-              orderAgentId = String(
-                agentIdObj.id || agentIdObj._id || "",
-              ).trim();
-            } else {
-              orderAgentId = String(order.agentId || "").trim();
-            }
-
-            // Notification for new published orders (visible to all agents)
-            if (
-              hoursSinceUpdate < 24 &&
-              order.status === "niitlegdsen" &&
-              (userData.isApproved || userData.role === "admin")
-            ) {
-              generatedNotifications.push({
-                id: `new-order-${order.id}`,
-                type: "new_order",
-                title: "Шинэ захиалга",
-                message: `"${order.productName}" захиалга нийтлэгдлээ`,
-                orderId: order.id,
-                createdAt: new Date(order.createdAt),
-              });
-            }
-
-            // Notifications for agent's own orders
-            if (orderAgentId === userAgentId) {
-              // Payment confirmed notification
-              if (
-                hoursSinceUpdate < 24 &&
-                order.status === "tolbor_huleej_bn" &&
-                order.userPaymentVerified
-              ) {
-                generatedNotifications.push({
-                  id: `payment-${order.id}`,
-                  type: "payment_confirmed",
-                  title: "Төлбөр баталгаажсан",
-                  message: `"${order.productName}" захиалгын төлбөр хэрэглэгчээс баталгаажсан`,
-                  orderId: order.id,
-                  createdAt: new Date(order.updatedAt),
-                });
-              }
-
-              // Order completed notification
-              if (
-                hoursSinceUpdate < 24 &&
-                order.status === "amjilttai_zahialga"
-              ) {
-                generatedNotifications.push({
-                  id: `completed-${order.id}`,
-                  type: "order_update",
-                  title: "Захиалга амжилттай",
-                  message: `"${order.productName}" захиалга амжилттай дууслаа`,
-                  orderId: order.id,
-                  createdAt: new Date(order.updatedAt),
-                });
-              }
-            }
-          });
-
-          // Sort by date (newest first)
-          generatedNotifications.sort(
-            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-          );
-
-          setNotifications(generatedNotifications);
-          setNotificationCount(generatedNotifications.length);
         } catch {
           console.log("No orders found");
         }
@@ -348,6 +232,14 @@ export default function AgentDashboardPage() {
         } catch (e) {
           console.error("Failed to load reward requests:", e);
           setRewardRequests([]);
+        }
+
+        // Load cargos
+        try {
+          const cargosData = await apiClient.getCargos();
+          setCargos(cargosData);
+        } catch (err) {
+          console.error("Failed to load cargos:", err);
         }
       } catch {
         // If user doesn't exist, the backend will create it automatically via Clerk middleware
@@ -435,11 +327,14 @@ export default function AgentDashboardPage() {
   const handleUpdateOrderStatus = async (
     orderId: string,
     newStatus: OrderStatus,
+    reasonForCancel?: string,
   ) => {
+    setStatusUpdateLoading(true);
     try {
       const updatedOrder = await apiClient.updateOrderStatus(
         orderId,
         newStatus,
+        reasonForCancel,
       );
 
       // Update order filter based on new status BEFORE loading data
@@ -482,28 +377,63 @@ export default function AgentDashboardPage() {
 
       // Close modal after data is loaded
       setShowOrderModal(false);
-
-      alert("Захиалгын статус амжилттай шинэчлэгдлээ");
     } catch (e: unknown) {
       console.error("Error updating order status:", e);
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
   const handleArchiveOrder = async (orderId: string) => {
-    if (!confirm("Та энэ захиалгыг архивлахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
+    setArchiveLoading(true);
     try {
       await apiClient.archiveOrder(orderId);
       await loadData();
       setShowOrderModal(false);
-      alert("Захиалга амжилттай архивлагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  // Open cancel modal for agent to enter reason
+  const openCancelModal = (orderId: string) => {
+    setCancelOrderId(orderId);
+    setCancelReason("");
+    setShowCancelModal(true);
+  };
+
+  // Submit cancellation with reason
+  const handleCancelWithReason = async () => {
+    if (!cancelOrderId) return;
+    if (cancelReason.trim().length < 5) {
+      alert("Цуцлах шалтгаан хамгийн багадаа 5 тэмдэгт байх ёстой");
+      return;
+    }
+
+    setCancelLoading(true);
+    try {
+      await apiClient.updateOrderStatus(
+        cancelOrderId,
+        "tsutsalsan_zahialga",
+        cancelReason.trim(),
+      );
+
+      setOrderFilter("completed");
+      await loadData();
+      setShowCancelModal(false);
+      setShowOrderModal(false);
+      setCancelOrderId(null);
+      setCancelReason("");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -689,17 +619,15 @@ export default function AgentDashboardPage() {
   const myArchivedCount = archivedOrders.length;
 
   const handleClearCancelledOrder = async (orderId: string) => {
-    if (!confirm("Та энэ цуцлагдсан захиалгыг устгахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
+    setClearLoading(true);
     try {
       await apiClient.cancelOrder(orderId);
       await loadData();
-      alert("Цуцлагдсан захиалга амжилттай устгагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setClearLoading(false);
     }
   };
 
@@ -708,58 +636,39 @@ export default function AgentDashboardPage() {
       (order) => order.status === "tsutsalsan_zahialga",
     );
     if (cancelledOrders.length === 0) {
-      alert("Цуцлагдсан захиалга байхгүй байна");
       return;
     }
 
-    if (
-      !confirm(
-        `Та ${cancelledOrders.length} цуцлагдсан захиалгыг бүгдийг нь устгахдаа итгэлтэй байна уу?`,
-      )
-    ) {
-      return;
-    }
-
+    setClearLoading(true);
     try {
-      // Delete all cancelled orders
       await Promise.all(
         cancelledOrders.map((order) => apiClient.cancelOrder(order.id)),
       );
       await loadData();
-      alert(
-        `${cancelledOrders.length} цуцлагдсан захиалга амжилттай устгагдлаа`,
-      );
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setClearLoading(false);
     }
   };
 
   const handleClearAllArchivedOrders = async () => {
     if (archivedOrders.length === 0) {
-      alert("Архивласан захиалга байхгүй байна");
       return;
     }
 
-    if (
-      !confirm(
-        `Та ${archivedOrders.length} архивласан захиалгыг бүгдийг нь устгахдаа итгэлтэй байна уу?`,
-      )
-    ) {
-      return;
-    }
-
+    setClearLoading(true);
     try {
       await Promise.all(
         archivedOrders.map((order) => apiClient.cancelOrder(order.id)),
       );
       await loadData();
-      alert(
-        `${archivedOrders.length} архивласан захиалга амжилттай устгагдлаа`,
-      );
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setClearLoading(false);
     }
   };
 
@@ -885,19 +794,38 @@ export default function AgentDashboardPage() {
 
           {/* Box 1: Нийтэлсэн захиалгууд */}
           {(user?.role === "admin" || isApproved) && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
               <div
-                className="flex items-center gap-2 mb-4 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
+                className="flex items-center justify-between cursor-pointer"
                 onClick={() => setShowPublishedOrders(!showPublishedOrders)}
               >
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Нээлттэй захиалгууд{" "}
-                  <span className="text-indigo-600">
-                    ({publishedOrders.length})
-                  </span>
-                </h2>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                      Нээлттэй захиалгууд
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Авах боломжтой захиалгууд ({publishedOrders.length})
+                    </p>
+                  </div>
+                </div>
                 <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${showPublishedOrders ? "rotate-90" : ""}`}
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showPublishedOrders ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -906,12 +834,13 @@ export default function AgentDashboardPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 5l7 7-7 7"
+                    d="M19 9l-7 7-7-7"
                   />
                 </svg>
               </div>
 
               {showPublishedOrders && (
+                <div className="mt-4">
                 <div className="space-y-3 sm:space-y-4">
                   {publishedOrders.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1077,159 +1006,59 @@ export default function AgentDashboardPage() {
                     </div>
                   )}
                 </div>
+                </div>
               )}
             </div>
           )}
 
           {/* Box 2: Миний захиалгууд */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <div
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
-                onClick={() => setShowMyOrders(!showMyOrders)}
-              >
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Миний захиалгууд{" "}
-                  <span className="text-indigo-600">({myOrders.length})</span>
-                </h2>
-                <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${showMyOrders ? "rotate-90" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Notification Bell - Always visible */}
-                <div className="relative" ref={notificationDropdownRef}>
-                  <button
-                    onClick={() =>
-                      setShowNotificationDropdown(!showNotificationDropdown)
-                    }
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative"
-                    title="Мэдэгдлүүд"
+          <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowMyOrders(!showMyOrders)}
+            >
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                      />
-                    </svg>
-                    {notificationCount > 0 && (
-                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                        {notificationCount > 9 ? "9+" : notificationCount}
-                      </div>
-                    )}
-                  </button>
-
-                  {/* Notification Dropdown */}
-                  {showNotificationDropdown && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
-                      <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Мэдэгдлүүд
-                        </h3>
-                        <button
-                          onClick={() => setShowNotificationDropdown(false)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="divide-y divide-gray-100">
-                        {notifications.length > 0 ? (
-                          notifications.map((notification) => (
-                            <div
-                              key={notification.id}
-                              className="p-4 hover:bg-gray-50 cursor-pointer transition"
-                              onClick={() => {
-                                if (notification.orderId) {
-                                  const order = orders.find(
-                                    (o) => o.id === notification.orderId,
-                                  );
-                                  if (order) {
-                                    setSelectedOrder(order);
-                                    setShowOrderModal(true);
-                                    setShowNotificationDropdown(false);
-                                  }
-                                }
-                              }}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div
-                                  className={`shrink-0 w-2 h-2 rounded-full mt-2 ${
-                                    notification.type === "new_order"
-                                      ? "bg-indigo-500"
-                                      : notification.type ===
-                                          "payment_confirmed"
-                                        ? "bg-green-500"
-                                        : notification.type === "message"
-                                          ? "bg-blue-500"
-                                          : "bg-yellow-500"
-                                  }`}
-                                ></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    {notification.title}
-                                  </p>
-                                  <p className="text-xs text-gray-600 mt-1">
-                                    {notification.message}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {new Date(
-                                      notification.createdAt,
-                                    ).toLocaleDateString("mn-MN", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-sm text-gray-500">
-                            Мэдэгдэл байхгүй байна.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                    Миний захиалгууд
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Таны авсан захиалгууд ({myOrders.length})
+                  </p>
                 </div>
               </div>
+              <svg
+                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showMyOrders ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </div>
 
             {showMyOrders && (
-              <div className="space-y-4">
+              <div className="mt-4 space-y-4">
                 {/* Category tabs */}
                 <div className="flex gap-2 border-b border-gray-200 pt-2">
                   <button
@@ -1315,9 +1144,13 @@ export default function AgentDashboardPage() {
                   <div className="flex justify-end mb-2">
                     <button
                       onClick={handleClearAllCancelledOrders}
-                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
+                      disabled={clearLoading}
+                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Бүгдийг устгах (Clear All)
+                      {clearLoading && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      )}
+                      {clearLoading ? "Устгаж байна..." : "Бүгдийг устгах"}
                     </button>
                   </div>
                 )}
@@ -1327,9 +1160,13 @@ export default function AgentDashboardPage() {
                   <div className="flex justify-end mb-2">
                     <button
                       onClick={handleClearAllArchivedOrders}
-                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
+                      disabled={clearLoading}
+                      className="px-4 py-2.5 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Бүгдийг устгах
+                      {clearLoading && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      )}
+                      {clearLoading ? "Устгаж байна..." : "Бүгдийг устгах"}
                     </button>
                   </div>
                 )}
@@ -1631,16 +1468,38 @@ export default function AgentDashboardPage() {
 
           {/* Box 3: Урамшуулал */}
           {user?.role === "agent" && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
+            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
               <div
-                className="flex items-center gap-2 mb-3 sm:mb-4 cursor-pointer hover:bg-gray-50 -ml-2 pl-2 py-1 pr-3 rounded-lg transition-colors"
+                className="flex items-center justify-between cursor-pointer"
                 onClick={() => setShowRewards(!showRewards)}
               >
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  Урамшуулал
-                </h2>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20">
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                      Урамшуулал
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Урамшууллын хүсэлтүүд ({rewardRequests.length})
+                    </p>
+                  </div>
+                </div>
                 <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${showRewards ? "rotate-90" : ""}`}
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showRewards ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1649,18 +1508,15 @@ export default function AgentDashboardPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M9 5l7 7-7 7"
+                    d="M19 9l-7 7-7-7"
                   />
                 </svg>
               </div>
 
               {showRewards && (
-                <div className="space-y-4">
+                <div className="mt-4 space-y-4">
                   {/* Reward Requests List */}
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-3">
-                      Урамшууллын хүсэлтүүд
-                    </h3>
                     {rewardRequests.length > 0 ? (
                       <div className="space-y-3">
                         {rewardRequests.map((request) => (
@@ -1731,6 +1587,179 @@ export default function AgentDashboardPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Box 4: Cargonууд - Dropdown */}
+          {cargos.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setShowCargos(!showCargos)}
+              >
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                      Каргонууд
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Түншлэгч карго компаниуд ({cargos.length})
+                    </p>
+                  </div>
+                </div>
+                <svg
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showCargos ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+
+              {showCargos && (
+                <div className="mt-4 space-y-3">
+                  {cargos.map((cargo) => (
+                    <div
+                      key={cargo.id}
+                      className="bg-linear-to-br from-white to-orange-50/50 border border-orange-100 rounded-xl p-4 hover:border-orange-200 hover:shadow-md transition-all"
+                    >
+                      <h4 className="font-semibold text-gray-900 text-sm sm:text-base">
+                        {cargo.name}
+                      </h4>
+                      {cargo.description && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {cargo.description}
+                        </p>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {cargo.phone && (
+                          <a
+                            href={`tel:${cargo.phone}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                              />
+                            </svg>
+                            {cargo.phone}
+                          </a>
+                        )}
+
+                        {cargo.website && (
+                          <a
+                            href={
+                              cargo.website.startsWith("http")
+                                ? cargo.website
+                                : `https://${cargo.website}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                              />
+                            </svg>
+                            Вэбсайт
+                          </a>
+                        )}
+
+                        {cargo.facebook && (
+                          <a
+                            href={
+                              cargo.facebook.startsWith("http")
+                                ? cargo.facebook
+                                : `https://${cargo.facebook}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                            </svg>
+                            Facebook
+                          </a>
+                        )}
+
+                        {cargo.location && (
+                          <a
+                            href={cargo.location}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            Байршил
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2577,70 +2606,101 @@ export default function AgentDashboardPage() {
                             "agent_sudlaj_bn",
                           )
                         }
-                        className="w-full px-4 py-3 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2"
+                        disabled={statusUpdateLoading}
+                        className="w-full px-4 py-3 bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Захиалга авах
+                        {statusUpdateLoading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                        )}
+                        {statusUpdateLoading ? "Уншиж байна..." : "Захиалга авах"}
                       </button>
                     )}
 
                     {selectedOrder.status === "agent_sudlaj_bn" && (
-                      <button
-                        onClick={() => {
-                          setReportOrder(selectedOrder);
-                          setShowReportForm(true);
-                        }}
-                        className="w-full px-4 py-3 bg-linear-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      <>
+                        <button
+                          onClick={() => {
+                            setReportOrder(selectedOrder);
+                            setShowReportForm(true);
+                          }}
+                          className="w-full px-4 py-3 bg-linear-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        Тайлан илгээх
-                      </button>
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          Тайлан илгээх
+                        </button>
+                        <button
+                          onClick={() => openCancelModal(selectedOrder.id)}
+                          className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                          Захиалга цуцлах
+                        </button>
+                      </>
                     )}
 
                     {/* Archive Button - for completed/cancelled orders */}
                     {canArchiveOrder(selectedOrder) && (
                       <button
                         onClick={() => handleArchiveOrder(selectedOrder.id)}
-                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        disabled={archiveLoading}
+                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                          />
-                        </svg>
-                        Архивлах
+                        {archiveLoading ? (
+                          <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                            />
+                          </svg>
+                        )}
+                        {archiveLoading ? "Уншиж байна..." : "Архивлах"}
                       </button>
                     )}
                   </div>
@@ -2707,6 +2767,94 @@ export default function AgentDashboardPage() {
                   setShowReportForm(false);
                 }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Modal - Requires reason */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                  <svg
+                    className="w-6 h-6 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Захиалга цуцлах
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Цуцлах шалтгаанаа бичнэ үү
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Шалтгаан <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Захиалга цуцлах шалтгаанаа дэлгэрэнгүй бичнэ үү..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
+                  rows={4}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Хамгийн багадаа 5 тэмдэгт ({cancelReason.length}/5)
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelOrderId(null);
+                    setCancelReason("");
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+                >
+                  Буцах
+                </button>
+                <button
+                  onClick={handleCancelWithReason}
+                  disabled={cancelLoading || cancelReason.trim().length < 5}
+                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  )}
+                  {cancelLoading ? "Цуцлаж байна..." : "Цуцлах"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -70,29 +70,11 @@ export default function UserDashboardPage() {
   } | null>(null);
   const [showUserInfoInModal, setShowUserInfoInModal] = useState(false);
 
-  // Notification states
-  const [hasOrderUpdates, setHasOrderUpdates] = useState(false);
-  const [hasNewMessages, setHasNewMessages] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
-
-  const [notifications, setNotifications] = useState<
-    Array<{
-      id: string;
-      type: "order_update" | "message" | "track_code";
-      title: string;
-      message: string;
-      orderId?: string;
-      createdAt: Date;
-    }>
-  >([]);
-
-  // Demo: Check for notifications (can be replaced with real API calls)
-  useEffect(() => {
-    if (orders.length > 0) {
-      // Check for new messages/track codes (demo - replace with real check)
-      setHasNewMessages(true); // Demo: always show for testing
-    }
-  }, [orders]);
+  // Action loading states
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   // Auto-open profile section and form if profile is incomplete or doesn't exist
   useEffect(() => {
@@ -213,77 +195,6 @@ export default function UserDashboardPage() {
               loadAgentReport(order.id);
             }
           });
-
-          // Check for order updates (status changed, new track code, etc.)
-          const hasUpdates = ordersData.some((order) => {
-            // Check if order status changed or has recent updates
-            const orderDate = new Date(order.updatedAt);
-            const now = new Date();
-            const hoursSinceUpdate =
-              (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
-            // Show notification if updated in last 24 hours and status is not agent_sudlaj_bn
-            return hoursSinceUpdate < 24 && order.status !== "agent_sudlaj_bn";
-          });
-          setHasOrderUpdates(hasUpdates);
-
-          // Generate notifications from orders
-          const generatedNotifications: Array<{
-            id: string;
-            type: "order_update" | "message" | "track_code";
-            title: string;
-            message: string;
-            orderId?: string;
-            createdAt: Date;
-          }> = [];
-
-          ordersData.forEach((order) => {
-            const orderDate = new Date(order.updatedAt);
-            const now = new Date();
-            const hoursSinceUpdate =
-              (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
-
-            // Order status update notifications
-            if (hoursSinceUpdate < 24 && order.status !== "agent_sudlaj_bn") {
-              const statusText =
-                order.status === "tolbor_huleej_bn"
-                  ? "Төлбөр хүлээж байна"
-                  : order.status === "amjilttai_zahialga"
-                    ? "Амжилттай захиалга"
-                    : order.status === "tsutsalsan_zahialga"
-                      ? "Цуцлагдсан захиалга"
-                      : "";
-
-              generatedNotifications.push({
-                id: `order-${order.id}-${order.status}`,
-                type: "order_update",
-                title: "Захиалга өөрчлөгдсөн",
-                message: `${order.productName} захиалгын статус: ${statusText}`,
-                orderId: order.id,
-                createdAt: new Date(order.updatedAt),
-              });
-            }
-          });
-
-          // Demo: Add message notifications
-          if (hasNewMessages) {
-            generatedNotifications.push({
-              id: "message-1",
-              type: "message",
-              title: "Шинэ мессеж",
-              message: "Таны захиалгатай холбоотой шинэ мессеж ирсэн байна.",
-              createdAt: new Date(),
-            });
-            generatedNotifications.push({
-              id: "track-1",
-              type: "track_code",
-              title: "Трак код",
-              message: "Таны захиалганд шинэ трак код нэмэгдлээ.",
-              createdAt: new Date(),
-            });
-          }
-
-          setNotifications(generatedNotifications);
-          setNotificationCount(generatedNotifications.length);
         } catch {
           // Orders might not exist yet, that's okay
         }
@@ -323,18 +234,16 @@ export default function UserDashboardPage() {
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    if (!confirm("Та энэ захиалгыг цуцлахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
+    setCancelLoading(true);
     try {
       await apiClient.cancelOrder(orderId);
       await loadData();
       setShowOrderModal(false);
-      alert("Захиалга амжилттай цуцлагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -385,14 +294,7 @@ export default function UserDashboardPage() {
   };
 
   const handlePaymentPaid = async (orderId: string) => {
-    if (
-      !confirm(
-        "Та төлбөр төлсөн эсэхийг баталгаажуулахдаа итгэлтэй байна уу? Admin-д хүсэлт илгээгдэнэ.",
-      )
-    ) {
-      return;
-    }
-
+    setPaymentLoading(true);
     try {
       // Call API to confirm user payment
       await apiClient.request<Order>(
@@ -402,12 +304,7 @@ export default function UserDashboardPage() {
         },
       );
 
-      alert(
-        "Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.",
-      );
-
       // Update selectedOrder state immediately with the updated order from API response
-      // Ensure userPaymentVerified is set to true
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({
           ...selectedOrder,
@@ -415,64 +312,52 @@ export default function UserDashboardPage() {
         });
       }
 
-      // Reload data to get updated orders list
-      // Note: loadData will preserve userPaymentVerified if it was set
       await loadData();
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (
-      !confirm(`"${order.productName}" захиалгыг устгахдаа итгэлтэй байна уу?`)
-    ) {
-      return;
-    }
-
+    setDeleteLoading(true);
     try {
       await apiClient.cancelOrder(order.id);
       await loadData();
-      alert("Захиалга амжилттай устгагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
   const handleDeleteBundleOrder = async (bundleOrder: BundleOrder) => {
-    if (
-      !confirm(
-        `Багц захиалга (${bundleOrder.items.length} бараа)-г устгахдаа итгэлтэй байна уу?`,
-      )
-    ) {
-      return;
-    }
-
+    setDeleteLoading(true);
     try {
       await apiClient.deleteBundleOrder(bundleOrder.id);
       await loadData();
-      alert("Багц захиалга амжилттай устгагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
   const handleArchiveOrder = async (orderId: string) => {
-    if (!confirm("Та энэ захиалгыг архивлахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-
+    setArchiveLoading(true);
     try {
       await apiClient.archiveOrder(orderId);
       await loadData();
       setShowOrderModal(false);
-      alert("Захиалга амжилттай архивлагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
       alert(errorMessage);
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -688,9 +573,7 @@ export default function UserDashboardPage() {
                       <h3 className="text-base sm:text-lg font-bold text-gray-900">
                         Шинэ захиалга үүсгэх
                       </h3>
-                      <p className="text-xs text-gray-500">
-                        Бараа захиалах
-                      </p>
+                      <p className="text-xs text-gray-500">Бараа захиалах</p>
                     </div>
                   </div>
                   <svg
@@ -718,10 +601,6 @@ export default function UserDashboardPage() {
                 orders={orders.filter((o) => !o.archivedByUser)}
                 bundleOrders={bundleOrders}
                 archivedOrders={orders.filter((o) => o.archivedByUser)}
-                notifications={notifications}
-                hasOrderUpdates={hasOrderUpdates}
-                hasNewMessages={hasNewMessages}
-                notificationCount={notificationCount}
                 onSelectOrder={(order) => {
                   setSelectedOrder(order);
                   setShowOrderModal(true);
@@ -746,6 +625,7 @@ export default function UserDashboardPage() {
                 onDeleteBundleOrder={handleDeleteBundleOrder}
                 onArchiveOrder={(order) => handleArchiveOrder(order.id)}
                 onReload={loadData}
+                deleteLoading={deleteLoading}
               />
 
               {/* Box 3: Cargonууд - Dropdown */}
@@ -773,7 +653,7 @@ export default function UserDashboardPage() {
                       </div>
                       <div>
                         <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                          Cargonууд
+                          Каргонууд
                         </h3>
                         <p className="text-xs text-gray-500">
                           Түншлэгч карго компаниуд ({cargos.length})
@@ -955,11 +835,13 @@ export default function UserDashboardPage() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                                index < 5
-                                  ? "bg-linear-to-br from-purple-500 to-indigo-500 text-white"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}>
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                  index < 5
+                                    ? "bg-linear-to-br from-purple-500 to-indigo-500 text-white"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
                                 #{index + 1}
                               </div>
                               <div>
@@ -967,7 +849,7 @@ export default function UserDashboardPage() {
                                   {agent.name}
                                 </h4>
                                 {agent.email && (
-                                  <p className="text-xs text-gray-500 truncate max-w-[150px]">
+                                  <p className="text-xs text-gray-500 truncate max-w-37.5">
                                     {agent.email}
                                   </p>
                                 )}
@@ -975,10 +857,22 @@ export default function UserDashboardPage() {
                             </div>
                             <div className="text-right">
                               <div className="flex items-center gap-1 text-purple-600">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                  />
                                 </svg>
-                                <span className="font-bold text-sm">{agent.orderCount}</span>
+                                <span className="font-bold text-sm">
+                                  {agent.orderCount}
+                                </span>
                               </div>
                               <p className="text-xs text-gray-500">захиалга</p>
                             </div>
@@ -1647,28 +1541,39 @@ export default function UserDashboardPage() {
                         <div className="flex gap-3">
                           <button
                             onClick={() => handlePaymentPaid(selectedOrder.id)}
-                            className="flex-1 px-4 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
+                            disabled={paymentLoading}
+                            className="flex-1 px-4 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            Төлбөр төлсөн
+                            {paymentLoading ? (
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                            {paymentLoading
+                              ? "Уншиж байна..."
+                              : "Төлбөр төлсөн"}
                           </button>
                           <button
                             onClick={() => handleCancelOrder(selectedOrder.id)}
-                            className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold transition-colors border border-red-200"
+                            disabled={cancelLoading}
+                            className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold transition-colors border border-red-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Цуцлах
+                            {cancelLoading && (
+                              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                            )}
+                            {cancelLoading ? "..." : "Цуцлах"}
                           </button>
                         </div>
                       )}
@@ -1761,22 +1666,27 @@ export default function UserDashboardPage() {
                     {canArchiveOrder(selectedOrder) && (
                       <button
                         onClick={() => handleArchiveOrder(selectedOrder.id)}
-                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        disabled={archiveLoading}
+                        className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                          />
-                        </svg>
-                        Архивлах
+                        {archiveLoading ? (
+                          <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                            />
+                          </svg>
+                        )}
+                        {archiveLoading ? "Уншиж байна..." : "Архивлах"}
                       </button>
                     )}
 
@@ -1784,22 +1694,27 @@ export default function UserDashboardPage() {
                     {canCancelOrder(selectedOrder) && (
                       <button
                         onClick={() => handleCancelOrder(selectedOrder.id)}
-                        className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        disabled={cancelLoading}
+                        className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                        Захиалга устгах
+                        {cancelLoading ? (
+                          <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        )}
+                        {cancelLoading ? "Устгаж байна..." : "Захиалга устгах"}
                       </button>
                     )}
                   </div>

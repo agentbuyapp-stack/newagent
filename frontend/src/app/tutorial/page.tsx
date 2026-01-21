@@ -8,19 +8,28 @@ export default function TutorialPage() {
       {/* Content */}
       <main className="flex-1 py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Заавар сургалт</h1>
-          <p className="text-gray-600 mb-8">AgentBuy ашиглан Хятадаас бараа захиалах алхам алхмаар заавар</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Заавар сургалт
+          </h1>
+          <p className="text-gray-600 mb-8">
+            AgentBuy ашиглан Хятадаас бараа захиалах алхам алхмаар заавар
+          </p>
 
           <div className="space-y-6">
             {/* Step 1 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">1</div>
-                <h2 className="text-xl font-semibold text-gray-900">Бүртгүүлэх</h2>
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                  1
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Бүртгүүлэх
+                </h2>
               </div>
               <div className="pl-16">
                 <p className="text-gray-600 mb-4">
-                  Эхлээд AgentBuy-д бүртгүүлнэ. Google эсвэл имэйл хаягаараа бүртгүүлэх боломжтой.
+                  Эхлээд AgentBuy-д бүртгүүлнэ. Google эсвэл имэйл хаягаараа
+                  бүртгүүлэх боломжтой.
                 </p>
                 <ul className="list-disc list-inside text-gray-600 space-y-1">
                   <li>Нүүр хуудас дээрх &quot;Нэвтрэх&quot; товч дарна</li>
@@ -33,8 +42,12 @@ export default function TutorialPage() {
             {/* Step 2 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">2</div>
-                <h2 className="text-xl font-semibold text-gray-900">Захиалга үүсгэх</h2>
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                  2
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Захиалга үүсгэх
+                </h2>
               </div>
               <div className="pl-16">
                 <p className="text-gray-600 mb-4">
@@ -53,8 +66,12 @@ export default function TutorialPage() {
             {/* Step 3 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">3</div>
-                <h2 className="text-xl font-semibold text-gray-900">Агентын тайлан хүлээх</h2>
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                  3
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Агентын тайлан хүлээх
+                </h2>
               </div>
               <div className="pl-16">
                 <p className="text-gray-600 mb-4">
@@ -63,7 +80,10 @@ export default function TutorialPage() {
                 <ul className="list-disc list-inside text-gray-600 space-y-1">
                   <li>Агент барааг олж, үнийг шалгана</li>
                   <li>Худалдагчийн найдвартай эсэхийг шалгана</li>
-                  <li>Тайлан дээр барааны үнэ, тээврийн зардал, үйлчилгээний хураамж заагдана</li>
+                  <li>
+                    Тайлан дээр барааны үнэ, тээврийн зардал, үйлчилгээний
+                    хураамж заагдана
+                  </li>
                   <li>Чат хэсгээр агенттай холбогдож асуулт асуух боломжтой</li>
                 </ul>
               </div>
@@ -72,8 +92,12 @@ export default function TutorialPage() {
             {/* Step 4 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">4</div>
-                <h2 className="text-xl font-semibold text-gray-900">Төлбөр төлөх</h2>
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                  4
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Төлбөр төлөх
+                </h2>
               </div>
               <div className="pl-16">
                 <p className="text-gray-600 mb-4">
@@ -83,7 +107,9 @@ export default function TutorialPage() {
                   <li>Тайлан дээрх нийт дүнг шалгана</li>
                   <li>Заасан дансанд төлбөрөө шилжүүлнэ</li>
                   <li>&quot;Төлбөр төлсөн&quot; товч дарна</li>
-                  <li>Admin төлбөрийг баталгаажуулсны дараа агент барааг захиална</li>
+                  <li>
+                    Admin төлбөрийг баталгаажуулсны дараа агент барааг захиална
+                  </li>
                 </ul>
               </div>
             </div>
@@ -91,8 +117,12 @@ export default function TutorialPage() {
             {/* Step 5 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">5</div>
-                <h2 className="text-xl font-semibold text-gray-900">Бараа хүлээн авах</h2>
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                  5
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Бараа хүлээн авах
+                </h2>
               </div>
               <div className="pl-16">
                 <p className="text-gray-600 mb-4">
@@ -111,8 +141,18 @@ export default function TutorialPage() {
           {/* Tips */}
           <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                className="w-6 h-6 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
               Зөвлөмж
             </h2>
@@ -137,8 +177,6 @@ export default function TutorialPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
