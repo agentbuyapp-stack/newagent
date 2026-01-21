@@ -463,6 +463,15 @@ class ApiClient {
       method: "DELETE",
     });
   }
+
+  // Upload image to Cloudinary
+  async uploadImage(base64: string): Promise<{ imageUrl: string }> {
+    const result = await this.request<{ url: string }>("/upload-image", {
+      method: "POST",
+      body: JSON.stringify({ image: base64 }),
+    });
+    return { imageUrl: result.url };
+  }
 }
 
 export interface Cargo {
@@ -473,6 +482,7 @@ export interface Cargo {
   location?: string;
   website?: string;
   facebook?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -151,7 +151,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   // Card View
   return (
-    <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-md hover:shadow-xl hover:border-blue-300 hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4">
+    <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 shadow-md hover:shadow-xl hover:border-blue-300 hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4">
       <div className="flex gap-4">
         {/* Thumbnail */}
         {mainImage && (
