@@ -9,7 +9,9 @@ interface BundleOrderCardProps {
   viewMode: "list" | "card";
   onViewDetails: (bundleOrder: BundleOrder) => void;
   onOpenChat: (bundleOrder: BundleOrder) => void;
+  onViewReport?: (bundleOrder: BundleOrder) => void;
   onDelete?: (bundleOrder: BundleOrder) => void;
+  deleteLoading?: boolean;
 }
 
 // Helper functions
@@ -40,10 +42,18 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
   viewMode,
   onViewDetails,
   onOpenChat,
+  onViewReport,
   onDelete,
+  deleteLoading = false,
 }) => {
   // Can delete only if status is "niitlegdsen" (before agent review)
   const canDelete = bundleOrder.status === "niitlegdsen";
+
+  // Check if bundle has report (agent has submitted report)
+  const hasReport =
+    bundleOrder.status === "tolbor_huleej_bn" ||
+    bundleOrder.status === "amjilttai_zahialga";
+
   // Get first 3 product names
   const productNames = bundleOrder.items
     .slice(0, 3)
@@ -54,11 +64,11 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
     ? `${productNames} (+${bundleOrder.items.length - 3})`
     : productNames;
 
-  // Get first image from first item
-  const mainImage =
-    bundleOrder.items[0]?.imageUrls && bundleOrder.items[0].imageUrls.length > 0
-      ? bundleOrder.items[0].imageUrls[0]
-      : null;
+  // Get first image from any item that has images
+  const itemWithImage = bundleOrder.items.find(
+    (item) => item.imageUrls && item.imageUrls.length > 0
+  );
+  const mainImage = itemWithImage?.imageUrls?.[0] || null;
 
   // List View
   if (viewMode === "list") {
@@ -87,16 +97,28 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => onViewDetails(bundleOrder)}
-            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            Дэлгэрэнгүй
-          </button>
+          {hasReport && onViewReport ? (
+            <button
+              onClick={() => onViewReport(bundleOrder)}
+              className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Тайлан
+            </button>
+          ) : (
+            <button
+              onClick={() => onViewDetails(bundleOrder)}
+              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Дэлгэрэнгүй
+            </button>
+          )}
           {bundleOrder.status !== "tsutsalsan_zahialga" && (
             <button
               onClick={() => onOpenChat(bundleOrder)}
@@ -114,12 +136,17 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
                 e.stopPropagation();
                 onDelete(bundleOrder);
               }}
-              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+              disabled={deleteLoading}
+              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Устгах
+              {deleteLoading ? (
+                <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
+              {deleteLoading ? "..." : "Устгах"}
             </button>
           )}
         </div>
@@ -187,16 +214,28 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
 
       {/* Buttons - Bottom */}
       <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-        <button
-          onClick={() => onViewDetails(bundleOrder)}
-          className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          Дэлгэрэнгүй
-        </button>
+        {hasReport && onViewReport ? (
+          <button
+            onClick={() => onViewReport(bundleOrder)}
+            className="h-8 px-3 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Тайлан
+          </button>
+        ) : (
+          <button
+            onClick={() => onViewDetails(bundleOrder)}
+            className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Дэлгэрэнгүй
+          </button>
+        )}
 
         {bundleOrder.status !== "tsutsalsan_zahialga" && (
           <button
@@ -216,12 +255,17 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
               e.stopPropagation();
               onDelete(bundleOrder);
             }}
-            className="h-8 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5"
+            disabled={deleteLoading}
+            className="h-8 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-all inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Устгах
+            {deleteLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
+            {deleteLoading ? "..." : "Устгах"}
           </button>
         )}
       </div>

@@ -35,5 +35,5 @@ const MessageSchema = new Schema<IMessage>(
 MessageSchema.index({ orderId: 1 });
 MessageSchema.index({ createdAt: 1 });
 
-export const Message = mongoose.models.Message || mongoose.model<IMessage>("Message", MessageSchema);
+export const Message = (mongoose.models.Message as mongoose.Model<IMessage>) || mongoose.model<IMessage>("Message", MessageSchema);
 

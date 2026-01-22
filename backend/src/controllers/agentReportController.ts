@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import { AgentReport, Order } from "../models";
+import { AgentReport, Order, Profile } from "../models";
 import { uploadImageToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
+import { notifyUserAgentReportSent } from "../services/notificationService";
 
 export const getAgentReport = async (req: Request, res: Response) => {
   try {
@@ -139,6 +140,16 @@ export const createAgentReport = async (req: Request, res: Response) => {
       { status: "tolbor_huleej_bn" },
       { new: true }
     );
+
+    // Notify user about the report
+    const agentProfile = await Profile.findOne({ userId: req.user.id }).lean();
+    const agentName = agentProfile?.name || "Agent";
+    notifyUserAgentReportSent(
+      order.userId,
+      new mongoose.Types.ObjectId(orderId),
+      order.productName,
+      agentName
+    ).catch((err) => console.error("Failed to notify user about report:", err));
 
     res.status(existingReport ? 200 : 201).json({
       ...report,

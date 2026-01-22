@@ -7,7 +7,14 @@ export type NotificationType =
   | "payment_verified"
   | "track_code_added"
   | "order_cancelled"
-  | "system";
+  | "system"
+  | "agent_report_sent"
+  | "agent_cancelled_order"
+  | "admin_cancelled_order"
+  | "agent_added_track_code"
+  | "payment_verification_request"
+  | "reward_request"
+  | "new_order_available";
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId;
@@ -29,7 +36,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ["order_created", "order_status_changed", "order_assigned", "payment_verified", "track_code_added", "order_cancelled", "system"],
+      enum: ["order_created", "order_status_changed", "order_assigned", "payment_verified", "track_code_added", "order_cancelled", "system", "agent_report_sent", "agent_cancelled_order", "admin_cancelled_order", "agent_added_track_code", "payment_verification_request", "reward_request", "new_order_available"],
       default: "system",
     },
     title: {
@@ -59,4 +66,4 @@ const NotificationSchema = new Schema<INotification>(
 NotificationSchema.index({ userId: 1, isRead: 1 });
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 
-export const Notification = mongoose.models.Notification || mongoose.model<INotification>("Notification", NotificationSchema);
+export const Notification = (mongoose.models.Notification as mongoose.Model<INotification>) || mongoose.model<INotification>("Notification", NotificationSchema);

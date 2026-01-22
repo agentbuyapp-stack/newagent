@@ -68,7 +68,7 @@ export default function Header() {
         </Link>
         {!isPublicPage ? (
           <SignedIn>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
               <NotificationDropdown />
               <ProfileDropdown />
               <SignOutButton />

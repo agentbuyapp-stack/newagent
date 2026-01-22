@@ -1,13 +1,18 @@
 import mongoose from "mongoose";
 
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
 const globalForMongoose = globalThis as unknown as {
-  mongoose: typeof mongoose | undefined;
+  mongoose: MongooseCache | undefined;
 };
 
-let cached = globalForMongoose.mongoose;
+let cached: MongooseCache = globalForMongoose.mongoose || { conn: null, promise: null };
 
-if (!cached) {
-  cached = globalForMongoose.mongoose = { conn: null, promise: null } as any;
+if (!globalForMongoose.mongoose) {
+  globalForMongoose.mongoose = cached;
 }
 
 async function connectDB() {
@@ -21,7 +26,7 @@ async function connectDB() {
     };
 
     const mongoUri = process.env.MONGODB_URI || process.env.DATABASE_URL;
-    
+
     if (!mongoUri) {
       throw new Error("Please define MONGODB_URI or DATABASE_URL in your .env file");
     }

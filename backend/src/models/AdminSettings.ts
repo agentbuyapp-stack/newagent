@@ -5,6 +5,9 @@ export interface IAdminSettings extends Document {
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  orderLimitEnabled?: boolean;
+  maxOrdersPerDay?: number;
+  maxActiveOrders?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +29,18 @@ const AdminSettingsSchema = new Schema<IAdminSettings>(
     exchangeRate: {
       type: Number,
     },
+    orderLimitEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    maxOrdersPerDay: {
+      type: Number,
+      default: 10,
+    },
+    maxActiveOrders: {
+      type: Number,
+      default: 10,
+    },
   },
   {
     timestamps: true,
@@ -33,5 +48,5 @@ const AdminSettingsSchema = new Schema<IAdminSettings>(
   }
 );
 
-export const AdminSettings = mongoose.models.AdminSettings || mongoose.model<IAdminSettings>("AdminSettings", AdminSettingsSchema);
+export const AdminSettings = (mongoose.models.AdminSettings as mongoose.Model<IAdminSettings>) || mongoose.model<IAdminSettings>("AdminSettings", AdminSettingsSchema);
 

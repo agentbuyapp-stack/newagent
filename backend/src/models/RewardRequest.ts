@@ -52,5 +52,5 @@ const RewardRequestSchema = new Schema<IRewardRequest>(
 RewardRequestSchema.index({ agentId: 1 });
 RewardRequestSchema.index({ status: 1 });
 
-export const RewardRequest = mongoose.models.RewardRequest || mongoose.model<IRewardRequest>("RewardRequest", RewardRequestSchema);
+export const RewardRequest = (mongoose.models.RewardRequest as mongoose.Model<IRewardRequest>) || mongoose.model<IRewardRequest>("RewardRequest", RewardRequestSchema);
 

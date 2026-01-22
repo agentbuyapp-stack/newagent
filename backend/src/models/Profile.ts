@@ -7,6 +7,7 @@ export interface IProfile extends Document {
   email: string;
   cargo?: string;
   accountNumber?: string; // For agents
+  emailNotificationsEnabled: boolean; // Email мэдэгдэл on/off
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,10 @@ const ProfileSchema = new Schema<IProfile>(
       type: String,
       trim: true,
     },
+    emailNotificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
@@ -52,5 +57,5 @@ const ProfileSchema = new Schema<IProfile>(
 
 // Index is already created by unique: true on userId field, so we don't need to add it again
 
-export const Profile = mongoose.models.Profile || mongoose.model<IProfile>("Profile", ProfileSchema);
+export const Profile = (mongoose.models.Profile as mongoose.Model<IProfile>) || mongoose.model<IProfile>("Profile", ProfileSchema);
 

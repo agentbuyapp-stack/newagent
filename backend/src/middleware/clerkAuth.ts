@@ -24,10 +24,11 @@ export const clerkAuth = async (
   next: NextFunction
 ) => {
   try {
-    // Development mode bypass (ONLY for local development without Clerk)
-    if (process.env.NODE_ENV === "development" && process.env.DISABLE_CLERK_AUTH === "true") {
-      console.warn("⚠️  WARNING: Clerk authentication is DISABLED (development mode only!)");
-      
+    // Auth bypass - ONLY enable via DISABLE_CLERK_AUTH env variable
+    // WARNING: Never set DISABLE_CLERK_AUTH=true in production!
+    if (process.env.DISABLE_CLERK_AUTH === "true") {
+      console.warn("⚠️  WARNING: Clerk authentication is DISABLED! Do not use in production.");
+
       // Use a default test user or create one
       let user = await User.findOne({ email: "test@example.com" }).lean();
       

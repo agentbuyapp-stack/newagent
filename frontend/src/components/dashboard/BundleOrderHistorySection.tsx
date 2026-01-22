@@ -11,6 +11,7 @@ interface BundleOrderHistorySectionProps {
   bundleOrders: BundleOrder[];
   onSelectBundleOrder: (bundleOrder: BundleOrder) => void;
   onOpenChat: (bundleOrder: BundleOrder) => void;
+  onViewReport?: (bundleOrder: BundleOrder) => void;
   onViewItemReport?: (bundleOrder: BundleOrder, item: BundleItem) => void;
   onReload: () => void;
 }
@@ -19,6 +20,7 @@ export default function BundleOrderHistorySection({
   bundleOrders,
   onSelectBundleOrder,
   onOpenChat,
+  onViewReport,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewItemReport,
   onReload,
@@ -202,6 +204,7 @@ export default function BundleOrderHistorySection({
                       viewMode="card"
                       onViewDetails={onSelectBundleOrder}
                       onOpenChat={onOpenChat}
+                      onViewReport={onViewReport}
                     />
                   ))}
                 </div>

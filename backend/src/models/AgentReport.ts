@@ -61,5 +61,5 @@ const AgentReportSchema = new Schema<IAgentReport>(
   }
 );
 
-export const AgentReport = mongoose.models.AgentReport || mongoose.model<IAgentReport>("AgentReport", AgentReportSchema);
+export const AgentReport = (mongoose.models.AgentReport as mongoose.Model<IAgentReport>) || mongoose.model<IAgentReport>("AgentReport", AgentReportSchema);
 

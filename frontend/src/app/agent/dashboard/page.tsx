@@ -11,10 +11,91 @@ import {
   type AgentReport,
   type RewardRequest,
   type Cargo,
+  type BundleOrder,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import ChatModal from "@/components/ChatModal";
 import AgentReportForm from "@/components/AgentReportForm";
+import BundleReportForm from "@/components/BundleReportForm";
+
+// Bundle Item Dropdown Component
+function BundleItemDropdown({ item, index }: { item: BundleOrder["items"][0]; index: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {item.imageUrls && item.imageUrls[0] ? (
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0">
+              <img src={item.imageUrls[0]} alt={item.productName} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          )}
+          <div className="text-left">
+            <p className="text-sm font-medium text-gray-900">{item.productName}</p>
+            <p className="text-xs text-gray-500">Бараа #{index + 1}</p>
+          </div>
+        </div>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="p-3 space-y-3 bg-white">
+          {/* Images */}
+          {item.imageUrls && item.imageUrls.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Зурагнууд</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {item.imageUrls.map((imgUrl, imgIndex) => (
+                  <div key={imgIndex} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img src={imgUrl} alt={`${item.productName} - ${imgIndex + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Description */}
+          {item.description && (
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Тайлбар</p>
+              <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-2">{item.description}</p>
+            </div>
+          )}
+          {/* Agent Report if exists */}
+          {item.agentReport && (
+            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+              <p className="text-xs font-medium text-green-800 mb-2">Agent тайлан</p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <span className="text-green-700">Үнэ: <strong>{item.agentReport.userAmount?.toLocaleString()}₮</strong></span>
+                {item.agentReport.quantity && <span className="text-gray-600">Тоо: x{item.agentReport.quantity}</span>}
+              </div>
+              {item.agentReport.paymentLink && (
+                <a href={item.agentReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-2 block">
+                  Төлбөрийн линк
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AgentDashboardPage() {
   const router = useRouter();
@@ -30,6 +111,9 @@ export default function AgentDashboardPage() {
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportOrder, setReportOrder] = useState<Order | null>(null);
+  // Bundle report states
+  const [showBundleReportForm, setShowBundleReportForm] = useState(false);
+  const [bundleReportOrder, setBundleReportOrder] = useState<Order | null>(null);
   const [showPublishedOrders, setShowPublishedOrders] = useState(true);
   const [showMyOrders, setShowMyOrders] = useState(true);
   const [showRewards, setShowRewards] = useState(true);
@@ -93,8 +177,10 @@ export default function AgentDashboardPage() {
         (order) => order.id === selectedOrder.id,
       );
 
-      // Load report if current user is the agent for this order
+      // Load report if current user is the agent for this order (skip for bundle orders - they have per-item reports)
+      const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
       if (
+        !isBundleOrder &&
         selectedOrder.agentId === user.id &&
         agentReports[selectedOrder.id] === undefined
       ) {
@@ -102,7 +188,11 @@ export default function AgentDashboardPage() {
       }
 
       // If agent report exists, collapse user info by default and expand agent report
-      if (agentReports[selectedOrder.id]) {
+      // Bundle orders have per-item reports, so skip the single agent report dropdown
+      if (isBundleOrder) {
+        setShowUserInfoInModal(true);
+        setShowAgentReportInModal(false); // Bundle orders show reports in item dropdowns
+      } else if (agentReports[selectedOrder.id]) {
         setShowUserInfoInModal(false);
         setShowAgentReportInModal(true);
       } else if (isMyOrder || selectedOrder.agentId === user.id) {
@@ -177,12 +267,59 @@ export default function AgentDashboardPage() {
 
         // Load all orders (Approved agents can see all orders, unapproved only see their own)
         try {
-          const ordersData = await apiClient.getOrders();
-          setOrders(ordersData);
+          // Fetch both regular orders and bundle orders in parallel
+          const [ordersData, bundleOrdersData] = await Promise.all([
+            apiClient.getOrders(),
+            apiClient.getBundleOrders().catch(() => [] as BundleOrder[]),
+          ]);
+
+          // Convert BundleOrder to Order format for unified display
+          const convertedBundleOrders: Order[] = bundleOrdersData.map((bundle) => {
+            // Show first 2 item names, with "+N" if more
+            const itemNames = bundle.items.slice(0, 2).map((i) => i.productName);
+            const remaining = bundle.items.length - 2;
+            const productName = remaining > 0
+              ? `${itemNames.join(", ")} +${remaining}`
+              : itemNames.join(", ") || "Багц захиалга";
+
+            // Find first item with images for thumbnail
+            const itemWithImage = bundle.items.find((i) => i.imageUrls && i.imageUrls.length > 0);
+
+            return {
+              id: bundle.id,
+              userId: bundle.userId,
+              agentId: bundle.agentId,
+              productName,
+              description: bundle.items.map((i) => i.productName).join(", "),
+              imageUrls: itemWithImage?.imageUrls || [],
+              status: bundle.status,
+              userPaymentVerified: bundle.userPaymentVerified || false,
+              agentPaymentPaid: bundle.agentPaymentPaid || false,
+              trackCode: bundle.trackCode,
+              archivedByUser: false,
+              archivedByAgent: false,
+              createdAt: bundle.createdAt,
+              updatedAt: bundle.updatedAt,
+              user: bundle.user,
+              isBundleOrder: true,
+              bundleItems: bundle.items, // Store original items for modal display
+              reportMode: bundle.reportMode, // Store report mode
+              bundleReport: bundle.bundleReport, // Store bundle-level report for single mode
+              userSnapshot: bundle.userSnapshot, // Store user info snapshot for display
+            } as Order;
+          });
+
+          const allOrders = [...ordersData, ...convertedBundleOrders];
+          setOrders(allOrders);
 
           // Load agent reports for orders that have agent assigned (including completed orders)
           const reports: Record<string, AgentReport | null> = {};
-          for (const order of ordersData) {
+          for (const order of allOrders) {
+            // Skip bundle orders for agent reports (they have different report structure)
+            if ((order as Order & { isBundleOrder?: boolean }).isBundleOrder) {
+              continue;
+            }
+
             // Handle both string and object types for agentId
             let orderAgentId = "";
             if (typeof order.agentId === "string") {
@@ -331,11 +468,14 @@ export default function AgentDashboardPage() {
   ) => {
     setStatusUpdateLoading(true);
     try {
-      const updatedOrder = await apiClient.updateOrderStatus(
-        orderId,
-        newStatus,
-        reasonForCancel,
-      );
+      // Check if this is a bundle order
+      const currentOrder = orders.find((o) => o.id === orderId);
+      const isBundleOrder = (currentOrder as Order & { isBundleOrder?: boolean })?.isBundleOrder;
+
+      // Use appropriate API based on order type
+      const updatedOrder = isBundleOrder
+        ? await apiClient.updateBundleOrderStatus(orderId, newStatus)
+        : await apiClient.updateOrderStatus(orderId, newStatus, reasonForCancel);
 
       // Update order filter based on new status BEFORE loading data
       if (
@@ -355,10 +495,10 @@ export default function AgentDashboardPage() {
         prevOrders.map((order) =>
           order.id === orderId
             ? {
-              ...order,
-              status: newStatus,
-              agentId: updatedOrder.agentId || order.agentId || user?.id,
-            }
+                ...order,
+                status: newStatus,
+                agentId: updatedOrder.agentId || order.agentId || user?.id,
+              }
             : order,
         ),
       );
@@ -891,9 +1031,9 @@ export default function AgentDashboardPage() {
                                 <div className="min-w-0 flex-1">
                                   {/* Top: Status & Date */}
                                   <div className="flex items-center justify-between gap-2 mb-1">
-                                    {order.user?.profile && (
+                                    {(order.user?.profile || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot) && (
                                       <span className="text-xs font-medium text-blue-600 truncate">
-                                        {order.user.profile.name || "Нэргүй"}
+                                        {order.user?.profile?.name || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.name || "Нэргүй"}
                                       </span>
                                     )}
                                     <span className="text-[10px] text-gray-400 shrink-0">
@@ -912,11 +1052,11 @@ export default function AgentDashboardPage() {
                                   </h4>
 
                                   {/* User cargo */}
-                                  {order.user?.profile?.cargo && (
+                                  {(order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo) && (
                                     <p className="text-[10px] text-gray-500 mt-0.5">
                                       Карго:{" "}
                                       <span className="font-medium text-blue-600">
-                                        {order.user.profile.cargo}
+                                        {order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo}
                                       </span>
                                     </p>
                                   )}
@@ -1060,71 +1200,79 @@ export default function AgentDashboardPage() {
             {showMyOrders && (
               <div className="mt-4 space-y-4">
                 {/* Category tabs */}
-                <div className="flex gap-2 border-b border-gray-200 pt-2">
+                <div className="flex flex-row gap-1 sm:gap-2 border-b border-gray-200 pt-2 overflow-x-auto pb-px">
                   <button
                     onClick={() => setOrderFilter("active")}
-                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${orderFilter === "active"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
+                    className={`relative px-2 sm:px-4 py-2 pr-5 sm:pr-6 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                      orderFilter === "active"
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
                     Идэвхтэй
                     <span
-                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${orderFilter === "active"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700"
-                        }`}
+                      className={`absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full text-[10px] sm:text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "active"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
                     >
                       {myActiveCount}
                     </span>
                   </button>
                   <button
                     onClick={() => setOrderFilter("completed")}
-                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${orderFilter === "completed"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
+                    className={`relative px-2 sm:px-4 py-2 pr-5 sm:pr-6 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                      orderFilter === "completed"
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
                     Амжилттай
                     <span
-                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${orderFilter === "completed"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700"
-                        }`}
+                      className={`absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full text-[10px] sm:text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "completed"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
                     >
                       {myCompletedCount}
                     </span>
                   </button>
                   <button
                     onClick={() => setOrderFilter("cancelled")}
-                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${orderFilter === "cancelled"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
+                    className={`relative px-2 sm:px-4 py-2 pr-5 sm:pr-6 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                      orderFilter === "cancelled"
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
                     Цуцлагдсан
                     <span
-                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${orderFilter === "cancelled"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700"
-                        }`}
+                      className={`absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full text-[10px] sm:text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "cancelled"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
                     >
                       {myCancelledCount}
                     </span>
                   </button>
                   <button
                     onClick={() => setOrderFilter("archived")}
-                    className={`relative px-4 py-2 pr-6 text-sm font-medium transition ${orderFilter === "archived"
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
+                    className={`relative px-2 sm:px-4 py-2 pr-5 sm:pr-6 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                      orderFilter === "archived"
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
                     Архив
                     <span
-                      className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${orderFilter === "archived"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700"
-                        }`}
+                      className={`absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full text-[10px] sm:text-xs flex items-center justify-center font-semibold ${
+                        orderFilter === "archived"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
                     >
                       {myArchivedCount}
                     </span>
@@ -1181,14 +1329,15 @@ export default function AgentDashboardPage() {
                         return (
                           <div
                             key={order.id}
-                            className={`bg-linear-to-br from-white to-gray-50 rounded-xl border transition-all duration-300 p-3 hover:scale-[1.01] ${needsReport
-                              ? "border-amber-300 hover:border-amber-400 shadow-amber-100/50"
-                              : waitingPayment
-                                ? "border-blue-300 hover:border-blue-400"
-                                : order.status === "amjilttai_zahialga"
-                                  ? "border-emerald-300 hover:border-emerald-400"
-                                  : "border-gray-200 hover:border-gray-300"
-                              }`}
+                            className={`bg-linear-to-br from-white to-gray-50 rounded-xl border transition-all duration-300 p-3 hover:scale-[1.01] ${
+                              needsReport
+                                ? "border-amber-300 hover:border-amber-400 shadow-amber-100/50"
+                                : waitingPayment
+                                  ? "border-blue-300 hover:border-blue-400"
+                                  : order.status === "amjilttai_zahialga"
+                                    ? "border-emerald-300 hover:border-emerald-400"
+                                    : "border-gray-200 hover:border-gray-300"
+                            }`}
                           >
                             <div className="flex gap-3">
                               {/* Thumbnail */}
@@ -1227,15 +1376,16 @@ export default function AgentDashboardPage() {
                                 {/* Top: Status & Date */}
                                 <div className="flex items-center justify-between gap-2 mb-1">
                                   <span
-                                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${order.status === "agent_sudlaj_bn"
-                                      ? "bg-amber-100 text-amber-700"
-                                      : order.status === "tolbor_huleej_bn"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : order.status ===
-                                          "amjilttai_zahialga"
-                                          ? "bg-emerald-100 text-emerald-700"
-                                          : "bg-red-100 text-red-700"
-                                      }`}
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                      order.status === "agent_sudlaj_bn"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : order.status === "tolbor_huleej_bn"
+                                          ? "bg-blue-100 text-blue-700"
+                                          : order.status ===
+                                              "amjilttai_zahialga"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-red-100 text-red-700"
+                                    }`}
                                   >
                                     {getStatusText(order.status)}
                                   </span>
@@ -1255,13 +1405,13 @@ export default function AgentDashboardPage() {
                                 </h4>
 
                                 {/* User Info */}
-                                {order.user?.profile && (
+                                {(order.user?.profile || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot) && (
                                   <p className="text-[10px] text-gray-500 mt-0.5 truncate">
                                     <span className="font-medium text-blue-600">
-                                      {order.user.profile.name || "Нэргүй"}
+                                      {order.user?.profile?.name || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.name || "Нэргүй"}
                                     </span>
-                                    {order.user.profile.cargo && (
-                                      <span> • {order.user.profile.cargo}</span>
+                                    {(order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo) && (
+                                      <span> • {order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo}</span>
                                     )}
                                   </p>
                                 )}
@@ -1349,8 +1499,14 @@ export default function AgentDashboardPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setReportOrder(order);
-                                    setShowReportForm(true);
+                                    const isBundleOrder = (order as Order & { isBundleOrder?: boolean }).isBundleOrder;
+                                    if (isBundleOrder) {
+                                      setBundleReportOrder(order);
+                                      setShowBundleReportForm(true);
+                                    } else {
+                                      setReportOrder(order);
+                                      setShowReportForm(true);
+                                    }
                                   }}
                                   className="flex-1 h-7 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center justify-center gap-1"
                                 >
@@ -1372,36 +1528,12 @@ export default function AgentDashboardPage() {
                               )}
                               {(order.status === "tsutsalsan_zahialga" ||
                                 order.archivedByAgent) && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleClearCancelledOrder(order.id);
-                                    }}
-                                    className="h-7 px-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
-                                  >
-                                    <svg
-                                      className="w-3.5 h-3.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                      />
-                                    </svg>
-                                    Устгах
-                                  </button>
-                                )}
-                              {canArchiveOrder(order) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleArchiveOrder(order.id);
+                                    handleClearCancelledOrder(order.id);
                                   }}
-                                  className="h-7 px-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
+                                  className="h-7 px-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -1413,10 +1545,39 @@ export default function AgentDashboardPage() {
                                       strokeLinecap="round"
                                       strokeLinejoin="round"
                                       strokeWidth={2}
-                                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                     />
                                   </svg>
-                                  Архив
+                                  Устгах
+                                </button>
+                              )}
+                              {canArchiveOrder(order) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchiveOrder(order.id);
+                                  }}
+                                  disabled={archiveLoading}
+                                  className="h-7 px-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {archiveLoading ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                                      />
+                                    </svg>
+                                  )}
+                                  {archiveLoading ? "..." : "Архив"}
                                 </button>
                               )}
                             </div>
@@ -1512,12 +1673,13 @@ export default function AgentDashboardPage() {
                         {rewardRequests.map((request) => (
                           <div
                             key={request.id}
-                            className={`border rounded-xl p-4 ${request.status === "approved"
-                              ? "bg-green-50 border-green-200"
-                              : request.status === "rejected"
-                                ? "bg-red-50 border-red-200"
-                                : "bg-yellow-50 border-yellow-200"
-                              }`}
+                            className={`border rounded-xl p-4 ${
+                              request.status === "approved"
+                                ? "bg-green-50 border-green-200"
+                                : request.status === "rejected"
+                                  ? "bg-red-50 border-red-200"
+                                  : "bg-yellow-50 border-yellow-200"
+                            }`}
                           >
                             <div className="flex justify-between items-start">
                               <div>
@@ -1539,12 +1701,13 @@ export default function AgentDashboardPage() {
                               </div>
                               <div className="text-right">
                                 <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${request.status === "approved"
-                                    ? "bg-green-100 text-green-800"
-                                    : request.status === "rejected"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                                    }`}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    request.status === "approved"
+                                      ? "bg-green-100 text-green-800"
+                                      : request.status === "rejected"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                                  }`}
                                 >
                                   {request.status === "approved"
                                     ? "Батлагдсан"
@@ -1632,24 +1795,34 @@ export default function AgentDashboardPage() {
                   {cargos.map((cargo) => (
                     <div
                       key={cargo.id}
-                      className="relative rounded-xl overflow-hidden border border-orange-100 hover:border-orange-200 hover:shadow-lg transition-all min-h-[220px]"
+                      className="relative rounded-xl overflow-hidden border border-orange-100 hover:border-orange-200 hover:shadow-lg transition-all min-h-55"
                       style={{
-                        backgroundImage: cargo.imageUrl ? `url(${cargo.imageUrl})` : undefined,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
+                        backgroundImage: cargo.imageUrl
+                          ? `url(${cargo.imageUrl})`
+                          : undefined,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                       }}
                     >
                       {/* Gradient overlay - only at bottom */}
-                      <div className={`absolute inset-x-0 bottom-0 h-1/2 ${cargo.imageUrl ? 'bg-gradient-to-t from-black/90 to-transparent' : ''}`} />
-                      {!cargo.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-white to-orange-50/50" />}
+                      <div
+                        className={`absolute inset-x-0 bottom-0 h-1/2 ${cargo.imageUrl ? "bg-linear-to-t from-black/90 to-transparent" : ""}`}
+                      />
+                      {!cargo.imageUrl && (
+                        <div className="absolute inset-0 bg-linear-to-br from-white to-orange-50/50" />
+                      )}
 
                       {/* Content positioned at bottom */}
                       <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h4 className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? 'text-white drop-shadow-md' : 'text-gray-900'}`}>
+                        <h4
+                          className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? "text-white drop-shadow-md" : "text-gray-900"}`}
+                        >
                           {cargo.name}
                         </h4>
                         {cargo.description && (
-                          <p className={`text-xs mt-1 ${cargo.imageUrl ? 'text-gray-100' : 'text-gray-500'}`}>
+                          <p
+                            className={`text-xs mt-1 ${cargo.imageUrl ? "text-gray-100" : "text-gray-500"}`}
+                          >
                             {cargo.description}
                           </p>
                         )}
@@ -1658,7 +1831,7 @@ export default function AgentDashboardPage() {
                           {cargo.phone && (
                             <a
                               href={`tel:${cargo.phone}`}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-orange-50 hover:bg-orange-100 text-orange-700'}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-orange-50 hover:bg-orange-100 text-orange-700"}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5"
@@ -1686,7 +1859,7 @@ export default function AgentDashboardPage() {
                               }
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5"
@@ -1714,7 +1887,7 @@ export default function AgentDashboardPage() {
                               }
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5"
@@ -1732,7 +1905,7 @@ export default function AgentDashboardPage() {
                               href={cargo.location}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-green-50 hover:bg-green-100 text-green-700"}`}
                             >
                               <svg
                                 className="w-3.5 h-3.5"
@@ -1784,96 +1957,69 @@ export default function AgentDashboardPage() {
               ? selectedOrder.imageUrls[0]
               : null;
 
+          const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
+          const userSnapshot = (selectedOrder as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot;
+          const bundleItems = (selectedOrder as Order & { bundleItems?: BundleOrder["items"] }).bundleItems;
+
           return (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
               <div className="bg-white rounded-none sm:rounded-2xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl">
                 {/* Header with gradient */}
                 <div className="sticky top-0 bg-linear-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-4 z-10">
-                  <div className="flex items-start gap-4">
-                    {/* Product Thumbnail */}
-                    {mainImage ? (
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
-                        <img
-                          src={mainImage}
-                          alt={selectedOrder.productName}
-                          className="w-full h-full object-cover"
-                        />
+                  {isBundleOrder ? (
+                    /* Bundle Order Header - User style */
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-bold text-white">Багц захиалга</h2>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/70 text-xs">{bundleItems?.length || 0} бараа</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              selectedOrder.status === "niitlegdsen"
+                                ? "bg-gray-100 text-gray-700"
+                                : selectedOrder.status === "agent_sudlaj_bn"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : selectedOrder.status === "tolbor_huleej_bn"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : selectedOrder.status === "amjilttai_zahialga"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-red-100 text-red-700"
+                            }`}>
+                              {getStatusText(selectedOrder.status)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl flex items-center justify-center border-2 border-white/30">
-                        <svg
-                          className="w-8 h-8 text-white/70"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-
-                    {/* Title and Status */}
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-lg sm:text-xl font-bold text-white truncate">
-                        {selectedOrder.productName}
-                      </h2>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${selectedOrder.status === "niitlegdsen"
-                            ? "bg-gray-100 text-gray-700"
-                            : selectedOrder.status === "agent_sudlaj_bn"
-                              ? "bg-amber-100 text-amber-700"
-                              : selectedOrder.status === "tolbor_huleej_bn"
-                                ? "bg-blue-100 text-blue-700"
-                                : selectedOrder.status ===
-                                  "amjilttai_zahialga"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-red-100 text-red-700"
-                            }`}
-                        >
-                          {getStatusText(selectedOrder.status)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-white/70 mt-1.5 font-mono">
-                        #{selectedOrder.id.slice(-4).toUpperCase()}
-                      </p>
-                    </div>
-
-                    {/* Close Button */}
-                    <button
-                      onClick={() => setShowOrderModal(false)}
-                      className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all min-h-10 min-w-10"
-                    >
-                      <svg
-                        className="w-6 h-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={() => setShowOrderModal(false)}
+                        className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 sm:p-6 space-y-5">
-                  {/* IMPORTANT: User Contact Info for Agent - Compact */}
-                  {selectedOrder.user?.profile && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                        <span className="flex items-center gap-1.5">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    /* Regular Order Header */
+                    <div className="flex items-start gap-4">
+                      {/* Product Thumbnail */}
+                      {mainImage ? (
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
+                          <img
+                            src={mainImage}
+                            alt={selectedOrder.productName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl flex items-center justify-center border-2 border-white/30">
                           <svg
-                            className="w-4 h-4 text-blue-500"
+                            className="w-8 h-8 text-white/70"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -1882,25 +2028,86 @@ export default function AgentDashboardPage() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
-                          <span className="font-medium text-gray-900">
-                            {selectedOrder.user.profile.name || "-"}
+                        </div>
+                      )}
+
+                      {/* Title and Status */}
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg sm:text-xl font-bold text-white truncate">
+                          {selectedOrder.productName}
+                        </h2>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                              selectedOrder.status === "niitlegdsen"
+                                ? "bg-gray-100 text-gray-700"
+                                : selectedOrder.status === "agent_sudlaj_bn"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : selectedOrder.status === "tolbor_huleej_bn"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : selectedOrder.status ===
+                                        "amjilttai_zahialga"
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {getStatusText(selectedOrder.status)}
                           </span>
+                        </div>
+                        <p className="text-xs text-white/70 mt-1.5 font-mono">
+                          #{selectedOrder.id.slice(-4).toUpperCase()}
+                        </p>
+                      </div>
+
+                      {/* Close Button */}
+                      <button
+                        onClick={() => setShowOrderModal(false)}
+                        className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all min-h-10 min-w-10"
+                      >
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 sm:p-6 space-y-5">
+                  {/* User Contact Info for Agent */}
+                  {(selectedOrder.user?.profile || userSnapshot) && (
+                    <div className="flex items-center gap-3 text-sm flex-wrap">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="font-medium">
+                          {selectedOrder.user?.profile?.name || userSnapshot?.name || "-"}
                         </span>
-                        <span className="text-gray-600">
-                          Утас:{" "}
-                          <span className="font-medium text-gray-900">
-                            {selectedOrder.user.profile.phone || "-"}
-                          </span>
-                        </span>
-                        <span className="text-gray-600">
-                          Карго:{" "}
-                          <span className="font-medium text-blue-600">
-                            {selectedOrder.user.profile.cargo || "-"}
-                          </span>
-                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <span>{selectedOrder.user?.profile?.phone || userSnapshot?.phone || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                        </svg>
+                        <span>{selectedOrder.user?.profile?.cargo || userSnapshot?.cargo || "-"}</span>
                       </div>
                     </div>
                   )}
@@ -1976,8 +2183,14 @@ export default function AgentDashboardPage() {
                           </div>
                           <button
                             onClick={() => {
-                              setReportOrder(selectedOrder);
-                              setShowReportForm(true);
+                              const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
+                              if (isBundleOrder) {
+                                setBundleReportOrder(selectedOrder);
+                                setShowBundleReportForm(true);
+                              } else {
+                                setReportOrder(selectedOrder);
+                                setShowReportForm(true);
+                              }
                             }}
                             className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors"
                           >
@@ -2032,91 +2245,103 @@ export default function AgentDashboardPage() {
 
                     {showUserInfoInModal && (
                       <div className="border-t border-gray-200 p-4 space-y-4 bg-white">
-                        {/* Images Gallery */}
-                        {selectedOrder.imageUrls &&
-                          selectedOrder.imageUrls.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                                Зурагнууд
-                              </p>
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                {selectedOrder.imageUrls.map(
-                                  (imgUrl, index) => (
+                        {/* Bundle Order Items - Each item as collapsible */}
+                        {(selectedOrder as Order & { isBundleOrder?: boolean; bundleItems?: BundleOrder["items"] }).isBundleOrder &&
+                          (selectedOrder as Order & { bundleItems?: BundleOrder["items"] }).bundleItems ? (
+                          <div className="space-y-2">
+                            {(selectedOrder as Order & { bundleItems?: BundleOrder["items"] }).bundleItems?.map((item, index) => (
+                              <BundleItemDropdown key={item.id || index} item={item} index={index} />
+                            ))}
+                          </div>
+                        ) : (
+                          <>
+                            {/* Images Gallery - Regular Order */}
+                            {selectedOrder.imageUrls &&
+                              selectedOrder.imageUrls.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                                    Зурагнууд
+                                  </p>
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                    {selectedOrder.imageUrls.map(
+                                      (imgUrl, index) => (
+                                        <div
+                                          key={index}
+                                          className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-purple-300"
+                                          onClick={() =>
+                                            setZoomedImageIndex(
+                                              zoomedImageIndex === index
+                                                ? null
+                                                : index,
+                                            )
+                                          }
+                                        >
+                                          <img
+                                            src={imgUrl}
+                                            alt={`${selectedOrder.productName} - ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                  {/* Zoomed Image Modal */}
+                                  {zoomedImageIndex !== null && (
                                     <div
-                                      key={index}
-                                      className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-purple-300"
-                                      onClick={() =>
-                                        setZoomedImageIndex(
-                                          zoomedImageIndex === index
-                                            ? null
-                                            : index,
-                                        )
-                                      }
+                                      className="fixed inset-0 bg-black/90 flex items-center justify-center z-70 p-4"
+                                      onClick={() => setZoomedImageIndex(null)}
                                     >
                                       <img
-                                        src={imgUrl}
-                                        alt={`${selectedOrder.productName} - ${index + 1}`}
-                                        className="w-full h-full object-cover"
+                                        src={
+                                          selectedOrder.imageUrls[zoomedImageIndex]
+                                        }
+                                        alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
+                                        className="max-w-full max-h-full object-contain rounded-xl"
                                       />
+                                      <button
+                                        onClick={() => setZoomedImageIndex(null)}
+                                        className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                      >
+                                        <svg
+                                          className="w-6 h-6"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                          />
+                                        </svg>
+                                      </button>
                                     </div>
-                                  ),
-                                )}
-                              </div>
-                              {/* Zoomed Image Modal */}
-                              {zoomedImageIndex !== null && (
-                                <div
-                                  className="fixed inset-0 bg-black/90 flex items-center justify-center z-70 p-4"
-                                  onClick={() => setZoomedImageIndex(null)}
-                                >
-                                  <img
-                                    src={
-                                      selectedOrder.imageUrls[zoomedImageIndex]
-                                    }
-                                    alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
-                                    className="max-w-full max-h-full object-contain rounded-xl"
-                                  />
-                                  <button
-                                    onClick={() => setZoomedImageIndex(null)}
-                                    className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-                                  >
-                                    <svg
-                                      className="w-6 h-6"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
-                                  </button>
+                                  )}
                                 </div>
                               )}
+
+                            {/* Product Name */}
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                Барааны нэр
+                              </p>
+                              <p className="text-base font-semibold text-gray-900 mt-1">
+                                {selectedOrder.productName}
+                              </p>
                             </div>
-                          )}
 
-                        {/* Product Name */}
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                            Барааны нэр
-                          </p>
-                          <p className="text-base font-semibold text-gray-900 mt-1">
-                            {selectedOrder.productName}
-                          </p>
-                        </div>
-
-                        {/* Description */}
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                            Тайлбар
-                          </p>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            {selectedOrder.description || "Тайлбар байхгүй"}
-                          </p>
-                        </div>
+                            {/* Description */}
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                                Тайлбар
+                              </p>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                {selectedOrder.description || "Тайлбар байхгүй"}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2132,278 +2357,461 @@ export default function AgentDashboardPage() {
                     const isMyAssignedOrder =
                       selectedOrder.agentId &&
                       selectedOrder.agentId === user?.id;
-                    return isMyOrder || isMyAssignedOrder;
+                    // Check if this is a bundle order
+                    const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
+                    return (isMyOrder || isMyAssignedOrder) && !isBundleOrder; // Hide for bundle orders - they show report in items
                   })() && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                      <button
+                        onClick={() => {
+                          setShowAgentReportInModal(!showAgentReportInModal);
+                          // Load report if not loaded yet
+                          if (
+                            !showAgentReportInModal &&
+                            agentReports[selectedOrder.id] === undefined
+                          ) {
+                            loadAgentReport(selectedOrder.id);
+                          }
+                        }}
+                        className="w-full flex items-center justify-between text-left"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Миний илгээсэн тайлан
+                        </h3>
+                        <svg
+                          className={`w-5 h-5 transition-transform ${showAgentReportInModal ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {showAgentReportInModal && (
+                        <div className="mt-4 space-y-4">
+                          {agentReports[selectedOrder.id] === undefined && (
+                            <div className="text-sm text-gray-500 text-center py-4">
+                              Ачааллаж байна...
+                            </div>
+                          )}
+
+                          {agentReports[selectedOrder.id] === null && (
+                            <div className="text-sm text-gray-500 text-center py-4">
+                              Тайлан байхгүй байна
+                            </div>
+                          )}
+
+                          {agentReports[selectedOrder.id] &&
+                            (() => {
+                              const report = agentReports[selectedOrder.id];
+                              if (!report) return null;
+
+                              // Check if can edit (before user payment)
+                              const canEdit =
+                                selectedOrder.status === "tolbor_huleej_bn" &&
+                                !selectedOrder.userPaymentVerified;
+
+                              return (
+                                <>
+                                  {/* Yuan Amount with Edit */}
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-sm font-medium text-gray-600">
+                                        Юань дүн:
+                                      </label>
+                                      {canEdit && !isEditingReport && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsEditingReport(true);
+                                            setEditReportAmount(
+                                              report.userAmount,
+                                            );
+                                            setEditReportReason("");
+                                          }}
+                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                        >
+                                          Засах
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {isEditingReport ? (
+                                      <div className="mt-2 space-y-2">
+                                        <input
+                                          type="number"
+                                          step="1"
+                                          min="0"
+                                          value={editReportAmount || ""}
+                                          onChange={(e) =>
+                                            setEditReportAmount(
+                                              Math.round(
+                                                parseFloat(e.target.value),
+                                              ) || 0,
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 text-base text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Юань дүн оруулна уу"
+                                        />
+                                        <input
+                                          type="text"
+                                          value={editReportReason}
+                                          onChange={(e) =>
+                                            setEditReportReason(e.target.value)
+                                          }
+                                          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Засварын шалтгаан (заавал биш)"
+                                        />
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => {
+                                              setIsEditingReport(false);
+                                              setEditReportReason("");
+                                            }}
+                                            className="flex-1 px-3 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                                          >
+                                            Цуцлах
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              handleUpdateReport(
+                                                selectedOrder.id,
+                                              )
+                                            }
+                                            disabled={editReportLoading}
+                                            className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium disabled:opacity-50"
+                                          >
+                                            {editReportLoading
+                                              ? "Хадгалж байна..."
+                                              : "Хадгалах"}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-lg font-semibold text-amber-600 mt-1">
+                                        ¥
+                                        {Math.round(
+                                          report.userAmount,
+                                        ).toLocaleString()}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Calculated MNT Amount */}
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">
+                                      Хэрэглэгчийн төлөх дүн:
+                                    </label>
+                                    <p className="text-lg font-semibold text-green-600 mt-1">
+                                      {(() => {
+                                        const exchangeRate =
+                                          adminSettings?.exchangeRate || 1;
+                                        const calculatedAmount =
+                                          calculateUserPaymentAmount(
+                                            report,
+                                            exchangeRate,
+                                          );
+                                        return Math.round(
+                                          calculatedAmount,
+                                        ).toLocaleString();
+                                      })()}{" "}
+                                      ₮
+                                    </p>
+                                  </div>
+
+                                  {/* Edit History - Text only */}
+                                  {report.editHistory &&
+                                    report.editHistory.length > 0 && (
+                                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <label className="text-sm font-medium text-amber-700 block mb-2">
+                                          Засварын түүх:
+                                        </label>
+                                        <div className="space-y-1 text-xs text-amber-800">
+                                          {report.editHistory.map(
+                                            (edit, idx) => (
+                                              <p key={idx}>
+                                                •{" "}
+                                                {new Date(
+                                                  edit.editedAt,
+                                                ).toLocaleDateString("mn-MN", {
+                                                  month: "short",
+                                                  day: "numeric",
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })}
+                                                : ¥
+                                                {Math.round(
+                                                  edit.previousAmount,
+                                                ).toLocaleString()}{" "}
+                                                → ¥
+                                                {Math.round(
+                                                  edit.newAmount,
+                                                ).toLocaleString()}
+                                                {edit.reason && (
+                                                  <span className="text-amber-600">
+                                                    {" "}
+                                                    ({edit.reason})
+                                                  </span>
+                                                )}
+                                              </p>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                  {report.paymentLink && (
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-600">
+                                        Төлбөрийн холбоос:
+                                      </label>
+                                      <a
+                                        href={report.paymentLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:text-blue-600 hover:underline break-all block mt-1"
+                                      >
+                                        {report.paymentLink}
+                                      </a>
+                                    </div>
+                                  )}
+
+                                  {report.quantity && (
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-600">
+                                        Тоо ширхэг:
+                                      </label>
+                                      <p className="text-gray-900 mt-1">
+                                        {report.quantity}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {report.additionalDescription && (
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-600">
+                                        Нэмэлт тайлбар:
+                                      </label>
+                                      <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                                        {report.additionalDescription}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {report.additionalImages &&
+                                    report.additionalImages.length > 0 && (
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-600 mb-2 block">
+                                          Нэмэлт зураг:
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-3">
+                                          {report.additionalImages.map(
+                                            (imgUrl, idx) => (
+                                              <img
+                                                key={idx}
+                                                src={imgUrl}
+                                                alt={`Additional ${idx + 1}`}
+                                                className="w-full h-32 object-cover rounded-xl border border-gray-200"
+                                              />
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                </>
+                              );
+                            })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bundle Order Report Section */}
+                  {(() => {
+                    const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
+                    const bundleItems = (selectedOrder as Order & { bundleItems?: BundleOrder["items"] }).bundleItems;
+                    const isMyOrder = myOrders.some((order) => order.id === selectedOrder.id);
+                    const isMyAssignedOrder = selectedOrder.agentId && selectedOrder.agentId === user?.id;
+
+                    if (!isBundleOrder || (!isMyOrder && !isMyAssignedOrder)) return null;
+
+                    // Check for single mode report (bundleReport in the order)
+                    const bundleReport = (selectedOrder as Order & { bundleReport?: { totalUserAmount: number; paymentLink?: string; additionalDescription?: string; additionalImages?: string[] } }).bundleReport;
+                    const reportMode = (selectedOrder as Order & { reportMode?: string }).reportMode;
+                    const isSingleMode = reportMode === "single" && bundleReport;
+
+                    // Check if any item has a report (per-item mode)
+                    const hasPerItemReports = bundleItems?.some(item => item.agentReport);
+
+                    // No report at all
+                    if (!isSingleMode && !hasPerItemReports) {
+                      return (
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Миний илгээсэн тайлан</h3>
+                          <p className="text-sm text-gray-500 text-center py-4">Тайлан байхгүй байна</p>
+                        </div>
+                      );
+                    }
+
+                    return (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                         <button
-                          onClick={() => {
-                            setShowAgentReportInModal(!showAgentReportInModal);
-                            // Load report if not loaded yet
-                            if (
-                              !showAgentReportInModal &&
-                              agentReports[selectedOrder.id] === undefined
-                            ) {
-                              loadAgentReport(selectedOrder.id);
-                            }
-                          }}
+                          onClick={() => setShowAgentReportInModal(!showAgentReportInModal)}
                           className="w-full flex items-center justify-between text-left"
                         >
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Миний илгээсэн тайлан
-                          </h3>
+                          <h3 className="text-lg font-semibold text-gray-900">Миний илгээсэн тайлан</h3>
                           <svg
                             className={`w-5 h-5 transition-transform ${showAgentReportInModal ? "rotate-180" : ""}`}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </button>
 
                         {showAgentReportInModal && (
                           <div className="mt-4 space-y-4">
-                            {agentReports[selectedOrder.id] === undefined && (
-                              <div className="text-sm text-gray-500 text-center py-4">
-                                Ачааллаж байна...
+                            {isSingleMode && bundleReport ? (
+                              /* Single Mode Report */
+                              <div className="space-y-3">
+                                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                  <span className="text-sm text-gray-600">Хэрэглэгчийн төлөх дүн:</span>
+                                  {(() => {
+                                    const exchangeRate = adminSettings?.exchangeRate || 1;
+                                    const agentYuan = bundleReport.totalUserAmount;
+                                    const userYuan = agentYuan * 1.05;
+                                    const userMNT = userYuan * exchangeRate;
+                                    return (
+                                      <div className="mt-2">
+                                        <p className="text-xl font-bold text-green-700">
+                                          {userMNT.toLocaleString()}₮
+                                        </p>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                          ({userYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                          Агент үнэ: {agentYuan.toLocaleString()}¥ + 5% = {userYuan.toLocaleString()}¥
+                                        </p>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                                {bundleReport.paymentLink && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Төлбөрийн мэдээлэл:</label>
+                                    <p className="text-gray-900 mt-1 break-all">{bundleReport.paymentLink}</p>
+                                  </div>
+                                )}
+                                {bundleReport.additionalDescription && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
+                                    <p className="text-gray-600 mt-1 whitespace-pre-wrap">{bundleReport.additionalDescription}</p>
+                                  </div>
+                                )}
+                                {bundleReport.additionalImages && bundleReport.additionalImages.length > 0 && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
+                                    <div className="grid grid-cols-3 gap-3">
+                                      {bundleReport.additionalImages.map((imgUrl, idx) => (
+                                        <img key={idx} src={imgUrl} alt={`Additional ${idx + 1}`} className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              /* Per-Item Mode Reports */
+                              <div className="space-y-3">
+                                {bundleItems?.map((item, idx) => (
+                                  item.agentReport && (
+                                    <div key={item.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-xs text-gray-400">#{idx + 1}</span>
+                                        <span className="text-sm font-medium text-gray-900">{item.productName}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-600">Үнэ:</span>
+                                        <span className="font-semibold text-green-600">{item.agentReport.userAmount.toLocaleString()}¥</span>
+                                      </div>
+                                      {item.agentReport.quantity && (
+                                        <div className="flex justify-between text-sm mt-1">
+                                          <span className="text-gray-500">Тоо:</span>
+                                          <span>{item.agentReport.quantity}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                ))}
+                                {/* Total for per-item mode */}
+                                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                  <span className="text-sm text-gray-600">Хэрэглэгчийн төлөх дүн:</span>
+                                  {(() => {
+                                    const exchangeRate = adminSettings?.exchangeRate || 1;
+                                    const agentYuan = bundleItems?.reduce((sum, item) => sum + (item.agentReport?.userAmount || 0), 0) || 0;
+                                    const userYuan = agentYuan * 1.05;
+                                    const userMNT = userYuan * exchangeRate;
+                                    return (
+                                      <div className="mt-2">
+                                        <p className="text-xl font-bold text-green-700">
+                                          {userMNT.toLocaleString()}₮
+                                        </p>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                          ({userYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                          Агент үнэ: {agentYuan.toLocaleString()}¥ + 5% = {userYuan.toLocaleString()}¥
+                                        </p>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                             )}
 
-                            {agentReports[selectedOrder.id] === null && (
-                              <div className="text-sm text-gray-500 text-center py-4">
-                                Тайлан байхгүй байна
-                              </div>
-                            )}
+                            {/* Action Buttons - Chat and Edit */}
+                            <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                              {/* Chat Button */}
+                              <button
+                                onClick={() => {
+                                  setChatOrder(selectedOrder);
+                                  setShowChatModal(true);
+                                }}
+                                className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Хэрэглэгчтэй чатлах
+                              </button>
 
-                            {agentReports[selectedOrder.id] &&
-                              (() => {
-                                const report = agentReports[selectedOrder.id];
-                                if (!report) return null;
-
-                                // Check if can edit (before user payment)
-                                const canEdit =
-                                  selectedOrder.status === "tolbor_huleej_bn" &&
-                                  !selectedOrder.userPaymentVerified;
-
-                                return (
-                                  <>
-                                    {/* Yuan Amount with Edit */}
-                                    <div>
-                                      <div className="flex items-center justify-between">
-                                        <label className="text-sm font-medium text-gray-600">
-                                          Юань дүн:
-                                        </label>
-                                        {canEdit && !isEditingReport && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setIsEditingReport(true);
-                                              setEditReportAmount(
-                                                report.userAmount,
-                                              );
-                                              setEditReportReason("");
-                                            }}
-                                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                          >
-                                            Засах
-                                          </button>
-                                        )}
-                                      </div>
-
-                                      {isEditingReport ? (
-                                        <div className="mt-2 space-y-2">
-                                          <input
-                                            type="number"
-                                            step="1"
-                                            min="0"
-                                            value={editReportAmount || ""}
-                                            onChange={(e) =>
-                                              setEditReportAmount(
-                                                Math.round(
-                                                  parseFloat(e.target.value),
-                                                ) || 0,
-                                              )
-                                            }
-                                            className="w-full px-3 py-2 text-base text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="Юань дүн оруулна уу"
-                                          />
-                                          <input
-                                            type="text"
-                                            value={editReportReason}
-                                            onChange={(e) =>
-                                              setEditReportReason(e.target.value)
-                                            }
-                                            className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="Засварын шалтгаан (заавал биш)"
-                                          />
-                                          <div className="flex gap-2">
-                                            <button
-                                              onClick={() => {
-                                                setIsEditingReport(false);
-                                                setEditReportReason("");
-                                              }}
-                                              className="flex-1 px-3 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm font-medium"
-                                            >
-                                              Цуцлах
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                handleUpdateReport(
-                                                  selectedOrder.id,
-                                                )
-                                              }
-                                              disabled={editReportLoading}
-                                              className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium disabled:opacity-50"
-                                            >
-                                              {editReportLoading
-                                                ? "Хадгалж байна..."
-                                                : "Хадгалах"}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <p className="text-lg font-semibold text-amber-600 mt-1">
-                                          ¥
-                                          {Math.round(
-                                            report.userAmount,
-                                          ).toLocaleString()}
-                                        </p>
-                                      )}
-                                    </div>
-
-                                    {/* Calculated MNT Amount */}
-                                    <div>
-                                      <label className="text-sm font-medium text-gray-600">
-                                        Хэрэглэгчийн төлөх дүн:
-                                      </label>
-                                      <p className="text-lg font-semibold text-green-600 mt-1">
-                                        {(() => {
-                                          const exchangeRate =
-                                            adminSettings?.exchangeRate || 1;
-                                          const calculatedAmount =
-                                            calculateUserPaymentAmount(
-                                              report,
-                                              exchangeRate,
-                                            );
-                                          return Math.round(
-                                            calculatedAmount,
-                                          ).toLocaleString();
-                                        })()}{" "}
-                                        ₮
-                                      </p>
-                                    </div>
-
-                                    {/* Edit History - Text only */}
-                                    {report.editHistory &&
-                                      report.editHistory.length > 0 && (
-                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                          <label className="text-sm font-medium text-amber-700 block mb-2">
-                                            Засварын түүх:
-                                          </label>
-                                          <div className="space-y-1 text-xs text-amber-800">
-                                            {report.editHistory.map(
-                                              (edit, idx) => (
-                                                <p key={idx}>
-                                                  •{" "}
-                                                  {new Date(
-                                                    edit.editedAt,
-                                                  ).toLocaleDateString("mn-MN", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                  })}
-                                                  : ¥
-                                                  {Math.round(
-                                                    edit.previousAmount,
-                                                  ).toLocaleString()}{" "}
-                                                  → ¥
-                                                  {Math.round(
-                                                    edit.newAmount,
-                                                  ).toLocaleString()}
-                                                  {edit.reason && (
-                                                    <span className="text-amber-600">
-                                                      {" "}
-                                                      ({edit.reason})
-                                                    </span>
-                                                  )}
-                                                </p>
-                                              ),
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                    {report.paymentLink && (
-                                      <div>
-                                        <label className="text-sm font-medium text-gray-600">
-                                          Төлбөрийн холбоос:
-                                        </label>
-                                        <a
-                                          href={report.paymentLink}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-500 hover:text-blue-600 hover:underline break-all block mt-1"
-                                        >
-                                          {report.paymentLink}
-                                        </a>
-                                      </div>
-                                    )}
-
-                                    {report.quantity && (
-                                      <div>
-                                        <label className="text-sm font-medium text-gray-600">
-                                          Тоо ширхэг:
-                                        </label>
-                                        <p className="text-gray-900 mt-1">
-                                          {report.quantity}
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {report.additionalDescription && (
-                                      <div>
-                                        <label className="text-sm font-medium text-gray-600">
-                                          Нэмэлт тайлбар:
-                                        </label>
-                                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">
-                                          {report.additionalDescription}
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {report.additionalImages &&
-                                      report.additionalImages.length > 0 && (
-                                        <div>
-                                          <label className="text-sm font-medium text-gray-600 mb-2 block">
-                                            Нэмэлт зураг:
-                                          </label>
-                                          <div className="grid grid-cols-3 gap-3">
-                                            {report.additionalImages.map(
-                                              (imgUrl, idx) => (
-                                                <img
-                                                  key={idx}
-                                                  src={imgUrl}
-                                                  alt={`Additional ${idx + 1}`}
-                                                  className="w-full h-32 object-cover rounded-xl border border-gray-200"
-                                                />
-                                              ),
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-                                  </>
-                                );
-                              })()}
+                              {/* Edit Button - Only show if payment not verified */}
+                              {!(selectedOrder as Order & { userPaymentVerified?: boolean }).userPaymentVerified && (
+                                <button
+                                  onClick={() => {
+                                    setBundleReportOrder(selectedOrder);
+                                    setShowBundleReportForm(true);
+                                  }}
+                                  className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  Тайлан засварлах
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
-                    )}
+                    );
+                  })()}
 
                   {/* Track Code Section - Show for successful orders */}
                   {selectedOrder.status === "amjilttai_zahialga" &&
@@ -2568,34 +2976,6 @@ export default function AgentDashboardPage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3 pt-2">
-                    {/* Chat Button - Show for active and completed orders */}
-                    {(selectedOrder.status === "agent_sudlaj_bn" ||
-                      selectedOrder.status === "tolbor_huleej_bn" ||
-                      selectedOrder.status === "amjilttai_zahialga") && (
-                        <button
-                          onClick={() => {
-                            setChatOrder(selectedOrder);
-                            setShowChatModal(true);
-                          }}
-                          className="w-full px-4 py-3 bg-linear-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                            />
-                          </svg>
-                          Хэрэглэгчтэй чатлах
-                        </button>
-                      )}
-
                     {/* Status Update Actions (for agents) */}
                     {selectedOrder.status === "niitlegdsen" && (
                       <button
@@ -2625,7 +3005,9 @@ export default function AgentDashboardPage() {
                             />
                           </svg>
                         )}
-                        {statusUpdateLoading ? "Уншиж байна..." : "Захиалга авах"}
+                        {statusUpdateLoading
+                          ? "Уншиж байна..."
+                          : "Захиалга авах"}
                       </button>
                     )}
 
@@ -2633,8 +3015,14 @@ export default function AgentDashboardPage() {
                       <>
                         <button
                           onClick={() => {
-                            setReportOrder(selectedOrder);
-                            setShowReportForm(true);
+                            const isBundleOrder = (selectedOrder as Order & { isBundleOrder?: boolean }).isBundleOrder;
+                            if (isBundleOrder) {
+                              setBundleReportOrder(selectedOrder);
+                              setShowBundleReportForm(true);
+                            } else {
+                              setReportOrder(selectedOrder);
+                              setShowReportForm(true);
+                            }
                           }}
                           className="w-full px-4 py-3 bg-linear-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
                         >
@@ -2764,6 +3152,67 @@ export default function AgentDashboardPage() {
                 onCancel={() => {
                   setReportOrder(null);
                   setShowReportForm(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bundle Report Form Modal */}
+      {showBundleReportForm && bundleReportOrder && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                Багц захиалгын тайлан
+              </h2>
+              <button
+                onClick={() => {
+                  setBundleReportOrder(null);
+                  setShowBundleReportForm(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-10 min-w-10"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <BundleReportForm
+                bundleOrder={{
+                  id: bundleReportOrder.id,
+                  userId: bundleReportOrder.userId,
+                  agentId: bundleReportOrder.agentId,
+                  userSnapshot: (bundleReportOrder as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot || { name: "", phone: "", cargo: "" },
+                  items: (bundleReportOrder as Order & { bundleItems?: BundleOrder["items"] }).bundleItems || [],
+                  status: bundleReportOrder.status,
+                  createdAt: bundleReportOrder.createdAt,
+                  updatedAt: bundleReportOrder.updatedAt,
+                  reportMode: (bundleReportOrder as Order & { reportMode?: "single" | "per_item" }).reportMode,
+                  bundleReport: (bundleReportOrder as Order & { bundleReport?: { totalUserAmount: number; paymentLink?: string; additionalDescription?: string; additionalImages?: string[] } }).bundleReport,
+                }}
+                onSuccess={async () => {
+                  setBundleReportOrder(null);
+                  setShowBundleReportForm(false);
+                  await loadData();
+                  alert("Багц тайлан амжилттай илгээгдлээ");
+                }}
+                onCancel={() => {
+                  setBundleReportOrder(null);
+                  setShowBundleReportForm(false);
                 }}
               />
             </div>

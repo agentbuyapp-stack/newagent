@@ -464,6 +464,28 @@ class ApiClient {
     });
   }
 
+  // Confirm user payment for bundle order
+  async confirmBundleUserPayment(orderId: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/user-payment-confirmed`, {
+      method: "PUT",
+    });
+  }
+
+  // Cancel bundle order (user only)
+  async cancelBundleOrder(orderId: string): Promise<{ id: string; status: string }> {
+    return this.request<{ id: string; status: string }>(`/bundle-orders/${orderId}/cancel`, {
+      method: "PUT",
+    });
+  }
+
+  // Create or update bundle report (single or per-item mode)
+  async createBundleReport(orderId: string, data: BundleReportData): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/report`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Upload image to Cloudinary
   async uploadImage(base64: string): Promise<{ imageUrl: string }> {
     const result = await this.request<{ url: string }>("/upload-image", {
@@ -562,6 +584,9 @@ export interface AdminSettings {
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  orderLimitEnabled?: boolean;
+  maxOrdersPerDay?: number;
+  maxActiveOrders?: number;
   footer?: FooterSettings;
   createdAt: string;
   updatedAt: string;
@@ -572,6 +597,9 @@ export interface AdminSettingsData {
   accountName?: string;
   bank?: string;
   exchangeRate?: number;
+  orderLimitEnabled?: boolean;
+  maxOrdersPerDay?: number;
+  maxActiveOrders?: number;
   footer?: FooterSettings;
 }
 
@@ -594,6 +622,14 @@ export interface BundleItem {
   };
 }
 
+// Report for whole bundle (when reportMode is "single")
+export interface BundleReport {
+  totalUserAmount: number;
+  paymentLink?: string;
+  additionalImages?: string[];
+  additionalDescription?: string;
+}
+
 export interface BundleOrder {
   id: string;
   userId: string;
@@ -608,6 +644,10 @@ export interface BundleOrder {
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
   trackCode?: string;
+  // Report mode: "single" = one price for whole bundle, "per_item" = price for each item
+  reportMode?: "single" | "per_item";
+  // Bundle-level report (used when reportMode is "single")
+  bundleReport?: BundleReport;
   createdAt: string;
   updatedAt: string;
   user?: User;
@@ -628,6 +668,27 @@ export interface BundleItemReportData {
   additionalImages?: string[];
   additionalDescription?: string;
   quantity?: number;
+}
+
+// Data for creating/updating bundle-level report
+export interface BundleReportData {
+  reportMode: "single" | "per_item";
+  // For "single" mode
+  bundleReport?: {
+    totalUserAmount: number;
+    paymentLink?: string;
+    additionalImages?: string[];
+    additionalDescription?: string;
+  };
+  // For "per_item" mode
+  itemReports?: Array<{
+    itemId: string;
+    userAmount: number;
+    paymentLink?: string;
+    additionalImages?: string[];
+    additionalDescription?: string;
+    quantity?: number;
+  }>;
 }
 
 export interface RewardRequest {

@@ -46,5 +46,5 @@ const CargoSchema = new Schema<ICargo>(
   }
 );
 
-export const Cargo = mongoose.models.Cargo || mongoose.model<ICargo>("Cargo", CargoSchema);
+export const Cargo = (mongoose.models.Cargo as mongoose.Model<ICargo>) || mongoose.model<ICargo>("Cargo", CargoSchema);
 

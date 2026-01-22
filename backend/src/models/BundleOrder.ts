@@ -1,11 +1,5 @@
-import mongoose, { Schema, Document } from "mongoose";
-
-export type OrderStatus =
-  | "niitlegdsen"
-  | "agent_sudlaj_bn"
-  | "tolbor_huleej_bn"
-  | "amjilttai_zahialga"
-  | "tsutsalsan_zahialga";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { OrderStatus } from "./Order";
 
 export interface IBundleItemReport {
   userAmount: number;
@@ -13,6 +7,14 @@ export interface IBundleItemReport {
   additionalImages?: string[];
   additionalDescription?: string;
   quantity?: number;
+}
+
+// Report for whole bundle (when reportMode is "single")
+export interface IBundleReport {
+  totalUserAmount: number;
+  paymentLink?: string;
+  additionalImages?: string[];
+  additionalDescription?: string;
 }
 
 export interface IBundleItem {
@@ -31,11 +33,15 @@ export interface IBundleOrder extends Document {
     phone: string;
     cargo: string;
   };
-  items: IBundleItem[];
+  items: Types.DocumentArray<IBundleItem & Document>;
   status: OrderStatus;
   userPaymentVerified: boolean;
   agentPaymentPaid: boolean;
   trackCode?: string;
+  // Report mode: "single" = one price for whole bundle, "per_item" = price for each item
+  reportMode?: "single" | "per_item";
+  // Bundle-level report (used when reportMode is "single")
+  bundleReport?: IBundleReport;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +53,16 @@ const BundleItemReportSchema = new Schema<IBundleItemReport>(
     additionalImages: { type: [String], default: [] },
     additionalDescription: { type: String },
     quantity: { type: Number },
+  },
+  { _id: false }
+);
+
+const BundleReportSchema = new Schema<IBundleReport>(
+  {
+    totalUserAmount: { type: Number, required: true },
+    paymentLink: { type: String },
+    additionalImages: { type: [String], default: [] },
+    additionalDescription: { type: String },
   },
   { _id: false }
 );
@@ -109,6 +125,14 @@ const BundleOrderSchema = new Schema<IBundleOrder>(
       type: String,
       trim: true,
     },
+    reportMode: {
+      type: String,
+      enum: ["single", "per_item"],
+      default: "single",
+    },
+    bundleReport: {
+      type: BundleReportSchema,
+    },
   },
   {
     timestamps: true,
@@ -120,4 +144,4 @@ BundleOrderSchema.index({ userId: 1 });
 BundleOrderSchema.index({ agentId: 1 });
 BundleOrderSchema.index({ status: 1 });
 
-export const BundleOrder = mongoose.models.BundleOrder || mongoose.model<IBundleOrder>("BundleOrder", BundleOrderSchema);
+export const BundleOrder = (mongoose.models.BundleOrder as mongoose.Model<IBundleOrder>) || mongoose.model<IBundleOrder>("BundleOrder", BundleOrderSchema);
