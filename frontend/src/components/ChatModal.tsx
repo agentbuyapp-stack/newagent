@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
-import { type Message, type Order } from "@/lib/api";
+import { type Message, type Order, type BundleOrder } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 
 interface ApiClientLike {
@@ -39,7 +39,7 @@ async function uploadImageToCloudinary(
 }
 
 interface ChatModalProps {
-  order: Order;
+  order: Order | BundleOrder;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -215,7 +215,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200 shrink-0">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">
-            Чат - {order.productName}
+            Чат - {"productName" in order ? order.productName : `Багц захиалга (${order.items.length})`}
           </h2>
           <button
             onClick={onClose}

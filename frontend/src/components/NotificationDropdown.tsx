@@ -50,10 +50,10 @@ export default function NotificationDropdown() {
     try {
       const response = await apiClient.getNotifications(1, 10);
       // Handle both response formats: { data: notifications[] } or { data: { notifications: [] } }
-      const data = response.data as Notification[] | { notifications: Notification[] };
-      const notifs = Array.isArray(data)
-        ? data
-        : (data?.notifications || []);
+      const data = response.data as
+        | Notification[]
+        | { notifications: Notification[] };
+      const notifs = Array.isArray(data) ? data : data?.notifications || [];
       setNotifications(notifs);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -188,7 +188,7 @@ export default function NotificationDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] overflow-hidden">
+        <div className="absolute right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[60vh] overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <h3 className="text-sm font-semibold text-gray-900">Мэдэгдэл</h3>

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User, RewardRequest, Order, Profile } from "../models";
 import mongoose from "mongoose";
+import { notifyAdminRewardRequest } from "../services/notificationService";
 
 // Public endpoint - get all approved agents with stats
 export const getPublicAgents = async (req: Request, res: Response) => {
@@ -159,6 +160,15 @@ export const createRewardRequest = async (req: Request, res: Response) => {
       req.user.id,
       { agentPoints: 0 }
     );
+
+    // Notify admins about reward request
+    const profile = await Profile.findOne({ userId: req.user.id }).lean();
+    const agentName = profile?.name || "Agent";
+    notifyAdminRewardRequest(
+      new mongoose.Types.ObjectId(req.user.id),
+      agentName,
+      agentPoints
+    ).catch((err) => console.error("Failed to notify admins:", err));
 
     res.status(201).json({
       ...request.toObject(),

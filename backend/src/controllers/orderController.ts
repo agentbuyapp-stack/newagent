@@ -1,7 +1,16 @@
 import { Request, Response } from "express";
 import { Order, User, Profile } from "../models";
 import { uploadImageToCloudinary } from "../utils/cloudinary";
+import { checkOrderLimits } from "../utils/orderLimits";
 import mongoose from "mongoose";
+import {
+  notifyAgentsNewOrder,
+  markOrderAssigned,
+  notifyUserAgentCancelled,
+  notifyUserAdminCancelled,
+  notifyUserTrackCodeAdded,
+  notifyAdminPaymentRequest,
+} from "../services/notificationService";
 
 // Helper to format order with populated user/agent
 const formatOrder = (order: any) => {
@@ -160,15 +169,16 @@ export const getOrders = async (req: Request, res: Response) => {
       let user = null;
       if (userIdStr) {
         const userProfile = profileMap.get(userIdStr) || null;
-        if (order.userId && typeof order.userId === 'object' && order.userId._id) {
+        if (order.userId && typeof order.userId === 'object' && (order.userId as any)._id) {
           // User was populated
+          const populatedUser = order.userId as any;
           user = {
-            _id: order.userId._id,
-            id: order.userId._id.toString(),
-            email: order.userId.email || '',
-            role: order.userId.role || 'user',
-            isApproved: order.userId.isApproved || false,
-            agentPoints: order.userId.agentPoints || 0,
+            _id: populatedUser._id,
+            id: populatedUser._id.toString(),
+            email: populatedUser.email || '',
+            role: populatedUser.role || 'user',
+            isApproved: populatedUser.isApproved || false,
+            agentPoints: populatedUser.agentPoints || 0,
             profile: userProfile ? {
               ...userProfile,
               id: userProfile._id.toString(),
@@ -197,15 +207,16 @@ export const getOrders = async (req: Request, res: Response) => {
       let agent = null;
       if (agentIdStr) {
         const agentProfile = profileMap.get(agentIdStr) || null;
-        if (order.agentId && typeof order.agentId === 'object' && order.agentId._id) {
+        if (order.agentId && typeof order.agentId === 'object' && (order.agentId as any)._id) {
           // Agent was populated
+          const populatedAgent = order.agentId as any;
           agent = {
-            _id: order.agentId._id,
-            id: order.agentId._id.toString(),
-            email: order.agentId.email || '',
-            role: order.agentId.role || 'agent',
-            isApproved: order.agentId.isApproved || false,
-            agentPoints: order.agentId.agentPoints || 0,
+            _id: populatedAgent._id,
+            id: populatedAgent._id.toString(),
+            email: populatedAgent.email || '',
+            role: populatedAgent.role || 'agent',
+            isApproved: populatedAgent.isApproved || false,
+            agentPoints: populatedAgent.agentPoints || 0,
             profile: agentProfile ? {
               ...agentProfile,
               id: agentProfile._id.toString(),
@@ -308,9 +319,13 @@ export const getOrder = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Get profiles for user and agent
-    const userId = order.userId?.toString();
-    const agentId = order.agentId?.toString();
+    // Get profiles for user and agent - handle populated objects
+    const userId = typeof order.userId === 'object' && (order.userId as any)?._id
+      ? (order.userId as any)._id.toString()
+      : order.userId?.toString();
+    const agentId = typeof order.agentId === 'object' && (order.agentId as any)?._id
+      ? (order.agentId as any)._id.toString()
+      : order.agentId?.toString();
     const allUserIds = [userId, agentId].filter(Boolean) as string[];
 
     const profiles = await Profile.find({ userId: { $in: allUserIds.map(id => new mongoose.Types.ObjectId(id)) } }).lean();
@@ -318,14 +333,14 @@ export const getOrder = async (req: Request, res: Response) => {
 
     const user = order.userId ? {
       ...(typeof order.userId === 'object' ? order.userId : {}),
-      _id: typeof order.userId === 'object' ? order.userId._id : new mongoose.Types.ObjectId(order.userId.toString()),
-      profile: profileMap.get(order.userId.toString()) || null,
+      _id: typeof order.userId === 'object' ? (order.userId as any)._id : new mongoose.Types.ObjectId(String(order.userId)),
+      profile: profileMap.get(String(order.userId)) || null,
     } : null;
 
     const agent = order.agentId ? {
       ...(typeof order.agentId === 'object' ? order.agentId : {}),
-      _id: typeof order.agentId === 'object' ? order.agentId._id : new mongoose.Types.ObjectId(order.agentId.toString()),
-      profile: profileMap.get(order.agentId.toString()) || null,
+      _id: typeof order.agentId === 'object' ? (order.agentId as any)._id : new mongoose.Types.ObjectId(String(order.agentId)),
+      profile: profileMap.get(String(order.agentId)) || null,
     } : null;
 
     res.json(formatOrder({
@@ -361,10 +376,28 @@ export const createOrder = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Unauthenticated" });
     }
 
+    // Check order limits for users only
+    if (req.user.role === "user") {
+      const limitCheck = await checkOrderLimits(req.user.id);
+      if (!limitCheck.allowed) {
+        return res.status(429).json({ error: limitCheck.reason });
+      }
+    }
+
     const { productName, description, imageUrl, imageUrls, products } = req.body;
 
     // Support for multiple products in one order
     if (products && Array.isArray(products) && products.length > 0) {
+      // Validate each product in array
+      for (const product of products) {
+        if (!product.productName || typeof product.productName !== "string" || product.productName.trim().length === 0) {
+          return res.status(400).json({ error: "Бараа бүр нэртэй байх ёстой" });
+        }
+        if (!product.description || typeof product.description !== "string" || product.description.trim().length === 0) {
+          return res.status(400).json({ error: "Бараа бүр тайлбартай байх ёстой" });
+        }
+      }
+
       let allImageUrls: string[] = [];
       const productDescriptions: string[] = [];
 
@@ -413,6 +446,11 @@ export const createOrder = async (req: Request, res: Response) => {
           status: "niitlegdsen",
         });
 
+        // Notify top 5 agents about new order
+        notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
+          console.error("Failed to notify agents:", err)
+        );
+
         return res.status(201).json({
           ...order.toObject(),
           id: order._id.toString(),
@@ -422,12 +460,6 @@ export const createOrder = async (req: Request, res: Response) => {
         console.error("Order creation error:", createError);
         throw createError;
       }
-
-      return res.status(201).json({
-        ...order.toObject(),
-        id: order._id.toString(),
-        userId: order.userId.toString(),
-      });
     }
 
     // Single product order
@@ -492,6 +524,11 @@ export const createOrder = async (req: Request, res: Response) => {
         status: "niitlegdsen",
       });
 
+      // Notify top 5 agents about new order
+      notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
+        console.error("Failed to notify agents:", err)
+      );
+
       res.status(201).json({
         ...order.toObject(),
         id: order._id.toString(),
@@ -530,10 +567,17 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     }
 
     const orderId = req.params.id;
-    const { status } = req.body;
+    const { status, cancelReason } = req.body;
 
     if (!status || typeof status !== "string") {
       return res.status(400).json({ error: "Status is required" });
+    }
+
+    // Require cancelReason when agent cancels an order they are investigating
+    if (status === "tsutsalsan_zahialga" && req.user.role === "agent") {
+      if (!cancelReason || typeof cancelReason !== "string" || cancelReason.trim().length < 5) {
+        return res.status(400).json({ error: "Cancel reason is required (minimum 5 characters)" });
+      }
     }
 
     const validStatuses = ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga", "tsutsalsan_zahialga"];
@@ -560,11 +604,43 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       updateData.agentId = new mongoose.Types.ObjectId(req.user.id);
     }
 
+    // Store cancel reason if provided
+    if (status === "tsutsalsan_zahialga" && cancelReason) {
+      updateData.cancelReason = cancelReason.trim();
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       updateData,
       { new: true }
     ).lean();
+
+    // If agent picked up order, mark as assigned (stops further notifications)
+    if (status === "agent_sudlaj_bn" && updateData.agentId) {
+      markOrderAssigned(
+        new mongoose.Types.ObjectId(orderId),
+        updateData.agentId
+      ).catch((err) => console.error("Failed to mark order assigned:", err));
+    }
+
+    // If agent cancelled order, notify user
+    if (status === "tsutsalsan_zahialga" && req.user.role === "agent") {
+      notifyUserAgentCancelled(
+        order.userId,
+        new mongoose.Types.ObjectId(orderId),
+        order.productName,
+        cancelReason
+      ).catch((err) => console.error("Failed to notify user:", err));
+    }
+
+    // If admin cancelled order, notify user
+    if (status === "tsutsalsan_zahialga" && req.user.role === "admin") {
+      notifyUserAdminCancelled(
+        order.userId,
+        new mongoose.Types.ObjectId(orderId),
+        order.productName
+      ).catch((err) => console.error("Failed to notify user:", err));
+    }
 
     res.json({
       ...updatedOrder,
@@ -627,24 +703,95 @@ export const updateTrackCode = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid order ID" });
     }
 
+    // Get order first to get userId
+    const existingOrder = await Order.findById(orderId).lean();
+    if (!existingOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
     const order = await Order.findByIdAndUpdate(
       orderId,
       { trackCode: trackCode || undefined },
       { new: true }
     ).lean();
 
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    // Notify user about track code if added
+    if (trackCode && order) {
+      notifyUserTrackCodeAdded(
+        existingOrder.userId,
+        new mongoose.Types.ObjectId(orderId),
+        existingOrder.productName,
+        trackCode
+      ).catch((err) => console.error("Failed to notify user about track code:", err));
     }
 
     res.json({
       ...order,
-      id: order._id.toString(),
-      userId: order.userId.toString(),
-      agentId: order.agentId?.toString(),
+      id: order!._id.toString(),
+      userId: order!.userId.toString(),
+      agentId: order!.agentId?.toString(),
     });
   } catch (error: any) {
     console.error("Error in PUT /orders/:id/track-code:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const archiveOrder = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthenticated" });
+    }
+
+    const orderId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: "Invalid order ID" });
+    }
+
+    const order = await (Order as any).findById(orderId).lean();
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const updateData: any = {};
+
+    // User can archive their own orders
+    if (req.user.role === "user") {
+      if (order.userId.toString() !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      updateData.archivedByUser = true;
+    }
+
+    // Agent can archive orders they are assigned to
+    if (req.user.role === "agent") {
+      if (!order.agentId || order.agentId.toString() !== req.user.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      updateData.archivedByAgent = true;
+    }
+
+    // Admin can archive any order (both user and agent)
+    if (req.user.role === "admin") {
+      updateData.archivedByUser = true;
+      updateData.archivedByAgent = true;
+    }
+
+    const updatedOrder = await (Order as any).findByIdAndUpdate(
+      orderId,
+      updateData,
+      { new: true }
+    ).lean();
+
+    res.json({
+      ...updatedOrder,
+      id: updatedOrder!._id.toString(),
+      userId: updatedOrder!.userId.toString(),
+      agentId: updatedOrder!.agentId?.toString(),
+    });
+  } catch (error: any) {
+    console.error("Error in PUT /orders/:id/archive:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -679,6 +826,15 @@ export const confirmUserPayment = async (req: Request, res: Response) => {
       { userPaymentVerified: true },
       { new: true }
     ).lean();
+
+    // Notify admin about payment verification request
+    const profile = await Profile.findOne({ userId: req.user.id }).lean();
+    const userName = profile?.name || "Хэрэглэгч";
+    notifyAdminPaymentRequest(
+      new mongoose.Types.ObjectId(orderId),
+      order.productName,
+      userName
+    ).catch((err) => console.error("Failed to notify admin:", err));
 
     res.json({
       ...updatedOrder,

@@ -8,7 +8,6 @@ import BundleOrderCard from "@/components/BundleOrderCard";
 
 const ITEMS_PER_PAGE = 10;
 
-
 // Combined type for both single and bundle orders
 type CombinedOrder =
   | { type: "single"; data: Order }
@@ -23,11 +22,13 @@ interface OrderHistorySectionProps {
   onOpenChat: (order: Order) => void;
   onOpenBundleChat: (bundleOrder: BundleOrder) => void;
   onViewReport?: (order: Order) => void;
+  onViewBundleReport?: (bundleOrder: BundleOrder) => void;
   onDeleteOrder?: (order: Order) => void;
   onDeleteBundleOrder?: (bundleOrder: BundleOrder) => void;
   onArchiveOrder?: (order: Order) => void;
   onReload: () => void;
   deleteLoading?: boolean;
+  archiveLoading?: boolean;
 }
 
 export default function OrderHistorySection({
@@ -39,11 +40,13 @@ export default function OrderHistorySection({
   onOpenChat,
   onOpenBundleChat,
   onViewReport,
+  onViewBundleReport,
   onDeleteOrder,
   onDeleteBundleOrder,
   onArchiveOrder,
   onReload,
   deleteLoading = false,
+  archiveLoading = false,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
@@ -176,7 +179,7 @@ export default function OrderHistorySection({
           className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer min-w-0"
           onClick={() => setShowOrderSection(!showOrderSection)}
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-[#0b4ce5] to-[#4a90e2] flex items-center justify-center shadow-md shadow-blue-500/20">
             <svg
               className="w-4 h-4 sm:w-5 sm:h-5 text-white"
               fill="none"
@@ -422,6 +425,7 @@ export default function OrderHistorySection({
                           onDelete={onDeleteOrder}
                           onArchive={onArchiveOrder}
                           deleteLoading={deleteLoading}
+                          archiveLoading={archiveLoading}
                         />
                       );
                     } else {
@@ -432,6 +436,7 @@ export default function OrderHistorySection({
                           viewMode={orderViewMode}
                           onViewDetails={onSelectBundleOrder}
                           onOpenChat={onOpenBundleChat}
+                          onViewReport={onViewBundleReport}
                           onDelete={onDeleteBundleOrder}
                         />
                       );

@@ -7,6 +7,7 @@ import {
   deleteOrder,
   updateTrackCode,
   confirmUserPayment,
+  archiveOrder,
 } from "../controllers/orderController";
 import { getAgentReport, createAgentReport, updateAgentReport } from "../controllers/agentReportController";
 import { requireRole } from "../middleware/requireRole";
@@ -24,6 +25,7 @@ router.get("/:id/report", requireRole(["user", "agent", "admin"]), getAgentRepor
 router.post("/:id/report", requireRole(["agent", "admin"]), createAgentReport);
 router.put("/:id/report", requireRole(["agent", "admin"]), updateAgentReport);
 router.delete("/:id", requireRole(["user", "agent", "admin"]), deleteOrder);
+router.put("/:id/archive", requireRole(["user", "agent", "admin"]), archiveOrder);
 
 export default router;
 

@@ -45,7 +45,7 @@ export default function UserDashboardPage() {
     useState<BundleOrder | null>(null);
   const [showBundleOrderModal, setShowBundleOrderModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
-  const [chatOrder, setChatOrder] = useState<Order | null>(null);
+  const [chatOrder, setChatOrder] = useState<Order | BundleOrder | null>(null);
   const [zoomedImageIndex, setZoomedImageIndex] = useState<number | null>(null);
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
@@ -614,18 +614,23 @@ export default function UserDashboardPage() {
                   setShowChatModal(true);
                 }}
                 onOpenBundleChat={(bundleOrder) => {
-                  // TODO: Open chat for bundle order
-                  console.log("Open chat for bundle:", bundleOrder);
+                  setChatOrder(bundleOrder);
+                  setShowChatModal(true);
                 }}
                 onViewReport={(order) => {
                   setSelectedOrder(order);
                   setShowOrderModal(true);
+                }}
+                onViewBundleReport={(bundleOrder) => {
+                  setSelectedBundleOrder(bundleOrder);
+                  setShowBundleOrderModal(true);
                 }}
                 onDeleteOrder={handleDeleteOrder}
                 onDeleteBundleOrder={handleDeleteBundleOrder}
                 onArchiveOrder={(order) => handleArchiveOrder(order.id)}
                 onReload={loadData}
                 deleteLoading={deleteLoading}
+                archiveLoading={archiveLoading}
               />
 
               {/* Box 3: Cargonууд - Dropdown */}
@@ -680,24 +685,34 @@ export default function UserDashboardPage() {
                       {cargos.map((cargo) => (
                         <div
                           key={cargo.id}
-                          className="relative rounded-xl overflow-hidden border border-orange-100 hover:border-orange-200 hover:shadow-lg transition-all min-h-[220px]"
+                          className="relative rounded-xl overflow-hidden border border-orange-100 hover:border-orange-200 hover:shadow-lg transition-all min-h-55"
                           style={{
-                            backgroundImage: cargo.imageUrl ? `url(${cargo.imageUrl})` : undefined,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
+                            backgroundImage: cargo.imageUrl
+                              ? `url(${cargo.imageUrl})`
+                              : undefined,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
                           }}
                         >
                           {/* Gradient overlay - only at bottom */}
-                          <div className={`absolute inset-x-0 bottom-0 h-1/2 ${cargo.imageUrl ? 'bg-gradient-to-t from-black/90 to-transparent' : ''}`} />
-                          {!cargo.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-white to-orange-50/50" />}
+                          <div
+                            className={`absolute inset-x-0 bottom-0 h-1/2 ${cargo.imageUrl ? "bg-linear-to-t from-black/90 to-transparent" : ""}`}
+                          />
+                          {!cargo.imageUrl && (
+                            <div className="absolute inset-0 bg-linear-to-br from-white to-orange-50/50" />
+                          )}
 
                           {/* Content positioned at bottom */}
                           <div className="absolute bottom-0 left-0 right-0 p-4">
-                            <h4 className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? 'text-white drop-shadow-md' : 'text-gray-900'}`}>
+                            <h4
+                              className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? "text-white drop-shadow-md" : "text-gray-900"}`}
+                            >
                               {cargo.name}
                             </h4>
                             {cargo.description && (
-                              <p className={`text-xs mt-1 ${cargo.imageUrl ? 'text-gray-100' : 'text-gray-500'}`}>
+                              <p
+                                className={`text-xs mt-1 ${cargo.imageUrl ? "text-gray-100" : "text-gray-500"}`}
+                              >
                                 {cargo.description}
                               </p>
                             )}
@@ -706,7 +721,7 @@ export default function UserDashboardPage() {
                               {cargo.phone && (
                                 <a
                                   href={`tel:${cargo.phone}`}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-orange-50 hover:bg-orange-100 text-orange-700'}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-orange-50 hover:bg-orange-100 text-orange-700"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -734,7 +749,7 @@ export default function UserDashboardPage() {
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -762,7 +777,7 @@ export default function UserDashboardPage() {
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -780,7 +795,7 @@ export default function UserDashboardPage() {
                                   href={cargo.location}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-green-50 hover:bg-green-100 text-green-700"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -870,10 +885,11 @@ export default function UserDashboardPage() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
                               <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${index < 5
-                                  ? "bg-linear-to-br from-purple-500 to-indigo-500 text-white"
-                                  : "bg-gray-100 text-gray-600"
-                                  }`}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                  index < 5
+                                    ? "bg-linear-to-br from-purple-500 to-indigo-500 text-white"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
                               >
                                 #{index + 1}
                               </div>
@@ -1305,8 +1321,8 @@ export default function UserDashboardPage() {
                             Тайлбар
                           </p>
                           {selectedOrder.description &&
-                            selectedOrder.description.includes(":") &&
-                            selectedOrder.description.split("\n\n").length > 1 ? (
+                          selectedOrder.description.includes(":") &&
+                          selectedOrder.description.split("\n\n").length > 1 ? (
                             <div className="space-y-2">
                               {selectedOrder.description
                                 .split("\n\n")
@@ -1778,6 +1794,52 @@ export default function UserDashboardPage() {
             setShowBundleOrderModal(false);
           }}
           exchangeRate={adminSettings?.exchangeRate || 1}
+          adminSettings={adminSettings || undefined}
+          onConfirmPayment={async (bundleOrderId: string) => {
+            setPaymentLoading(true);
+            try {
+              await apiClient.confirmBundleUserPayment(bundleOrderId);
+              // Update local state
+              setSelectedBundleOrder({
+                ...selectedBundleOrder,
+                userPaymentVerified: true,
+              });
+              await loadData();
+            } catch (e: unknown) {
+              const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+              alert(errorMessage);
+            } finally {
+              setPaymentLoading(false);
+            }
+          }}
+          paymentLoading={paymentLoading}
+          onCancelOrder={async (bundleOrderId: string) => {
+            setCancelLoading(true);
+            try {
+              await apiClient.cancelBundleOrder(bundleOrderId);
+              // Update local state
+              setSelectedBundleOrder({
+                ...selectedBundleOrder,
+                status: "tsutsalsan_zahialga",
+              });
+              await loadData();
+              // Close modal after cancellation
+              setSelectedBundleOrder(null);
+              setShowBundleOrderModal(false);
+            } catch (e: unknown) {
+              const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+              alert(errorMessage);
+            } finally {
+              setCancelLoading(false);
+            }
+          }}
+          cancelLoading={cancelLoading}
+          onOpenChat={(bundleOrder) => {
+            setSelectedBundleOrder(null);
+            setShowBundleOrderModal(false);
+            setChatOrder(bundleOrder);
+            setShowChatModal(true);
+          }}
         />
       )}
     </div>

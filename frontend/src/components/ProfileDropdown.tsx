@@ -107,7 +107,7 @@ export default function ProfileDropdown() {
           const displayPoints = Math.max(0, user.agentPoints || 0);
           return (
             <div
-              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 border rounded-xl ${
+              className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 border rounded-lg sm:rounded-xl ${
                 displayPoints > 0
                   ? "bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer"
                   : "bg-gray-50 border-gray-200 cursor-default"
@@ -142,7 +142,7 @@ export default function ProfileDropdown() {
               title={displayPoints > 0 ? "Оноо зарах - Дарах" : "Оноо байхгүй"}
             >
               <svg
-                className={`w-4 h-4 sm:w-5 sm:h-5 ${displayPoints > 0 ? "text-blue-600" : "text-gray-400"}`}
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${displayPoints > 0 ? "text-blue-600" : "text-gray-400"}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -155,7 +155,7 @@ export default function ProfileDropdown() {
                 />
               </svg>
               <span
-                className={`text-xs sm:text-sm font-semibold ${displayPoints > 0 ? "text-blue-600" : "text-gray-400"}`}
+                className={`text-[10px] sm:text-xs font-semibold ${displayPoints > 0 ? "text-blue-600" : "text-gray-400"}`}
               >
                 {displayPoints.toLocaleString(undefined, {
                   maximumFractionDigits: 2,

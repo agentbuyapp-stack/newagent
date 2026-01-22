@@ -18,6 +18,9 @@ export interface IOrder extends Document {
   userPaymentVerified: boolean;
   agentPaymentPaid: boolean;
   trackCode?: string;
+  cancelReason?: string;
+  archivedByUser: boolean;
+  archivedByAgent: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +69,18 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       trim: true,
     },
+    cancelReason: {
+      type: String,
+      trim: true,
+    },
+    archivedByUser: {
+      type: Boolean,
+      default: false,
+    },
+    archivedByAgent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -77,5 +92,5 @@ OrderSchema.index({ userId: 1 });
 OrderSchema.index({ agentId: 1 });
 OrderSchema.index({ status: 1 });
 
-export const Order = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);
+export const Order = (mongoose.models.Order as mongoose.Model<IOrder>) || mongoose.model<IOrder>("Order", OrderSchema);
 

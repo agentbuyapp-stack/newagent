@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { User, Profile, Order, AdminSettings, RewardRequest, AgentReport } from "../models";
 import mongoose from "mongoose";
+import {
+  notifyAgentPaymentVerified,
+} from "../services/notificationService";
 
 // Format user with profile
 const formatUser = (user: any) => {
@@ -251,6 +254,24 @@ export const verifyUserPayment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    // Notify agent about payment verified
+    if (order.agentId) {
+      const agentReport = await AgentReport.findOne({
+        orderId: new mongoose.Types.ObjectId(orderId)
+      }).lean();
+      const amount = agentReport?.userAmount || 0;
+
+      const agentIdObj = typeof order.agentId === 'object' && order.agentId !== null
+        ? (order.agentId as any)._id || order.agentId
+        : new mongoose.Types.ObjectId(String(order.agentId));
+      notifyAgentPaymentVerified(
+        agentIdObj,
+        new mongoose.Types.ObjectId(orderId),
+        order.productName,
+        amount
+      ).catch((err) => console.error("Failed to notify agent:", err));
+    }
+
     res.json({
       ...order,
       id: order._id.toString(),
@@ -299,7 +320,9 @@ export const markAgentPaymentPaid = async (req: Request, res: Response) => {
     const agentPoints = agentReport.userAmount * exchangeRate * 0.05;
 
     // Update order and add points to agent
-    const agentId = typeof order.agentId === 'object' ? order.agentId._id : new mongoose.Types.ObjectId(order.agentId.toString());
+    const agentId = typeof order.agentId === 'object' && order.agentId !== null
+      ? (order.agentId as any)._id || order.agentId
+      : new mongoose.Types.ObjectId(String(order.agentId));
 
     const [updatedOrder] = await Promise.all([
       Order.findByIdAndUpdate(
@@ -498,7 +521,9 @@ export const approveRewardRequest = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Request is not pending" });
     }
 
-    const agentId = typeof request.agentId === 'object' ? request.agentId._id : new mongoose.Types.ObjectId(request.agentId.toString());
+    const agentId = typeof request.agentId === 'object' && request.agentId !== null
+      ? (request.agentId as any)._id || request.agentId
+      : new mongoose.Types.ObjectId(String(request.agentId));
 
     // Update request status and deduct points from agent
     const [updatedRequest, agent] = await Promise.all([
@@ -583,11 +608,13 @@ export const rejectRewardRequest = async (req: Request, res: Response) => {
       .lean();
 
     // Get profile for agent
-    const agentId = typeof request.agentId === 'object' ? request.agentId._id : new mongoose.Types.ObjectId(request.agentId.toString());
+    const agentId = typeof request.agentId === 'object' && request.agentId !== null
+      ? (request.agentId as any)._id || request.agentId
+      : new mongoose.Types.ObjectId(String(request.agentId));
     const profile = await Profile.findOne({ userId: agentId }).lean();
     const agent = updatedRequest!.agentId ? {
       ...(typeof updatedRequest!.agentId === 'object' ? updatedRequest!.agentId : {}),
-      _id: typeof updatedRequest!.agentId === 'object' ? updatedRequest!.agentId._id : new mongoose.Types.ObjectId(updatedRequest!.agentId.toString()),
+      _id: typeof updatedRequest!.agentId === 'object' ? (updatedRequest!.agentId as any)._id : new mongoose.Types.ObjectId(String(updatedRequest!.agentId)),
       profile: profile || null,
     } : null;
 

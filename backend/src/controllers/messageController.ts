@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Message, Order } from "../models";
+import { Message, Order, BundleOrder } from "../models";
 import { uploadImageToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
 
@@ -14,8 +14,15 @@ export const getMessages = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid order ID" });
     }
 
-    // Check if user has access to this order
-    const order = await Order.findById(orderId).lean();
+    // Check if user has access to this order (try Order first, then BundleOrder)
+    let order: { userId: mongoose.Types.ObjectId; agentId?: mongoose.Types.ObjectId } | null = await Order.findById(orderId).lean();
+    let isBundleOrder = false;
+
+    if (!order) {
+      // Try finding as BundleOrder
+      order = await BundleOrder.findById(orderId).lean();
+      isBundleOrder = true;
+    }
 
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
@@ -68,8 +75,15 @@ export const sendMessage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid order ID" });
     }
 
-    // Check if user has access to this order
-    const order = await Order.findById(orderId).lean();
+    // Check if user has access to this order (try Order first, then BundleOrder)
+    let order: { userId: any; agentId?: any; status?: string } | null = await Order.findById(orderId).lean();
+    let isBundleOrder = false;
+
+    if (!order) {
+      // Try finding as BundleOrder
+      order = await BundleOrder.findById(orderId).lean();
+      isBundleOrder = true;
+    }
 
     if (!order) {
       return res.status(404).json({ error: "Order not found" });

@@ -311,23 +311,27 @@ export default function OrderModal({
                   Agent-ийн тайлан
                 </h3>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-600">
-                    Хэрэглэгчийн төлөх дүн:
-                  </label>
-                  <p className="text-lg font-semibold text-green-600 mt-1">
-                    {(() => {
-                      const exchangeRate =
-                        adminSettings?.exchangeRate || 1;
-                      const calculatedAmount =
-                        calculateUserPaymentAmount(
-                          report,
-                          exchangeRate,
-                        );
-                      return calculatedAmount.toLocaleString();
-                    })()}{" "}
-                    ₮
-                  </p>
+                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                  <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
+                  {(() => {
+                    const exchangeRate = adminSettings?.exchangeRate || 1;
+                    const agentYuan = report.userAmount;
+                    const userYuan = agentYuan * 1.05;
+                    const userMNT = userYuan * exchangeRate;
+                    return (
+                      <div className="mt-2">
+                        <p className="text-xl font-bold text-green-700">
+                          {userMNT.toLocaleString()}₮
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          ({userYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Агент үнэ: {agentYuan.toLocaleString()}¥ + 5% = {userYuan.toLocaleString()}¥
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {report.quantity && (

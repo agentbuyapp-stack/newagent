@@ -54,6 +54,9 @@ export default function AdminDashboardPage() {
     accountName: "",
     bank: "",
     exchangeRate: 1,
+    orderLimitEnabled: true,
+    maxOrdersPerDay: 10,
+    maxActiveOrders: 10,
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
@@ -190,6 +193,9 @@ export default function AdminDashboardPage() {
             accountName: settingsData.accountName || "",
             bank: settingsData.bank || "",
             exchangeRate: settingsData.exchangeRate || 1,
+            orderLimitEnabled: settingsData.orderLimitEnabled ?? true,
+            maxOrdersPerDay: settingsData.maxOrdersPerDay ?? 10,
+            maxActiveOrders: settingsData.maxActiveOrders ?? 10,
           });
 
           // Load agent reports for orders
@@ -1339,6 +1345,87 @@ export default function AdminDashboardPage() {
                         </p>
                       </div>
 
+                      {/* Захиалгын хязгаарлалт */}
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">
+                          Захиалгын хязгаарлалт
+                        </h5>
+
+                        <div className="flex items-center justify-between mb-4">
+                          <label className="text-sm font-medium text-gray-700">
+                            Хязгаарлалт идэвхжүүлэх
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSettingsFormData({
+                                ...settingsFormData,
+                                orderLimitEnabled: !settingsFormData.orderLimitEnabled,
+                              })
+                            }
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              settingsFormData.orderLimitEnabled
+                                ? "bg-green-500"
+                                : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                settingsFormData.orderLimitEnabled
+                                  ? "translate-x-6"
+                                  : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {settingsFormData.orderLimitEnabled && (
+                          <>
+                            <div className="mb-3">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Өдөрт максимум захиалга
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={settingsFormData.maxOrdersPerDay || 10}
+                                onChange={(e) =>
+                                  setSettingsFormData({
+                                    ...settingsFormData,
+                                    maxOrdersPerDay: parseInt(e.target.value) || 10,
+                                  })
+                                }
+                                className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Нэг хэрэглэгч өдөрт хамгийн ихдээ хэдэн захиалга үүсгэж болох
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Идэвхтэй захиалгын хязгаар
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={settingsFormData.maxActiveOrders || 10}
+                                onChange={(e) =>
+                                  setSettingsFormData({
+                                    ...settingsFormData,
+                                    maxActiveOrders: parseInt(e.target.value) || 10,
+                                  })
+                                }
+                                className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Нэг хэрэглэгч дуусаагүй хэдэн захиалгатай байж болох
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
                       <div className="flex gap-2">
                         <button
                           onClick={handleSaveSettings}
@@ -1355,6 +1442,9 @@ export default function AdminDashboardPage() {
                               accountName: adminSettings?.accountName || "",
                               bank: adminSettings?.bank || "",
                               exchangeRate: adminSettings?.exchangeRate || 1,
+                              orderLimitEnabled: adminSettings?.orderLimitEnabled ?? true,
+                              maxOrdersPerDay: adminSettings?.maxOrdersPerDay ?? 10,
+                              maxActiveOrders: adminSettings?.maxActiveOrders ?? 10,
                             });
                           }}
                           className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
@@ -1399,6 +1489,37 @@ export default function AdminDashboardPage() {
                         <p className="text-gray-900">
                           {adminSettings?.exchangeRate || 1}
                         </p>
+                      </div>
+
+                      {/* Захиалгын хязгаарлалт харах */}
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">
+                          Захиалгын хязгаарлалт
+                        </h5>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Төлөв:</span>
+                            <span className={`text-sm font-medium ${adminSettings?.orderLimitEnabled !== false ? "text-green-600" : "text-gray-500"}`}>
+                              {adminSettings?.orderLimitEnabled !== false ? "Идэвхтэй" : "Идэвхгүй"}
+                            </span>
+                          </div>
+                          {adminSettings?.orderLimitEnabled !== false && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Өдөрт максимум:</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {adminSettings?.maxOrdersPerDay ?? 10} захиалга
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Идэвхтэй хязгаар:</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {adminSettings?.maxActiveOrders ?? 10} захиалга
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
