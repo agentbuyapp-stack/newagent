@@ -4,6 +4,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
 import {
   type User,
   type Profile,
@@ -14,11 +15,13 @@ import {
   type PublicAgent,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
-import ChatModal from "@/components/ChatModal";
 
 import NewOrderForm from "@/components/dashboard/NewOrderForm";
 import OrderHistorySection from "@/components/dashboard/OrderHistorySection";
-import BundleOrderDetailModal from "@/components/dashboard/BundleOrderDetailModal";
+
+// Lazy load modals - only loaded when needed
+const ChatModal = dynamic(() => import("@/components/ChatModal"), { ssr: false });
+const BundleOrderDetailModal = dynamic(() => import("@/components/dashboard/BundleOrderDetailModal"), { ssr: false });
 
 export default function UserDashboardPage() {
   const router = useRouter();
@@ -129,51 +132,39 @@ export default function UserDashboardPage() {
           setProfile(userData.profile);
         }
 
-        // Load admin settings for payment info and exchange rate
-        try {
-          const settings = await apiClient.getAdminSettings();
-          setAdminSettings(settings);
-        } catch (err) {
-          console.error("Failed to load admin settings:", err);
+        // Load all data in parallel for better performance
+        const [settingsResult, cargosResult, agentsResult, ordersResult, bundleOrdersResult] = await Promise.allSettled([
+          apiClient.getAdminSettings(),
+          apiClient.getCargos(),
+          apiClient.getPublicAgents(),
+          apiClient.getOrders(),
+          apiClient.getBundleOrders(),
+        ]);
+
+        // Process results
+        if (settingsResult.status === "fulfilled") {
+          setAdminSettings(settingsResult.value);
+        }
+        if (cargosResult.status === "fulfilled") {
+          setCargos(cargosResult.value);
+        }
+        if (agentsResult.status === "fulfilled") {
+          setAgents(agentsResult.value);
+        }
+        if (bundleOrdersResult.status === "fulfilled") {
+          setBundleOrders(bundleOrdersResult.value);
         }
 
-        // Load cargos
-        try {
-          const cargosData = await apiClient.getCargos();
-          setCargos(cargosData);
-        } catch (err) {
-          console.error("Failed to load cargos:", err);
-        }
-
-        // Load agents
-        try {
-          const agentsData = await apiClient.getPublicAgents();
-          setAgents(agentsData);
-        } catch (err) {
-          console.error("Failed to load agents:", err);
-        }
-
-        // Load orders
-        try {
-          const ordersData = await apiClient.getOrders();
+        if (ordersResult.status === "fulfilled") {
+          const ordersData = ordersResult.value;
           setOrders(ordersData);
 
-          // Load bundle orders
-          try {
-            const bundleOrdersData = await apiClient.getBundleOrders();
-            setBundleOrders(bundleOrdersData);
-          } catch (err) {
-            console.error("Failed to load bundle orders:", err);
-          }
-
           // If modal is open and we have a selectedOrder, update it from fresh data
-          // Preserve userPaymentVerified state if it was set locally
           if (showOrderModal && selectedOrder) {
             const refreshedOrder = ordersData.find(
               (o) => o.id === selectedOrder.id,
             );
             if (refreshedOrder) {
-              // Preserve userPaymentVerified if it was set locally (from handlePaymentPaid)
               const preservedUserPaymentVerified =
                 selectedOrder.userPaymentVerified ||
                 refreshedOrder.userPaymentVerified;
@@ -184,19 +175,29 @@ export default function UserDashboardPage() {
             }
           }
 
-          // Load agent reports for orders that have agent assigned (including completed orders)
-          ordersData.forEach((order) => {
-            if (
+          // Load agent reports in parallel (not one by one)
+          const ordersNeedingReports = ordersData.filter(
+            (order) =>
               order.agentId &&
               (order.status === "agent_sudlaj_bn" ||
                 order.status === "tolbor_huleej_bn" ||
                 order.status === "amjilttai_zahialga")
-            ) {
-              loadAgentReport(order.id);
-            }
-          });
-        } catch {
-          // Orders might not exist yet, that's okay
+          );
+
+          if (ordersNeedingReports.length > 0) {
+            const reportPromises = ordersNeedingReports.map((order) =>
+              apiClient.getAgentReport(order.id).then(
+                (report) => ({ orderId: order.id, report }),
+                () => ({ orderId: order.id, report: null })
+              )
+            );
+            const reportResults = await Promise.all(reportPromises);
+            const reportsMap: Record<string, typeof reportResults[0]["report"]> = {};
+            reportResults.forEach(({ orderId, report }) => {
+              reportsMap[orderId] = report;
+            });
+            setAgentReports((prev) => ({ ...prev, ...reportsMap }));
+          }
         }
       } catch {
         // If user doesn't exist, the backend will create it automatically via Clerk middleware
@@ -591,11 +592,10 @@ export default function UserDashboardPage() {
                   </svg>
                 </div>
 
-                {showNewOrderSection && (
-                  <div className="mt-4">
-                    <NewOrderForm onSuccess={handleOrderSuccess} />
-                  </div>
-                )}
+                {/* Use CSS to hide instead of unmount to preserve form state */}
+                <div className={`mt-4 ${showNewOrderSection ? "" : "hidden"}`}>
+                  <NewOrderForm onSuccess={handleOrderSuccess} />
+                </div>
               </div>
               <OrderHistorySection
                 orders={orders.filter((o) => !o.archivedByUser)}

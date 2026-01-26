@@ -9,12 +9,16 @@ interface NewOrderFormProps {
   onSuccess: () => void;
 }
 
+// Generate stable initial ID
+const INITIAL_ID = 1;
+let nextProductId = INITIAL_ID + 1;
+
 export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
   const apiClient = useApiClient();
 
   // New order form state - support multiple products
   const [newOrders, setNewOrders] = useState<Array<OrderData & { id: number }>>([
-    { id: Date.now(), productName: "", description: "", imageUrls: [] },
+    { id: INITIAL_ID, productName: "", description: "", imageUrls: [] },
   ]);
   const [newOrderImagePreviews, setNewOrderImagePreviews] = useState<string[][]>([
     [],
@@ -22,8 +26,9 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
   const [newOrderLoading, setNewOrderLoading] = useState(false);
   const [newOrderError, setNewOrderError] = useState("");
   const [newOrderSuccess, setNewOrderSuccess] = useState(false);
+  // Always expand all products to prevent data loss confusion
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(
-    new Set([Date.now()])
+    new Set([INITIAL_ID])
   );
 
   const handleNewOrderImageChange = (
@@ -84,13 +89,14 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
   };
 
   const addNewProductField = () => {
-    const newId = Date.now() + Math.random();
+    const newId = nextProductId++;
     setNewOrders([
       ...newOrders,
       { id: newId, productName: "", description: "", imageUrls: [] },
     ]);
     setNewOrderImagePreviews([...newOrderImagePreviews, []]);
-    setExpandedProducts(new Set([newId]));
+    // Expand new product, keep others expanded too
+    setExpandedProducts(prev => new Set([...prev, newId]));
   };
 
   const toggleProductExpand = (productId: number) => {
@@ -157,11 +163,12 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
       }
 
       setNewOrderSuccess(true);
+      const resetId = nextProductId++;
       setNewOrders([
-        { id: Date.now(), productName: "", description: "", imageUrls: [] },
+        { id: resetId, productName: "", description: "", imageUrls: [] },
       ]);
       setNewOrderImagePreviews([[]]);
-      setExpandedProducts(new Set([Date.now()]));
+      setExpandedProducts(new Set([resetId]));
       onSuccess();
 
       setTimeout(() => {

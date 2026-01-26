@@ -1,9 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   type User,
   type Order,
@@ -14,9 +15,19 @@ import {
   type BundleOrder,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
-import ChatModal from "@/components/ChatModal";
-import AgentReportForm from "@/components/AgentReportForm";
-import BundleReportForm from "@/components/BundleReportForm";
+import {
+  RewardsSection,
+  OrderDetailHeader,
+  UserContactInfo,
+  OrderDates,
+  MyOrderCard,
+} from "@/components/agent";
+
+// Lazy load modals - only loaded when needed
+const ChatModal = dynamic(() => import("@/components/ChatModal"), { ssr: false });
+const AgentReportForm = dynamic(() => import("@/components/AgentReportForm"), { ssr: false });
+const BundleReportForm = dynamic(() => import("@/components/BundleReportForm"), { ssr: false });
+const CancelOrderModal = dynamic(() => import("@/components/agent/CancelOrderModal"), { ssr: false });
 
 // Bundle Item Dropdown Component
 function BundleItemDropdown({ item, index }: { item: BundleOrder["items"][0]; index: number }) {
@@ -30,8 +41,8 @@ function BundleItemDropdown({ item, index }: { item: BundleOrder["items"][0]; in
       >
         <div className="flex items-center gap-3">
           {item.imageUrls && item.imageUrls[0] ? (
-            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0">
-              <img src={item.imageUrls[0]} alt={item.productName} className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0 relative">
+              <Image src={item.imageUrls[0]} alt={item.productName} fill sizes="40px" className="object-cover" />
             </div>
           ) : (
             <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
@@ -62,8 +73,8 @@ function BundleItemDropdown({ item, index }: { item: BundleOrder["items"][0]; in
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Зурагнууд</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {item.imageUrls.map((imgUrl, imgIndex) => (
-                  <div key={imgIndex} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                    <img src={imgUrl} alt={`${item.productName} - ${imgIndex + 1}`} className="w-full h-full object-cover" />
+                  <div key={imgIndex} className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
+                    <Image src={imgUrl} alt={`${item.productName} - ${imgIndex + 1}`} fill sizes="100px" className="object-cover" />
                   </div>
                 ))}
               </div>
@@ -426,13 +437,13 @@ export default function AgentDashboardPage() {
   };
 
   // Calculate user payment amount: agent report userAmount * exchangeRate * 1.05
-  const calculateUserPaymentAmount = (
-    agentReport: AgentReport | null,
-    exchangeRate: number = 1,
-  ): number => {
-    if (!agentReport) return 0;
-    return Math.round(agentReport.userAmount * exchangeRate * 1.05);
-  };
+  const calculateUserPaymentAmount = useCallback(
+    (agentReport: AgentReport | null, exchangeRate: number = 1): number => {
+      if (!agentReport) return 0;
+      return Math.round(agentReport.userAmount * exchangeRate * 1.05);
+    },
+    []
+  );
 
   // Handle update agent report
   const handleUpdateReport = async (orderId: string) => {
@@ -577,33 +588,20 @@ export default function AgentDashboardPage() {
     }
   };
 
-  const canArchiveOrder = (order: Order) => {
-    // Only completed or cancelled orders can be archived
-    // Agent can only archive orders they handled
-    return (
-      (order.status === "amjilttai_zahialga" ||
-        order.status === "tsutsalsan_zahialga") &&
-      !order.archivedByAgent &&
-      order.agentId === user?.id
-    );
-  };
+  const canArchiveOrder = useCallback(
+    (order: Order) => {
+      // Only completed or cancelled orders can be archived
+      // Agent can only archive orders they handled
+      return (
+        (order.status === "amjilttai_zahialga" ||
+          order.status === "tsutsalsan_zahialga") &&
+        !order.archivedByAgent &&
+        order.agentId === user?.id
+      );
+    },
+    [user?.id]
+  );
 
-  const getStatusText = (status: OrderStatus) => {
-    switch (status) {
-      case "niitlegdsen":
-        return "Нийтэлсэн";
-      case "agent_sudlaj_bn":
-        return "Agent шалгаж байна";
-      case "tolbor_huleej_bn":
-        return "Төлбөр хүлээж байна";
-      case "amjilttai_zahialga":
-        return "Амжилттай захиалга";
-      case "tsutsalsan_zahialga":
-        return "Цуцлагдсан захиалга";
-      default:
-        return status;
-    }
-  };
 
   // Memoize filtered orders to avoid recalculating on every render
   const publishedOrders = useMemo(() => {
@@ -999,10 +997,12 @@ export default function AgentDashboardPage() {
                                 {/* Thumbnail */}
                                 <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-lg overflow-hidden relative">
                                   {mainImage ? (
-                                    <img
+                                    <Image
                                       src={mainImage}
                                       alt={order.productName}
-                                      className="w-full h-full object-cover"
+                                      fill
+                                      sizes="64px"
+                                      className="object-cover"
                                     />
                                   ) : (
                                     <div className="w-full h-full bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center">
@@ -1315,275 +1315,36 @@ export default function AgentDashboardPage() {
                 <div className="max-h-150 overflow-y-auto">
                   {filteredMyOrders.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {filteredMyOrders.map((order) => {
-                        const mainImage =
-                          order.imageUrls && order.imageUrls.length > 0
-                            ? order.imageUrls[0]
-                            : order.imageUrl || null;
-                        const needsReport =
-                          order.status === "agent_sudlaj_bn" &&
-                          !agentReports[order.id];
-                        const waitingPayment =
-                          order.status === "tolbor_huleej_bn";
-
-                        return (
-                          <div
-                            key={order.id}
-                            className={`bg-linear-to-br from-white to-gray-50 rounded-xl border transition-all duration-300 p-3 hover:scale-[1.01] ${
-                              needsReport
-                                ? "border-amber-300 hover:border-amber-400 shadow-amber-100/50"
-                                : waitingPayment
-                                  ? "border-blue-300 hover:border-blue-400"
-                                  : order.status === "amjilttai_zahialga"
-                                    ? "border-emerald-300 hover:border-emerald-400"
-                                    : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            <div className="flex gap-3">
-                              {/* Thumbnail */}
-                              <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-lg overflow-hidden relative">
-                                {mainImage ? (
-                                  <img
-                                    src={mainImage}
-                                    alt={order.productName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                    <svg
-                                      className="w-6 h-6 text-gray-400"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                      />
-                                    </svg>
-                                  </div>
-                                )}
-                                {/* Action needed indicator */}
-                                {needsReport && (
-                                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white" />
-                                )}
-                              </div>
-
-                              {/* Content */}
-                              <div className="min-w-0 flex-1">
-                                {/* Top: Status & Date */}
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                                      order.status === "agent_sudlaj_bn"
-                                        ? "bg-amber-100 text-amber-700"
-                                        : order.status === "tolbor_huleej_bn"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : order.status ===
-                                              "amjilttai_zahialga"
-                                            ? "bg-emerald-100 text-emerald-700"
-                                            : "bg-red-100 text-red-700"
-                                    }`}
-                                  >
-                                    {getStatusText(order.status)}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400 shrink-0">
-                                    {new Date(
-                                      order.createdAt,
-                                    ).toLocaleDateString("mn-MN", {
-                                      month: "short",
-                                      day: "numeric",
-                                    })}
-                                  </span>
-                                </div>
-
-                                {/* Product name */}
-                                <h4 className="font-bold text-gray-900 text-sm truncate">
-                                  {order.productName}
-                                </h4>
-
-                                {/* User Info */}
-                                {(order.user?.profile || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot) && (
-                                  <p className="text-[10px] text-gray-500 mt-0.5 truncate">
-                                    <span className="font-medium text-blue-600">
-                                      {order.user?.profile?.name || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.name || "Нэргүй"}
-                                    </span>
-                                    {(order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo) && (
-                                      <span> • {order.user?.profile?.cargo || (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot?.cargo}</span>
-                                    )}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Price and Track Code - Always visible */}
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
-                              {agentReports[order.id] && (
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                                  {(() => {
-                                    const exchangeRate =
-                                      adminSettings?.exchangeRate || 1;
-                                    const calculatedAmount =
-                                      calculateUserPaymentAmount(
-                                        agentReports[order.id],
-                                        exchangeRate,
-                                      );
-                                    return calculatedAmount.toLocaleString();
-                                  })()}{" "}
-                                  ₮
-                                </span>
-                              )}
-                              {order.trackCode && (
-                                <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                                  🚚 {order.trackCode}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Buttons - Bottom */}
-                            <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100">
-                              <button
-                                onClick={() => {
-                                  setSelectedOrder(order);
-                                  setShowOrderModal(true);
-                                }}
-                                className="h-7 px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
-                              >
-                                <svg
-                                  className="w-3.5 h-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  />
-                                </svg>
-                                Харах
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setChatOrder(order);
-                                  setShowChatModal(true);
-                                }}
-                                className="h-7 px-2.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
-                              >
-                                <svg
-                                  className="w-3.5 h-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                                  />
-                                </svg>
-                                Чат
-                              </button>
-                              {needsReport && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const isBundleOrder = (order as Order & { isBundleOrder?: boolean }).isBundleOrder;
-                                    if (isBundleOrder) {
-                                      setBundleReportOrder(order);
-                                      setShowBundleReportForm(true);
-                                    } else {
-                                      setReportOrder(order);
-                                      setShowReportForm(true);
-                                    }
-                                  }}
-                                  className="flex-1 h-7 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center justify-center gap-1"
-                                >
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                  </svg>
-                                  Тайлан
-                                </button>
-                              )}
-                              {(order.status === "tsutsalsan_zahialga" ||
-                                order.archivedByAgent) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleClearCancelledOrder(order.id);
-                                  }}
-                                  className="h-7 px-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1"
-                                >
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
-                                  Устгах
-                                </button>
-                              )}
-                              {canArchiveOrder(order) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleArchiveOrder(order.id);
-                                  }}
-                                  disabled={archiveLoading}
-                                  className="h-7 px-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {archiveLoading ? (
-                                    <div className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <svg
-                                      className="w-3.5 h-3.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                                      />
-                                    </svg>
-                                  )}
-                                  {archiveLoading ? "..." : "Архив"}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {filteredMyOrders.map((order) => (
+                        <MyOrderCard
+                          key={order.id}
+                          order={order}
+                          agentReport={agentReports[order.id]}
+                          exchangeRate={adminSettings?.exchangeRate || 1}
+                          canArchive={canArchiveOrder(order)}
+                          archiveLoading={archiveLoading}
+                          onViewOrder={(o) => {
+                            setSelectedOrder(o);
+                            setShowOrderModal(true);
+                          }}
+                          onOpenChat={(o) => {
+                            setChatOrder(o);
+                            setShowChatModal(true);
+                          }}
+                          onOpenReportForm={(o, isBundleOrder) => {
+                            if (isBundleOrder) {
+                              setBundleReportOrder(o);
+                              setShowBundleReportForm(true);
+                            } else {
+                              setReportOrder(o);
+                              setShowReportForm(true);
+                            }
+                          }}
+                          onClearOrder={handleClearCancelledOrder}
+                          onArchiveOrder={handleArchiveOrder}
+                          calculateUserPaymentAmount={calculateUserPaymentAmount}
+                        />
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
@@ -1619,128 +1380,11 @@ export default function AgentDashboardPage() {
 
           {/* Box 3: Урамшуулал */}
           {user?.role === "agent" && (
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
-              <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => setShowRewards(!showRewards)}
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20">
-                    <svg
-                      className="w-4 h-4 sm:w-5 sm:h-5 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                      Урамшуулал
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      Урамшууллын хүсэлтүүд ({rewardRequests.length})
-                    </p>
-                  </div>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showRewards ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-
-              {showRewards && (
-                <div className="mt-4 space-y-4">
-                  {/* Reward Requests List */}
-                  <div>
-                    {rewardRequests.length > 0 ? (
-                      <div className="space-y-3">
-                        {rewardRequests.map((request) => (
-                          <div
-                            key={request.id}
-                            className={`border rounded-xl p-4 ${
-                              request.status === "approved"
-                                ? "bg-green-50 border-green-200"
-                                : request.status === "rejected"
-                                  ? "bg-red-50 border-red-200"
-                                  : "bg-yellow-50 border-yellow-200"
-                            }`}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="text-base font-semibold text-gray-900">
-                                  {Math.round(request.amount).toLocaleString()}{" "}
-                                  ₮
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {new Date(
-                                    request.createdAt,
-                                  ).toLocaleDateString("mn-MN", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    request.status === "approved"
-                                      ? "bg-green-100 text-green-800"
-                                      : request.status === "rejected"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                                  }`}
-                                >
-                                  {request.status === "approved"
-                                    ? "Батлагдсан"
-                                    : request.status === "rejected"
-                                      ? "Татгалзсан"
-                                      : "Хүлээж байна"}
-                                </span>
-                                {request.approvedAt && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Батлагдсан:{" "}
-                                    {new Date(
-                                      request.approvedAt,
-                                    ).toLocaleDateString("mn-MN", {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    })}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                        Урамшууллын хүсэлт байхгүй байна.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <RewardsSection
+              rewardRequests={rewardRequests}
+              showRewards={showRewards}
+              onToggle={() => setShowRewards(!showRewards)}
+            />
           )}
 
           {/* Box 4: Cargonууд - Dropdown */}
@@ -1944,14 +1588,6 @@ export default function AgentDashboardPage() {
       {showOrderModal &&
         selectedOrder &&
         (() => {
-          // For agent dashboard, show report if current user is the agent for this order
-          const currentReport =
-            selectedOrder.agentId === user?.id
-              ? agentReports[selectedOrder.id]
-              : undefined;
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const hasAgentReport =
-            currentReport !== null && currentReport !== undefined;
           const mainImage =
             selectedOrder.imageUrls && selectedOrder.imageUrls.length > 0
               ? selectedOrder.imageUrls[0]
@@ -1965,151 +1601,24 @@ export default function AgentDashboardPage() {
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
               <div className="bg-white rounded-none sm:rounded-2xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl">
                 {/* Header with gradient */}
-                <div className="sticky top-0 bg-linear-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-4 z-10">
-                  {isBundleOrder ? (
-                    /* Bundle Order Header - User style */
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-bold text-white">Багц захиалга</h2>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white/70 text-xs">{bundleItems?.length || 0} бараа</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              selectedOrder.status === "niitlegdsen"
-                                ? "bg-gray-100 text-gray-700"
-                                : selectedOrder.status === "agent_sudlaj_bn"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : selectedOrder.status === "tolbor_huleej_bn"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : selectedOrder.status === "amjilttai_zahialga"
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : "bg-red-100 text-red-700"
-                            }`}>
-                              {getStatusText(selectedOrder.status)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setShowOrderModal(false)}
-                        className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    /* Regular Order Header */
-                    <div className="flex items-start gap-4">
-                      {/* Product Thumbnail */}
-                      {mainImage ? (
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
-                          <img
-                            src={mainImage}
-                            alt={selectedOrder.productName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white/20 rounded-xl flex items-center justify-center border-2 border-white/30">
-                          <svg
-                            className="w-8 h-8 text-white/70"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </div>
-                      )}
-
-                      {/* Title and Status */}
-                      <div className="flex-1 min-w-0">
-                        <h2 className="text-lg sm:text-xl font-bold text-white truncate">
-                          {selectedOrder.productName}
-                        </h2>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                              selectedOrder.status === "niitlegdsen"
-                                ? "bg-gray-100 text-gray-700"
-                                : selectedOrder.status === "agent_sudlaj_bn"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : selectedOrder.status === "tolbor_huleej_bn"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : selectedOrder.status ===
-                                        "amjilttai_zahialga"
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {getStatusText(selectedOrder.status)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-white/70 mt-1.5 font-mono">
-                          #{selectedOrder.id.slice(-4).toUpperCase()}
-                        </p>
-                      </div>
-
-                      {/* Close Button */}
-                      <button
-                        onClick={() => setShowOrderModal(false)}
-                        className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all min-h-10 min-w-10"
-                      >
-                        <svg
-                          className="w-6 h-6"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <OrderDetailHeader
+                  isBundleOrder={!!isBundleOrder}
+                  bundleItemsCount={bundleItems?.length || 0}
+                  productName={selectedOrder.productName}
+                  status={selectedOrder.status}
+                  orderId={selectedOrder.id}
+                  mainImage={mainImage}
+                  onClose={() => setShowOrderModal(false)}
+                />
 
                 <div className="p-4 sm:p-6 space-y-5">
                   {/* User Contact Info for Agent */}
                   {(selectedOrder.user?.profile || userSnapshot) && (
-                    <div className="flex items-center gap-3 text-sm flex-wrap">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span className="font-medium">
-                          {selectedOrder.user?.profile?.name || userSnapshot?.name || "-"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        <span>{selectedOrder.user?.profile?.phone || userSnapshot?.phone || "-"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                        </svg>
-                        <span>{selectedOrder.user?.profile?.cargo || userSnapshot?.cargo || "-"}</span>
-                      </div>
-                    </div>
+                    <UserContactInfo
+                      name={selectedOrder.user?.profile?.name || userSnapshot?.name}
+                      phone={selectedOrder.user?.profile?.phone || userSnapshot?.phone}
+                      cargo={selectedOrder.user?.profile?.cargo || userSnapshot?.cargo}
+                    />
                   )}
 
                   {/* Quick Actions for Agent */}
@@ -2267,7 +1776,7 @@ export default function AgentDashboardPage() {
                                       (imgUrl, index) => (
                                         <div
                                           key={index}
-                                          className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-purple-300"
+                                          className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-transparent hover:ring-purple-300 relative"
                                           onClick={() =>
                                             setZoomedImageIndex(
                                               zoomedImageIndex === index
@@ -2276,10 +1785,12 @@ export default function AgentDashboardPage() {
                                             )
                                           }
                                         >
-                                          <img
+                                          <Image
                                             src={imgUrl}
                                             alt={`${selectedOrder.productName} - ${index + 1}`}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            sizes="100px"
+                                            className="object-cover"
                                           />
                                         </div>
                                       ),
@@ -2291,13 +1802,17 @@ export default function AgentDashboardPage() {
                                       className="fixed inset-0 bg-black/90 flex items-center justify-center z-70 p-4"
                                       onClick={() => setZoomedImageIndex(null)}
                                     >
-                                      <img
-                                        src={
-                                          selectedOrder.imageUrls[zoomedImageIndex]
-                                        }
-                                        alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
-                                        className="max-w-full max-h-full object-contain rounded-xl"
-                                      />
+                                      <div className="relative w-full h-full max-w-4xl max-h-[80vh]">
+                                        <Image
+                                          src={
+                                            selectedOrder.imageUrls[zoomedImageIndex]
+                                          }
+                                          alt={`${selectedOrder.productName} - ${zoomedImageIndex + 1}`}
+                                          fill
+                                          sizes="100vw"
+                                          className="object-contain rounded-xl"
+                                        />
+                                      </div>
                                       <button
                                         onClick={() => setZoomedImageIndex(null)}
                                         className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -2613,12 +2128,15 @@ export default function AgentDashboardPage() {
                                         <div className="grid grid-cols-3 gap-3">
                                           {report.additionalImages.map(
                                             (imgUrl, idx) => (
-                                              <img
-                                                key={idx}
-                                                src={imgUrl}
-                                                alt={`Additional ${idx + 1}`}
-                                                className="w-full h-32 object-cover rounded-xl border border-gray-200"
-                                              />
+                                              <div key={idx} className="relative h-32 rounded-xl overflow-hidden border border-gray-200">
+                                                <Image
+                                                  src={imgUrl}
+                                                  alt={`Additional ${idx + 1}`}
+                                                  fill
+                                                  sizes="150px"
+                                                  className="object-cover"
+                                                />
+                                              </div>
                                             ),
                                           )}
                                         </div>
@@ -2720,7 +2238,9 @@ export default function AgentDashboardPage() {
                                     <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
                                     <div className="grid grid-cols-3 gap-3">
                                       {bundleReport.additionalImages.map((imgUrl, idx) => (
-                                        <img key={idx} src={imgUrl} alt={`Additional ${idx + 1}`} className="w-full h-24 object-cover rounded-xl border border-gray-200" />
+                                        <div key={idx} className="relative h-24 rounded-xl overflow-hidden border border-gray-200">
+                                          <Image src={imgUrl} alt={`Additional ${idx + 1}`} fill sizes="150px" className="object-cover" />
+                                        </div>
                                       ))}
                                     </div>
                                   </div>
@@ -2921,58 +2441,10 @@ export default function AgentDashboardPage() {
                     )}
 
                   {/* Dates Section */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span>
-                        {new Date(selectedOrder.createdAt).toLocaleDateString(
-                          "mn-MN",
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          },
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                      <span>
-                        {new Date(selectedOrder.updatedAt).toLocaleDateString(
-                          "mn-MN",
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          },
-                        )}
-                      </span>
-                    </div>
-                  </div>
+                  <OrderDates
+                    createdAt={selectedOrder.createdAt}
+                    updatedAt={selectedOrder.updatedAt}
+                  />
 
                   {/* Action Buttons */}
                   <div className="space-y-3 pt-2">
@@ -3220,93 +2692,19 @@ export default function AgentDashboardPage() {
         </div>
       )}
 
-      {/* Cancel Order Modal - Requires reason */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl border border-gray-200 max-w-md w-full shadow-2xl">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                  <svg
-                    className="w-6 h-6 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Захиалга цуцлах
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Цуцлах шалтгаанаа бичнэ үү
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Шалтгаан <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Захиалга цуцлах шалтгаанаа дэлгэрэнгүй бичнэ үү..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
-                  rows={4}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Хамгийн багадаа 5 тэмдэгт ({cancelReason.length}/5)
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowCancelModal(false);
-                    setCancelOrderId(null);
-                    setCancelReason("");
-                  }}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
-                >
-                  Буцах
-                </button>
-                <button
-                  onClick={handleCancelWithReason}
-                  disabled={cancelLoading || cancelReason.trim().length < 5}
-                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {cancelLoading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  )}
-                  {cancelLoading ? "Цуцлаж байна..." : "Цуцлах"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Cancel Order Modal */}
+      <CancelOrderModal
+        isOpen={showCancelModal}
+        cancelReason={cancelReason}
+        cancelLoading={cancelLoading}
+        onReasonChange={setCancelReason}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setCancelOrderId(null);
+          setCancelReason("");
+        }}
+        onConfirm={handleCancelWithReason}
+      />
     </div>
   );
 }
