@@ -19,6 +19,7 @@ import agentRoutes from "./routes/agentRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import bundleOrderRoutes from "./routes/bundleOrderRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
+import { initCronJobs } from "./services/cronService";
 
 const app = express();
 
@@ -85,6 +86,9 @@ app.use(errorHandler);
 connectDB()
   .then(() => {
     console.log("✅ MongoDB connected");
+
+    // Initialize cron jobs for email processing and notifications
+    initCronJobs();
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
