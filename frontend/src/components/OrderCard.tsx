@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Order } from "@/lib/api";
 
 interface OrderCardProps {
@@ -242,11 +242,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       <div className="flex gap-4">
         {/* Thumbnail */}
         {mainImage && (
-          <div className="w-20 h-20 shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-            <img
+          <div className="w-20 h-20 shrink-0 bg-gray-100 rounded-xl overflow-hidden relative">
+            <Image
               src={mainImage}
               alt={order.productName}
-              className="w-full h-full object-cover"
+              fill
+              sizes="80px"
+              className="object-cover"
             />
           </div>
         )}

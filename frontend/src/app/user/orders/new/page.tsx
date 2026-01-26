@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApiClient } from "@/lib/useApiClient";
@@ -24,6 +24,53 @@ export default function NewOrderPage() {
     { id: getNextId(), productName: "", description: "", imageUrls: [] },
   ]);
   const [imagePreviews, setImagePreviews] = useState<string[][]>([[]]); // Array of arrays - each product can have up to 3 images
+
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    return orders.some(
+      (order) =>
+        (order.productName ?? "").trim() !== "" ||
+        (order.description ?? "").trim() !== "" ||
+        (order.imageUrls && order.imageUrls.length > 0)
+    );
+  }, [orders]);
+
+  // Warn user before leaving if there are unsaved changes (tab close, refresh)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Warn user on browser back button
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    // Push a dummy state to history so we can intercept back
+    window.history.pushState({ formGuard: true }, "");
+
+    const handlePopState = () => {
+      const confirmed = window.confirm(
+        "Хадгалаагүй өөрчлөлт байна. Гарахдаа итгэлтэй байна уу?"
+      );
+      if (confirmed) {
+        // Allow navigation - go back again
+        window.history.back();
+      } else {
+        // Stay on page - push state again
+        window.history.pushState({ formGuard: true }, "");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [hasUnsavedChanges]);
 
   const handleImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
