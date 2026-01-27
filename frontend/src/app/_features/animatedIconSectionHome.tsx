@@ -3,25 +3,46 @@ import { AnimatedIconsHome } from "../_components/animatedIconsHome";
 export const AnimatedIconsSection = () => {
   return (
     <>
-      {/* Mobile icons - only top area, hidden on very small screens to avoid overlap */}
+      {/* Mobile icons - top area (4 icons) */}
       <AnimatedIconsHome
-        classname="absolute top-[3%] left-[2%] scale-50 sm:scale-75 md:scale-100"
+        classname="absolute top-[2%] left-[3%] scale-50 sm:scale-75 md:scale-100"
         style="float-1 10s ease-in-out infinite"
         imgURL="/taobao.png"
       />
       <AnimatedIconsHome
-        classname="absolute top-[5%] right-[2%] scale-50 sm:scale-75 md:scale-100"
+        classname="absolute top-[8%] left-[30%] scale-50 sm:scale-75 md:scale-100"
+        style="float-2 7s ease-in-out infinite"
+        imgURL="/pinduoduo-stock-e-commerce-1609177441009.webp"
+      />
+      <AnimatedIconsHome
+        classname="absolute top-[3%] right-[25%] scale-50 sm:scale-75 md:scale-100"
+        style="float-3 9s ease-in-out infinite"
+        imgURL="/alibaba.png"
+      />
+      <AnimatedIconsHome
+        classname="absolute top-[6%] right-[3%] scale-50 sm:scale-75 md:scale-100"
         style="float-4 8s ease-in-out infinite"
         imgURL="/Dewu-Poizon-E-Commerce-1024x576.jpg"
       />
-      {/* Bottom icons - only visible on sm+ screens */}
+
+      {/* Mobile icons - bottom area (4 icons) */}
       <AnimatedIconsHome
-        classname="absolute top-[75%] left-[5%] hidden sm:block sm:scale-75 md:scale-100"
+        classname="absolute top-[80%] left-[3%] scale-50 sm:scale-75 md:scale-100"
         style="float-5 6.5s ease-in-out infinite"
         imgURL="/alibaba.png"
       />
       <AnimatedIconsHome
-        classname="absolute top-[80%] right-[3%] hidden sm:block sm:scale-75 md:scale-100"
+        classname="absolute top-[85%] left-[28%] scale-50 sm:scale-75 md:scale-100"
+        style="float-1 8s ease-in-out infinite"
+        imgURL="/taobao.png"
+      />
+      <AnimatedIconsHome
+        classname="absolute top-[82%] right-[25%] scale-50 sm:scale-75 md:scale-100"
+        style="float-4 7s ease-in-out infinite"
+        imgURL="/Dewu-Poizon-E-Commerce-1024x576.jpg"
+      />
+      <AnimatedIconsHome
+        classname="absolute top-[87%] right-[3%] scale-50 sm:scale-75 md:scale-100"
         style="float-3 5s ease-in-out infinite"
         imgURL="/pinduoduo-stock-e-commerce-1609177441009.webp"
       />

@@ -6,6 +6,7 @@ export interface ICargo extends Document {
   phone?: string;
   location?: string;
   website?: string;
+  facebook?: string;
   imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -32,6 +33,10 @@ const CargoSchema = new Schema<ICargo>(
       trim: true,
     },
     website: {
+      type: String,
+      trim: true,
+    },
+    facebook: {
       type: String,
       trim: true,
     },

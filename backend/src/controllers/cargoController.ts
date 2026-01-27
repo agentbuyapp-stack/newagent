@@ -36,7 +36,7 @@ export const getAdminCargos = async (_req: Request, res: Response): Promise<void
 
 export const createCargo = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, phone, location, website, imageUrl } = req.body;
+    const { name, description, phone, location, website, facebook, imageUrl } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       res.status(400).json({ error: "Name is required" });
@@ -49,6 +49,7 @@ export const createCargo = async (req: Request, res: Response): Promise<void> =>
       phone: phone ? phone.trim() : undefined,
       location: location ? location.trim() : undefined,
       website: website ? website.trim() : undefined,
+      facebook: facebook ? facebook.trim() : undefined,
       imageUrl: imageUrl ? imageUrl.trim() : undefined,
     });
 
@@ -69,7 +70,7 @@ export const createCargo = async (req: Request, res: Response): Promise<void> =>
 export const updateCargo = async (req: Request, res: Response): Promise<void> => {
   try {
     const cargoId = req.params.id;
-    const { name, description, phone, location, website, imageUrl } = req.body;
+    const { name, description, phone, location, website, facebook, imageUrl } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(cargoId)) {
       res.status(400).json({ error: "Invalid cargo ID" });
@@ -97,6 +98,9 @@ export const updateCargo = async (req: Request, res: Response): Promise<void> =>
     }
     if (website !== undefined) {
       updateData.website = website ? website.trim() : undefined;
+    }
+    if (facebook !== undefined) {
+      updateData.facebook = facebook ? facebook.trim() : undefined;
     }
     if (imageUrl !== undefined) {
       updateData.imageUrl = imageUrl ? imageUrl.trim() : undefined;
