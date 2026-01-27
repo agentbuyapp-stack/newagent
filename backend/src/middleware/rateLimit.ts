@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 // Ерөнхий API rate limiter
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100, // 15 минутад 100 хүсэлт
+  max: 500, // 15 минутад 500 хүсэлт
   message: { error: "Хэт олон хүсэлт илгээлээ. Түр хүлээнэ үү." },
   standardHeaders: true,
   legacyHeaders: false,
