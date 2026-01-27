@@ -46,15 +46,12 @@ export const sendMessageSchema = z.object({
 
 // ============ Agent Report Schemas ============
 export const agentReportSchema = z.object({
-  products: z.array(z.object({
-    productName: z.string().min(1, "Барааны нэр шаардлагатай"),
-    productUrl: z.string().url("URL буруу байна").optional().or(z.literal("")),
-    productImageUrl: z.string().optional(),
-    quantity: z.number().min(1, "Тоо ширхэг 1-ээс их байх ёстой"),
-    unitPriceYuan: z.number().min(0, "Үнэ 0-ээс их байх ёстой"),
-  })).min(1, "Хамгийн багадаа 1 бараа байх ёстой"),
-  domesticShippingYuan: z.number().min(0).optional().default(0),
-  note: z.string().max(1000).optional(),
+  userAmount: z.number().min(1, "Юань дүн 0-ээс их байх ёстой"),
+  paymentLink: z.string().optional(),
+  additionalImages: z.array(z.string()).max(3).optional(),
+  additionalDescription: z.string().max(2000).optional(),
+  quantity: z.number().min(1).optional(),
+  editReason: z.string().max(500).optional(),
 });
 
 // ============ Bundle Order Schemas ============
