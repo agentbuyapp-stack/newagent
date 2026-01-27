@@ -18,6 +18,7 @@ import { useApiClient } from "@/lib/useApiClient";
 
 import NewOrderForm from "@/components/dashboard/NewOrderForm";
 import OrderHistorySection from "@/components/dashboard/OrderHistorySection";
+import ProfileForm from "@/components/ProfileForm";
 
 // Lazy load modals - only loaded when needed
 const ChatModal = dynamic(() => import("@/components/ChatModal"), { ssr: false });
@@ -35,8 +36,7 @@ export default function UserDashboardPage() {
   const [agents, setAgents] = useState<PublicAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [, setShowProfileForm] = useState(false);
-  const [, setShowProfileSection] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [showNewOrderSection, setShowNewOrderSection] = useState(true);
   const [showCargos, setShowCargos] = useState(false);
@@ -79,17 +79,6 @@ export default function UserDashboardPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  // Auto-open profile section and form if profile is incomplete or doesn't exist
-  useEffect(() => {
-    if (!loading && user) {
-      const isComplete =
-        profile && profile.name && profile.phone && profile.cargo;
-      if (!profile || !isComplete) {
-        setShowProfileSection(true);
-        setShowProfileForm(true);
-      }
-    }
-  }, [profile, loading, user]);
 
   useEffect(() => {
     if (isLoaded && !clerkUser) {
@@ -224,10 +213,9 @@ export default function UserDashboardPage() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProfileSuccess = async () => {
     await loadData();
-    setShowProfileForm(false);
+    setShowProfileModal(false);
   };
 
   const handleOrderSuccess = async () => {
@@ -543,40 +531,44 @@ export default function UserDashboardPage() {
     <div className="min-h-screen bg-linear-to-br from-[#E8F5FF] via-[#F5F9FF] to-[#EEF2FF]">
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* Order Section - Only show if profile is complete */}
-          {isProfileComplete ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-              {/* Box 1: Омнох захиалгууд */}
-
-              {/* Box 2: Шинэ захиалга үүсгэх */}
-              <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
-                <div
-                  className="flex items-center justify-between cursor-pointer"
-                  onClick={() => setShowNewOrderSection(!showNewOrderSection)}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20">
-                      <svg
-                        className="w-4 h-4 sm:w-5 sm:h-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                        Шинэ захиалга үүсгэх
-                      </h3>
-                      <p className="text-xs text-gray-500">Бараа захиалах</p>
-                    </div>
+          {/* Order Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+            {/* Box 1: Шинэ захиалга үүсгэх */}
+            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => {
+                  if (isProfileComplete) {
+                    setShowNewOrderSection(!showNewOrderSection);
+                  } else {
+                    setShowProfileModal(true);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20">
+                    <svg
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
                   </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                      Шинэ захиалга үүсгэх
+                    </h3>
+                    <p className="text-xs text-gray-500">Бараа захиалах</p>
+                  </div>
+                </div>
+                {isProfileComplete && (
                   <svg
                     className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showNewOrderSection ? "rotate-180" : ""}`}
                     fill="none"
@@ -590,14 +582,17 @@ export default function UserDashboardPage() {
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                </div>
+                )}
+              </div>
 
-                {/* Use CSS to hide instead of unmount to preserve form state */}
+              {/* Show order form only if profile is complete */}
+              {isProfileComplete && (
                 <div className={`mt-4 ${showNewOrderSection ? "" : "hidden"}`}>
                   <NewOrderForm onSuccess={handleOrderSuccess} />
                 </div>
-              </div>
-              <OrderHistorySection
+              )}
+            </div>
+            <OrderHistorySection
                 orders={orders.filter((o) => !o.archivedByUser)}
                 bundleOrders={bundleOrders}
                 archivedOrders={orders.filter((o) => o.archivedByUser)}
@@ -933,16 +928,35 @@ export default function UserDashboardPage() {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-sm text-yellow-800">
-                Захиалга үүсгэхийн тулд эхлээд профайлаа бүрэн бөглөнө үү (Нэр,
-                Утас, Ачаа).
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
       </main>
+
+      {/* Profile Modal - Opens when user clicks "Захиалга үүсгэх" without complete profile */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Профайл бөглөх
+                </h2>
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Захиалга үүсгэхийн тулд эхлээд профайлаа бүрэн бөглөнө үү.
+              </p>
+              <ProfileForm profile={profile} onSuccess={handleProfileSuccess} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Detail Modal */}
       {showOrderModal &&

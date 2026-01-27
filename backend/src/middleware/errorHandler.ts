@@ -16,8 +16,8 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   const statusCode = err instanceof AppError ? err.statusCode : 500;
   const message = err.message || "Internal server error";
 
@@ -33,4 +33,3 @@ export const errorHandler = (
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
-

@@ -3,14 +3,16 @@ import { Profile } from "../models";
 import { validateEmail, validatePhone } from "../utils/validation";
 import mongoose from "mongoose";
 
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
     }
 
     const profile = await Profile.findOne({
@@ -18,7 +20,8 @@ export const getProfile = async (req: Request, res: Response) => {
     }).lean();
 
     if (!profile) {
-      return res.status(404).json({ error: "Profile not found" });
+      res.status(404).json({ error: "Profile not found" });
+      return;
     }
 
     res.json({
@@ -32,37 +35,44 @@ export const getProfile = async (req: Request, res: Response) => {
   }
 };
 
-export const updateProfile = async (req: Request, res: Response) => {
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const { name, phone, email, cargo, accountNumber } = req.body;
 
     // Validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Name is required and must be a non-empty string" });
+      res.status(400).json({ error: "Name is required and must be a non-empty string" });
+      return;
     }
 
     if (!phone || typeof phone !== "string") {
-      return res.status(400).json({ error: "Phone is required" });
+      res.status(400).json({ error: "Phone is required" });
+      return;
     }
 
     if (!validatePhone(phone)) {
-      return res.status(400).json({ error: "Invalid phone number format" });
+      res.status(400).json({ error: "Invalid phone number format" });
+      return;
     }
 
     if (!email || typeof email !== "string") {
-      return res.status(400).json({ error: "Email is required" });
+      res.status(400).json({ error: "Email is required" });
+      return;
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json({ error: "Invalid email format" });
+      res.status(400).json({ error: "Invalid email format" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
     }
 
     const userId = new mongoose.Types.ObjectId(req.user.id);
@@ -94,4 +104,3 @@ export const updateProfile = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

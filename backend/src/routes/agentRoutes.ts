@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerAsAgent, createRewardRequest, getMyRewardRequests, getPublicAgents } from "../controllers/agentController";
+import { createRewardRequest, getMyRewardRequests, getPublicAgents } from "../controllers/agentController";
 import { requireRole } from "../middleware/requireRole";
 
 const router = Router();
@@ -15,4 +15,3 @@ router.get("/reward-requests", requireRole("agent"), getMyRewardRequests);
 router.post("/reward-request", requireRole("agent"), createRewardRequest);
 
 export default router;
-

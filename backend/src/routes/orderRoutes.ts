@@ -11,21 +11,24 @@ import {
 } from "../controllers/orderController";
 import { getAgentReport, createAgentReport, updateAgentReport } from "../controllers/agentReportController";
 import { requireRole } from "../middleware/requireRole";
+import { validate, validateParams } from "../middleware/validate";
+import { createOrderSchema, updateOrderStatusSchema, mongoIdSchema, agentReportSchema } from "../schemas";
+import { orderLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
 // All order routes require authentication
 router.get("/", requireRole(["user", "agent", "admin"]), getOrders);
-router.get("/:id", requireRole(["user", "agent", "admin"]), getOrder);
-router.post("/", requireRole(["user", "agent", "admin"]), createOrder);
-router.put("/:id/status", requireRole(["agent", "admin"]), updateOrderStatus);
-router.put("/:id/track-code", requireRole(["agent", "admin"]), updateTrackCode);
-router.put("/:id/user-payment-confirmed", requireRole("user"), confirmUserPayment);
-router.get("/:id/report", requireRole(["user", "agent", "admin"]), getAgentReport);
-router.post("/:id/report", requireRole(["agent", "admin"]), createAgentReport);
-router.put("/:id/report", requireRole(["agent", "admin"]), updateAgentReport);
-router.delete("/:id", requireRole(["user", "agent", "admin"]), deleteOrder);
-router.put("/:id/archive", requireRole(["user", "agent", "admin"]), archiveOrder);
+router.get("/:id", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getOrder);
+router.post("/", requireRole(["user", "agent", "admin"]), orderLimiter, validate(createOrderSchema), createOrder);
+router.put("/:id/status", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), validate(updateOrderStatusSchema), updateOrderStatus);
+router.put("/:id/track-code", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), updateTrackCode);
+router.put("/:id/user-payment-confirmed", requireRole("user"), validateParams(mongoIdSchema), confirmUserPayment);
+router.get("/:id/report", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getAgentReport);
+router.post("/:id/report", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), validate(agentReportSchema), createAgentReport);
+router.put("/:id/report", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), validate(agentReportSchema), updateAgentReport);
+router.delete("/:id", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), deleteOrder);
+router.put("/:id/archive", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), archiveOrder);
 
 export default router;
 

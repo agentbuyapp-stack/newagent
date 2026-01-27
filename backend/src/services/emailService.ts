@@ -257,8 +257,8 @@ const emailWrapper = (content: string, title: string) => `
 
 // Email templates
 export const emailTemplates = {
-  agentReportSent: (orderId: string, productName: string) => ({
-    subject: "📋 Таны захиалгад тайлан ирлээ - Agentbuy",
+  agentReportSent: (_orderId: string, productName: string) => ({
+    subject: "Taны захиалгад тайлан ирлээ - Agentbuy",
     body: `Сайн байна уу,\n\nТаны "${productName}" захиалгад agent тайлан илгээлээ.\n\nДэлгэрэнгүйг agentbuy.mn сайтаас харна уу.`,
     html: emailWrapper(`
       <h2 style="margin: 0 0 20px; color: #111827; font-size: 22px;">Таны захиалгад тайлан ирлээ</h2>
@@ -276,8 +276,8 @@ export const emailTemplates = {
     `, "Тайлан ирлээ"),
   }),
 
-  agentCancelledOrder: (orderId: string, productName: string) => ({
-    subject: "❌ Захиалга цуцлагдлаа - Agentbuy",
+  agentCancelledOrder: (_orderId: string, productName: string) => ({
+    subject: "Захиалга цуцлагдлаа - Agentbuy",
     body: `Сайн байна уу,\n\nТаны "${productName}" захиалгыг agent цуцаллаа.\n\nДэлгэрэнгүйг agentbuy.mn сайтаас харна уу.`,
     html: emailWrapper(`
       <h2 style="margin: 0 0 20px; color: #dc2626; font-size: 22px;">Захиалга цуцлагдлаа</h2>
@@ -296,8 +296,8 @@ export const emailTemplates = {
     `, "Захиалга цуцлагдлаа"),
   }),
 
-  adminCancelledOrder: (orderId: string, productName: string) => ({
-    subject: "❌ Захиалга цуцлагдлаа (Админ) - Agentbuy",
+  adminCancelledOrder: (_orderId: string, productName: string) => ({
+    subject: "Захиалга цуцлагдлаа (Админ) - Agentbuy",
     body: `Сайн байна уу,\n\nТаны "${productName}" захиалгыг админ цуцаллаа.\n\nДэлгэрэнгүйг agentbuy.mn сайтаас харна уу.`,
     html: emailWrapper(`
       <h2 style="margin: 0 0 20px; color: #dc2626; font-size: 22px;">Захиалга цуцлагдлаа</h2>
@@ -316,8 +316,8 @@ export const emailTemplates = {
     `, "Захиалга цуцлагдлаа"),
   }),
 
-  trackCodeAdded: (orderId: string, productName: string, trackCode: string) => ({
-    subject: "📦 Track код оруулагдлаа - Agentbuy",
+  trackCodeAdded: (_orderId: string, productName: string, trackCode: string) => ({
+    subject: "Track код оруулагдлаа - Agentbuy",
     body: `Сайн байна уу,\n\nТаны "${productName}" захиалгад track код оруулагдлаа.\n\nTrack код: ${trackCode}`,
     html: emailWrapper(`
       <h2 style="margin: 0 0 20px; color: #059669; font-size: 22px;">Track код оруулагдлаа</h2>
@@ -341,11 +341,11 @@ export const emailTemplates = {
     `, "Track код"),
   }),
 
-  newOrderAvailable: (orderId: string, productName: string, amount: number, expiresInMinutes: number) => ({
-    subject: "🔔 Шинэ захиалга байна! - Agentbuy",
+  newOrderAvailable: (_orderId: string, productName: string, _amount: number, _expiresInMinutes: number) => ({
+    subject: "Шинэ захиалга байна! - Agentbuy",
     body: `Сайн байна уу,\n\nШинэ захиалга байна!\n\nБараа: ${productName}\n\nСистемд нэвтэрч захиалгыг авна уу.`,
     html: emailWrapper(`
-      <h2 style="margin: 0 0 20px; color: #f59e0b; font-size: 22px;">🔔 Шинэ захиалга байна!</h2>
+      <h2 style="margin: 0 0 20px; color: #f59e0b; font-size: 22px;">Шинэ захиалга байна!</h2>
       <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Шинэ захиалга ирлээ. Одоо авах боломжтой!</p>
       <table style="width: 100%; background-color: #fffbeb; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #fcd34d;">
@@ -360,11 +360,11 @@ export const emailTemplates = {
     `, "Шинэ захиалга"),
   }),
 
-  paymentVerified: (orderId: string, productName: string, amount: number) => ({
-    subject: "✅ Төлбөр баталгаажлаа - Agentbuy",
+  paymentVerified: (_orderId: string, productName: string, amount: number) => ({
+    subject: "Төлбөр баталгаажлаа - Agentbuy",
     body: `Сайн байна уу,\n\n"${productName}" захиалгын төлбөр баталгаажлаа.\n\nДүн: ¥${amount}`,
     html: emailWrapper(`
-      <h2 style="margin: 0 0 20px; color: #059669; font-size: 22px;">✅ Төлбөр баталгаажлаа</h2>
+      <h2 style="margin: 0 0 20px; color: #059669; font-size: 22px;">Төлбөр баталгаажлаа</h2>
       <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Захиалгын төлбөр амжилттай баталгаажлаа.</p>
       <table style="width: 100%; background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #a7f3d0;">
@@ -385,11 +385,11 @@ export const emailTemplates = {
     `, "Төлбөр баталгаажлаа"),
   }),
 
-  paymentVerificationRequest: (orderId: string, productName: string, userName: string) => ({
-    subject: "💳 Төлбөр баталгаажуулах хүсэлт - Agentbuy",
+  paymentVerificationRequest: (_orderId: string, productName: string, userName: string) => ({
+    subject: "Төлбөр баталгаажуулах хүсэлт - Agentbuy",
     body: `Сайн байна уу,\n\n${userName} хэрэглэгч "${productName}" захиалгын төлбөр баталгаажуулах хүсэлт илгээлээ.\n\nСистемд нэвтэрч шалгана уу.`,
     html: emailWrapper(`
-      <h2 style="margin: 0 0 20px; color: #7c3aed; font-size: 22px;">💳 Төлбөр баталгаажуулах хүсэлт</h2>
+      <h2 style="margin: 0 0 20px; color: #7c3aed; font-size: 22px;">Төлбөр баталгаажуулах хүсэлт</h2>
       <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Хэрэглэгч төлбөр баталгаажуулах хүсэлт илгээлээ.</p>
       <table style="width: 100%; background-color: #f5f3ff; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #c4b5fd;">
@@ -411,10 +411,10 @@ export const emailTemplates = {
   }),
 
   rewardRequest: (agentName: string, amount: number) => ({
-    subject: "🎁 Урамшууллын оноо татах хүсэлт - Agentbuy",
+    subject: "Урамшууллын оноо татах хүсэлт - Agentbuy",
     body: `Сайн байна уу,\n\n${agentName} agent ${amount.toLocaleString()} ₮ оноо татах хүсэлт илгээлээ.\n\nСистемд нэвтэрч шалгана уу.`,
     html: emailWrapper(`
-      <h2 style="margin: 0 0 20px; color: #7c3aed; font-size: 22px;">🎁 Урамшууллын оноо татах хүсэлт</h2>
+      <h2 style="margin: 0 0 20px; color: #7c3aed; font-size: 22px;">Урамшууллын оноо татах хүсэлт</h2>
       <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
       <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Agent урамшууллын оноо татах хүсэлт илгээлээ.</p>
       <table style="width: 100%; background-color: #f5f3ff; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #c4b5fd;">

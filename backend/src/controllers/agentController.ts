@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import { notifyAdminRewardRequest } from "../services/notificationService";
 
 // Public endpoint - get all approved agents with stats
-export const getPublicAgents = async (req: Request, res: Response) => {
+export const getPublicAgents = async (_req: Request, res: Response): Promise<void> => {
   try {
     // Get all approved agents
     const agents = await User.find({ role: "agent", isApproved: true })
@@ -12,7 +12,8 @@ export const getPublicAgents = async (req: Request, res: Response) => {
       .lean();
 
     if (agents.length === 0) {
-      return res.json([]);
+      res.json([]);
+      return;
     }
 
     const agentIds = agents.map(a => a._id);
@@ -68,14 +69,16 @@ export const getPublicAgents = async (req: Request, res: Response) => {
   }
 };
 
-export const registerAsAgent = async (req: Request, res: Response) => {
+export const registerAsAgent = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
     }
 
     const user = await User.findByIdAndUpdate(
@@ -85,7 +88,8 @@ export const registerAsAgent = async (req: Request, res: Response) => {
     ).lean();
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     res.json({
@@ -98,14 +102,16 @@ export const registerAsAgent = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyRewardRequests = async (req: Request, res: Response) => {
+export const getMyRewardRequests = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
     }
 
     // Get all reward requests for this agent
@@ -126,26 +132,30 @@ export const getMyRewardRequests = async (req: Request, res: Response) => {
   }
 };
 
-export const createRewardRequest = async (req: Request, res: Response) => {
+export const createRewardRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
     }
 
     // Get user's current points
     const user = await User.findById(req.user.id).lean();
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     const agentPoints = user.agentPoints || 0;
 
     if (agentPoints <= 0) {
-      return res.status(400).json({ error: "Insufficient points" });
+      res.status(400).json({ error: "Insufficient points" });
+      return;
     }
 
     // Create reward request with all available points
@@ -180,4 +190,3 @@ export const createRewardRequest = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

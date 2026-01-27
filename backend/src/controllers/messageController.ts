@@ -3,38 +3,41 @@ import { Message, Order, BundleOrder } from "../models";
 import { uploadImageToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
 
-export const getMessages = async (req: Request, res: Response) => {
+export const getMessages = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const orderId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
     }
 
     // Check if user has access to this order (try Order first, then BundleOrder)
     let order: { userId: mongoose.Types.ObjectId; agentId?: mongoose.Types.ObjectId } | null = await Order.findById(orderId).lean();
-    let isBundleOrder = false;
 
     if (!order) {
       // Try finding as BundleOrder
       order = await BundleOrder.findById(orderId).lean();
-      isBundleOrder = true;
     }
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      res.status(404).json({ error: "Order not found" });
+      return;
     }
 
     // User can only see messages for their own orders, agents/admins can see all
     if (req.user.role === "user") {
       if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
+        res.status(400).json({ error: "Invalid user ID" });
+        return;
       }
       if (order.userId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
+        res.status(403).json({ error: "Forbidden" });
+        return;
       }
     }
 
@@ -58,41 +61,44 @@ export const getMessages = async (req: Request, res: Response) => {
   }
 };
 
-export const sendMessage = async (req: Request, res: Response) => {
+export const sendMessage = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const orderId = req.params.id;
     let { text, imageUrl } = req.body;
 
     if (!text && !imageUrl) {
-      return res.status(400).json({ error: "Text or image is required" });
+      res.status(400).json({ error: "Text or image is required" });
+      return;
     }
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
     }
 
     // Check if user has access to this order (try Order first, then BundleOrder)
     let order: { userId: any; agentId?: any; status?: string } | null = await Order.findById(orderId).lean();
-    let isBundleOrder = false;
 
     if (!order) {
       // Try finding as BundleOrder
       order = await BundleOrder.findById(orderId).lean();
-      isBundleOrder = true;
     }
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      res.status(404).json({ error: "Order not found" });
+      return;
     }
 
     // User can only send messages for their own orders
     if (req.user.role === "user") {
       if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
+        res.status(400).json({ error: "Invalid user ID" });
+        return;
       }
       // Extract userId from order - handle both ObjectId and populated object
       let orderUserId: string = '';
@@ -107,7 +113,8 @@ export const sendMessage = async (req: Request, res: Response) => {
       }
 
       if (orderUserId !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
+        res.status(403).json({ error: "Forbidden" });
+        return;
       }
     }
 
@@ -133,7 +140,8 @@ export const sendMessage = async (req: Request, res: Response) => {
       // 1. Order has no agent assigned (open order - status = "niitlegdsen")
       // 2. Order is assigned to this agent
       if (orderAgentId && orderAgentId !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden: You can only send messages to orders assigned to you" });
+        res.status(403).json({ error: "Forbidden: You can only send messages to orders assigned to you" });
+        return;
       }
     }
 
@@ -144,7 +152,8 @@ export const sendMessage = async (req: Request, res: Response) => {
         imageUrl = uploadResult.url;
       } catch (uploadError: any) {
         console.error("Image upload error:", uploadError.message);
-        return res.status(500).json({ error: "Failed to upload image" });
+        res.status(500).json({ error: "Failed to upload image" });
+        return;
       }
     }
 
@@ -169,4 +178,3 @@ export const sendMessage = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

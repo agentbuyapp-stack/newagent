@@ -4,31 +4,36 @@ import { uploadImageToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
 import { notifyUserAgentReportSent } from "../services/notificationService";
 
-export const getAgentReport = async (req: Request, res: Response) => {
+export const getAgentReport = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const orderId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
     }
 
     // Check if user has access to this order
     const order = await Order.findById(orderId).lean();
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      res.status(404).json({ error: "Order not found" });
+      return;
     }
 
     // User can only see reports for their own orders, agents/admins can see all
     if (req.user.role === "user") {
       if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
+        res.status(400).json({ error: "Invalid user ID" });
+        return;
       }
       if (order.userId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
+        res.status(403).json({ error: "Forbidden" });
+        return;
       }
     }
 
@@ -37,7 +42,8 @@ export const getAgentReport = async (req: Request, res: Response) => {
     }).lean();
 
     if (!report) {
-      return res.json(null);
+      res.json(null);
+      return;
     }
 
     res.json({
@@ -51,37 +57,43 @@ export const getAgentReport = async (req: Request, res: Response) => {
   }
 };
 
-export const createAgentReport = async (req: Request, res: Response) => {
+export const createAgentReport = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const orderId = req.params.id;
     const { userAmount, paymentLink, additionalImages, additionalDescription, quantity } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
     }
 
     if (!userAmount || typeof userAmount !== "number") {
-      return res.status(400).json({ error: "User amount is required" });
+      res.status(400).json({ error: "User amount is required" });
+      return;
     }
 
     // Check if user has access to this order
     const order = await Order.findById(orderId).lean();
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      res.status(404).json({ error: "Order not found" });
+      return;
     }
 
     // Only agents assigned to the order can create reports
     if (req.user.role === "agent") {
       if (!order.agentId || order.agentId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
+        res.status(403).json({ error: "Forbidden" });
+        return;
       }
     } else if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Forbidden" });
+      res.status(403).json({ error: "Forbidden" });
+      return;
     }
 
     // Upload additional images if provided
@@ -162,43 +174,50 @@ export const createAgentReport = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAgentReport = async (req: Request, res: Response) => {
+export const updateAgentReport = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
     }
 
     const orderId = req.params.id;
     const { userAmount, paymentLink, additionalDescription, quantity, editReason } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
     }
 
     // Check if user has access to this order
     const order = await Order.findById(orderId).lean();
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      res.status(404).json({ error: "Order not found" });
+      return;
     }
 
     // Only allow editing before user payment (status must be tolbor_huleej_bn or agent_sudlaj_bn)
     if (order.status !== "tolbor_huleej_bn" && order.status !== "agent_sudlaj_bn") {
-      return res.status(400).json({ error: "Хэрэглэгч төлбөр төлсний дараа тайлан засах боломжгүй" });
+      res.status(400).json({ error: "Хэрэглэгч төлбөр төлсний дараа тайлан засах боломжгүй" });
+      return;
     }
 
     // Check if user paid already
     if (order.userPaymentVerified) {
-      return res.status(400).json({ error: "Хэрэглэгч төлбөр төлсний дараа тайлан засах боломжгүй" });
+      res.status(400).json({ error: "Хэрэглэгч төлбөр төлсний дараа тайлан засах боломжгүй" });
+      return;
     }
 
     // Only agents assigned to the order or admins can edit reports
     if (req.user.role === "agent") {
       if (!order.agentId || order.agentId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
+        res.status(403).json({ error: "Forbidden" });
+        return;
       }
     } else if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Forbidden" });
+      res.status(403).json({ error: "Forbidden" });
+      return;
     }
 
     // Get existing report
@@ -207,7 +226,8 @@ export const updateAgentReport = async (req: Request, res: Response) => {
     });
 
     if (!existingReport) {
-      return res.status(404).json({ error: "Report not found" });
+      res.status(404).json({ error: "Report not found" });
+      return;
     }
 
     // Track edit history if amount changed
@@ -252,4 +272,3 @@ export const updateAgentReport = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

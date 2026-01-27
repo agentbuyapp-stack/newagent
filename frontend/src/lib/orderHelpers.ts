@@ -49,3 +49,32 @@ export const calculateUserPaymentAmount = (
   const userYuan = Math.ceil(agentAmount * 1.05); // 5% commission
   return Math.ceil(userYuan * exchangeRate);
 };
+
+// Format order date
+export const formatOrderDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Тодорхойгүй";
+    }
+    return date.toLocaleDateString("mn-MN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return "Тодорхойгүй";
+  }
+};
+
+// Validate product name
+export const isValidProductName = (name: string): boolean => {
+  const trimmed = name.trim();
+  return trimmed.length >= 3;
+};
+
+// Validate description
+export const isValidDescription = (description: string): boolean => {
+  const trimmed = description.trim();
+  return trimmed.length >= 10;
+};
