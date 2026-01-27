@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Cargo } from "../models";
 import mongoose from "mongoose";
 
-export const getCargos = async (req: Request, res: Response) => {
+export const getCargos = async (_req: Request, res: Response): Promise<void> => {
   try {
     const cargos = await Cargo.find({})
       .sort({ name: 1 })
@@ -18,7 +18,7 @@ export const getCargos = async (req: Request, res: Response) => {
   }
 };
 
-export const getAdminCargos = async (req: Request, res: Response) => {
+export const getAdminCargos = async (_req: Request, res: Response): Promise<void> => {
   try {
     const cargos = await Cargo.find({})
       .sort({ name: 1 })
@@ -34,12 +34,13 @@ export const getAdminCargos = async (req: Request, res: Response) => {
   }
 };
 
-export const createCargo = async (req: Request, res: Response) => {
+export const createCargo = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, description, phone, location, website, imageUrl } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Name is required" });
+      res.status(400).json({ error: "Name is required" });
+      return;
     }
 
     const cargo = await Cargo.create({
@@ -57,24 +58,27 @@ export const createCargo = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: "Cargo with this name already exists" });
+      res.status(409).json({ error: "Cargo with this name already exists" });
+      return;
     }
     console.error("Error in POST /admin/cargos:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const updateCargo = async (req: Request, res: Response) => {
+export const updateCargo = async (req: Request, res: Response): Promise<void> => {
   try {
     const cargoId = req.params.id;
     const { name, description, phone, location, website, imageUrl } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(cargoId)) {
-      return res.status(400).json({ error: "Invalid cargo ID" });
+      res.status(400).json({ error: "Invalid cargo ID" });
+      return;
     }
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Name is required" });
+      res.status(400).json({ error: "Name is required" });
+      return;
     }
 
     const updateData: Record<string, string | undefined> = {
@@ -105,7 +109,8 @@ export const updateCargo = async (req: Request, res: Response) => {
     ).lean();
 
     if (!cargo) {
-      return res.status(404).json({ error: "Cargo not found" });
+      res.status(404).json({ error: "Cargo not found" });
+      return;
     }
 
     res.json({
@@ -114,24 +119,27 @@ export const updateCargo = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: "Cargo with this name already exists" });
+      res.status(409).json({ error: "Cargo with this name already exists" });
+      return;
     }
     console.error("Error in PUT /admin/cargos/:id:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const deleteCargo = async (req: Request, res: Response) => {
+export const deleteCargo = async (req: Request, res: Response): Promise<void> => {
   try {
     const cargoId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(cargoId)) {
-      return res.status(400).json({ error: "Invalid cargo ID" });
+      res.status(400).json({ error: "Invalid cargo ID" });
+      return;
     }
 
     const cargo = await Cargo.findByIdAndDelete(cargoId);
 
     if (!cargo) {
-      return res.status(404).json({ error: "Cargo not found" });
+      res.status(404).json({ error: "Cargo not found" });
+      return;
     }
 
     res.json({ message: "Cargo deleted successfully" });
@@ -140,4 +148,3 @@ export const deleteCargo = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

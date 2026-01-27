@@ -1,9 +1,6 @@
 import { Router } from "express";
 import {
   getCargos,
-  createCargo,
-  updateCargo,
-  deleteCargo,
 } from "../controllers/cargoController";
 import { requireRole } from "../middleware/requireRole";
 
@@ -13,4 +10,3 @@ const router = Router();
 router.get("/", requireRole(["user", "agent", "admin"]), getCargos);
 
 export default router;
-

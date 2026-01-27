@@ -255,7 +255,7 @@ export const notifyAdminPaymentRequest = async (
 
 // Notify admin: Reward request
 export const notifyAdminRewardRequest = async (
-  agentId: mongoose.Types.ObjectId,
+  _agentId: mongoose.Types.ObjectId,
   agentName: string,
   amount: number
 ) => {
@@ -290,7 +290,7 @@ export const notifyAdminRewardRequest = async (
   );
 };
 
-// ============ New order notification to agents (Top 5 → Top 6-10 logic) ============
+// ============ New order notification to agents (Top 5 -> Top 6-10 logic) ============
 
 // Get top agents by order total amount (for new order notification)
 export const getTopAgentsByOrderAmount = async (

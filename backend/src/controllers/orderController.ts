@@ -1,850 +1,184 @@
 import { Request, Response } from "express";
-import { Order, User, Profile } from "../models";
-import { uploadImageToCloudinary } from "../utils/cloudinary";
-import { checkOrderLimits } from "../utils/orderLimits";
-import mongoose from "mongoose";
-import {
-  notifyAgentsNewOrder,
-  markOrderAssigned,
-  notifyUserAgentCancelled,
-  notifyUserAdminCancelled,
-  notifyUserTrackCodeAdded,
-  notifyAdminPaymentRequest,
-} from "../services/notificationService";
+import { orderService } from "../services/orderService";
 
-// Helper to format order with populated user/agent
-const formatOrder = (order: any) => {
-  try {
-    // Extract agentId - handle both ObjectId and populated object
-    let agentId: string | undefined = undefined;
-    if (order.agentId) {
-      if (typeof order.agentId === 'string') {
-        agentId = order.agentId;
-      } else if (order.agentId._id) {
-        agentId = order.agentId._id.toString();
-      } else if (order.agentId.id) {
-        agentId = order.agentId.id.toString();
-      } else if (order.agentId.toString) {
-        agentId = order.agentId.toString();
-      } else {
-        agentId = String(order.agentId);
-      }
-    }
-
-    // Extract userId - handle both ObjectId and populated object
-    let userId: string | undefined = undefined;
-    if (order.userId) {
-      if (typeof order.userId === 'string') {
-        userId = order.userId;
-      } else if (order.userId._id) {
-        userId = order.userId._id.toString();
-      } else if (order.userId.id) {
-        userId = order.userId.id.toString();
-      } else if (order.userId.toString) {
-        userId = order.userId.toString();
-      } else {
-        userId = String(order.userId);
-      }
-    }
-
-    return {
-      ...order,
-      id: order._id?.toString() || order.id,
-      userId: userId || order.userId,
-      agentId: agentId || order.agentId,
-      user: order.user && order.user._id ? {
-        ...order.user,
-        id: order.user._id.toString(),
-        profile: order.user.profile && order.user.profile._id ? {
-          ...order.user.profile,
-          id: order.user.profile._id.toString(),
-          userId: order.user.profile.userId?.toString() || order.user.profile.userId,
-        } : null,
-      } : null,
-      agent: order.agent && order.agent._id ? {
-        ...order.agent,
-        id: order.agent._id.toString(),
-        profile: order.agent.profile && order.agent.profile._id ? {
-          ...order.agent.profile,
-          id: order.agent.profile._id.toString(),
-          userId: order.agent.profile.userId?.toString() || order.agent.profile.userId,
-        } : null,
-      } : null,
-    };
-  } catch (formatError: any) {
-    console.error("Error formatting order:", formatError);
-    // Return basic order data if formatting fails
-    return {
-      ...order,
-      id: order._id?.toString() || order.id,
-      userId: order.userId?.toString() || order.userId,
-      agentId: order.agentId?.toString() || order.agentId,
-      user: null,
-      agent: null,
-    };
+/**
+ * GET /orders - Get all orders based on user role
+ */
+export const getOrders = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { orders, error } = await orderService.getOrders(req.user.id, req.user.role);
+
+  if (error) {
+    res.status(500).json({ error });
+    return;
+  }
+
+  res.json(orders);
 };
 
-export const getOrders = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    // Get user to check if agent is approved
-    const currentUser = await User.findById(req.user.id).lean();
-
-    // Build query based on role
-    let query: any = {};
-
-    if (req.user.role === "user") {
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      query.userId = new mongoose.Types.ObjectId(req.user.id);
-    } else if (req.user.role === "agent") {
-      // Agents can see:
-      // 1. Open orders (status = "niitlegdsen" and no agentId assigned)
-      // 2. Orders where they are the agent (agentId matches their ID)
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      const agentObjectId = new mongoose.Types.ObjectId(req.user.id);
-      query.$or = [
-        // Open orders (published but not assigned to any agent)
-        { status: "niitlegdsen", agentId: null },
-        { status: "niitlegdsen", agentId: { $exists: false } },
-        // Orders assigned to this agent
-        { agentId: agentObjectId }
-      ];
-    }
-    // Admins can see all orders (empty query)
-
-    const orders = await Order.find(query)
-      .populate("userId", null, User)
-      .populate("agentId", null, User)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // Debug logging for agents
-    if (req.user.role === "agent" && process.env.NODE_ENV === "development") {
-      console.log("Agent orders query result:", {
-        agentId: req.user.id,
-        query: query,
-        ordersCount: orders.length,
-        ordersWithAgentId: orders.filter(o => o.agentId).length,
-        sampleOrders: orders.slice(0, 3).map(o => ({
-          id: o._id.toString(),
-          agentId: o.agentId?.toString(),
-          status: o.status
-        }))
-      });
-    }
-
-    // Get all user IDs and agent IDs (handle both ObjectId and populated objects)
-    const extractUserId = (userId: any): string | null => {
-      if (!userId) return null;
-      if (typeof userId === 'string') return userId;
-      if (userId._id) return userId._id.toString();
-      if (userId.toString) return userId.toString();
-      return null;
-    };
-
-    const userIds = [...new Set(orders.map(o => extractUserId(o.userId)).filter(Boolean))] as string[];
-    const agentIds = [...new Set(orders.map(o => extractUserId(o.agentId)).filter(Boolean))] as string[];
-    const allUserIds = [...new Set([...userIds, ...agentIds])];
-
-    // Get profiles for all users
-    const profiles = allUserIds.length > 0
-      ? await Profile.find({ userId: { $in: allUserIds.map(id => new mongoose.Types.ObjectId(id)) } }).lean()
-      : [];
-    const profileMap = new Map(profiles.map(p => [p.userId.toString(), p]));
-
-    // Format orders with user/agent data
-    const formattedOrders = orders.map(order => {
-      const userIdStr = extractUserId(order.userId);
-      const agentIdStr = extractUserId(order.agentId);
-
-      // Build user object from populated data or just ID
-      let user = null;
-      if (userIdStr) {
-        const userProfile = profileMap.get(userIdStr) || null;
-        if (order.userId && typeof order.userId === 'object' && (order.userId as any)._id) {
-          // User was populated
-          const populatedUser = order.userId as any;
-          user = {
-            _id: populatedUser._id,
-            id: populatedUser._id.toString(),
-            email: populatedUser.email || '',
-            role: populatedUser.role || 'user',
-            isApproved: populatedUser.isApproved || false,
-            agentPoints: populatedUser.agentPoints || 0,
-            profile: userProfile ? {
-              ...userProfile,
-              id: userProfile._id.toString(),
-              userId: userProfile.userId.toString(),
-            } : null,
-          };
-        } else {
-          // User was not populated, create minimal object
-          user = {
-            _id: new mongoose.Types.ObjectId(userIdStr),
-            id: userIdStr,
-            email: '',
-            role: 'user',
-            isApproved: false,
-            agentPoints: 0,
-            profile: userProfile ? {
-              ...userProfile,
-              id: userProfile._id.toString(),
-              userId: userProfile.userId.toString(),
-            } : null,
-          };
-        }
-      }
-
-      // Build agent object from populated data or just ID
-      let agent = null;
-      if (agentIdStr) {
-        const agentProfile = profileMap.get(agentIdStr) || null;
-        if (order.agentId && typeof order.agentId === 'object' && (order.agentId as any)._id) {
-          // Agent was populated
-          const populatedAgent = order.agentId as any;
-          agent = {
-            _id: populatedAgent._id,
-            id: populatedAgent._id.toString(),
-            email: populatedAgent.email || '',
-            role: populatedAgent.role || 'agent',
-            isApproved: populatedAgent.isApproved || false,
-            agentPoints: populatedAgent.agentPoints || 0,
-            profile: agentProfile ? {
-              ...agentProfile,
-              id: agentProfile._id.toString(),
-              userId: agentProfile.userId.toString(),
-            } : null,
-          };
-        } else {
-          // Agent was not populated, create minimal object
-          agent = {
-            _id: new mongoose.Types.ObjectId(agentIdStr),
-            id: agentIdStr,
-            email: '',
-            role: 'agent',
-            isApproved: false,
-            agentPoints: 0,
-            profile: agentProfile ? {
-              ...agentProfile,
-              id: agentProfile._id.toString(),
-              userId: agentProfile.userId.toString(),
-            } : null,
-          };
-        }
-      }
-
-      return formatOrder({
-        ...order,
-        user,
-        agent,
-      });
-    });
-
-    res.json(formattedOrders);
-  } catch (error: any) {
-    console.error("Error in GET /orders:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-      name: error.name,
-      code: error.code,
-      user: req.user ? { id: req.user.id, role: req.user.role } : null,
-    });
-    res.status(500).json({
-      error: "Internal server error",
-      message: process.env.NODE_ENV === "development" ? error.message : undefined,
-      details: process.env.NODE_ENV === "development" ? {
-        name: error.name,
-        code: error.code,
-      } : undefined,
-    });
+/**
+ * GET /orders/:id - Get single order by ID
+ */
+export const getOrder = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { order, error, status } = await orderService.getOrder(
+    req.params.id,
+    req.user.id,
+    req.user.role
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(order);
 };
 
-export const getOrder = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    const orderId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    // Get user to check role
-    const currentUser = await User.findById(req.user.id).lean();
-
-    // Build query
-    let query: any = { _id: new mongoose.Types.ObjectId(orderId) };
-
-    if (req.user.role === "user") {
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      query.userId = new mongoose.Types.ObjectId(req.user.id);
-    } else if (req.user.role === "agent") {
-      // Agents can see:
-      // 1. Open orders (status = "niitlegdsen" and no agentId assigned)
-      // 2. Orders where they are the agent (agentId matches their ID)
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      const agentObjectId = new mongoose.Types.ObjectId(req.user.id);
-      const orderObjectId = new mongoose.Types.ObjectId(orderId);
-      query.$or = [
-        // Open orders (published but not assigned to any agent)
-        { _id: orderObjectId, status: "niitlegdsen", agentId: null },
-        { _id: orderObjectId, status: "niitlegdsen", agentId: { $exists: false } },
-        // Orders assigned to this agent
-        { _id: orderObjectId, agentId: agentObjectId }
-      ];
-    }
-    // Admins can see all orders
-
-    const order = await Order.findOne(query)
-      .populate("userId", null, User)
-      .populate("agentId", null, User)
-      .lean();
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    // Get profiles for user and agent - handle populated objects
-    const userId = typeof order.userId === 'object' && (order.userId as any)?._id
-      ? (order.userId as any)._id.toString()
-      : order.userId?.toString();
-    const agentId = typeof order.agentId === 'object' && (order.agentId as any)?._id
-      ? (order.agentId as any)._id.toString()
-      : order.agentId?.toString();
-    const allUserIds = [userId, agentId].filter(Boolean) as string[];
-
-    const profiles = await Profile.find({ userId: { $in: allUserIds.map(id => new mongoose.Types.ObjectId(id)) } }).lean();
-    const profileMap = new Map(profiles.map(p => [p.userId.toString(), p]));
-
-    const user = order.userId ? {
-      ...(typeof order.userId === 'object' ? order.userId : {}),
-      _id: typeof order.userId === 'object' ? (order.userId as any)._id : new mongoose.Types.ObjectId(String(order.userId)),
-      profile: profileMap.get(String(order.userId)) || null,
-    } : null;
-
-    const agent = order.agentId ? {
-      ...(typeof order.agentId === 'object' ? order.agentId : {}),
-      _id: typeof order.agentId === 'object' ? (order.agentId as any)._id : new mongoose.Types.ObjectId(String(order.agentId)),
-      profile: profileMap.get(String(order.agentId)) || null,
-    } : null;
-
-    res.json(formatOrder({
-      ...order,
-      user: user ? {
-        ...user,
-        id: user._id.toString(),
-        profile: user.profile ? {
-          ...user.profile,
-          id: user.profile._id.toString(),
-          userId: user.profile.userId.toString(),
-        } : null,
-      } : null,
-      agent: agent ? {
-        ...agent,
-        id: agent._id.toString(),
-        profile: agent.profile ? {
-          ...agent.profile,
-          id: agent.profile._id.toString(),
-          userId: agent.profile.userId.toString(),
-        } : null,
-      } : null,
-    }));
-  } catch (error) {
-    console.error("Error in GET /orders/:id:", error);
-    res.status(500).json({ error: "Internal server error" });
+/**
+ * POST /orders - Create new order
+ */
+export const createOrder = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { order, error, status } = await orderService.createOrder(
+    req.user.id,
+    req.user.role,
+    req.body
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.status(201).json(order);
 };
 
-export const createOrder = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    // Check order limits for users only
-    if (req.user.role === "user") {
-      const limitCheck = await checkOrderLimits(req.user.id);
-      if (!limitCheck.allowed) {
-        return res.status(429).json({ error: limitCheck.reason });
-      }
-    }
-
-    const { productName, description, imageUrl, imageUrls, products } = req.body;
-
-    // Support for multiple products in one order
-    if (products && Array.isArray(products) && products.length > 0) {
-      // Validate each product in array
-      for (const product of products) {
-        if (!product.productName || typeof product.productName !== "string" || product.productName.trim().length === 0) {
-          return res.status(400).json({ error: "Бараа бүр нэртэй байх ёстой" });
-        }
-        if (!product.description || typeof product.description !== "string" || product.description.trim().length === 0) {
-          return res.status(400).json({ error: "Бараа бүр тайлбартай байх ёстой" });
-        }
-      }
-
-      let allImageUrls: string[] = [];
-      const productDescriptions: string[] = [];
-
-      for (const product of products) {
-        if (product.productName && product.description) {
-          productDescriptions.push(`${product.productName}: ${product.description}`);
-        }
-        if (product.imageUrls && Array.isArray(product.imageUrls)) {
-          allImageUrls = [...allImageUrls, ...product.imageUrls.slice(0, 3)];
-        }
-      }
-
-      allImageUrls = allImageUrls.slice(0, 9);
-
-      // Upload images to Cloudinary
-      const finalImageUrls: string[] = [];
-      for (let i = 0; i < allImageUrls.length; i++) {
-        const img = allImageUrls[i];
-        if (typeof img === "string" && img.startsWith("data:image")) {
-          try {
-            const uploadResult = await uploadImageToCloudinary(img);
-            finalImageUrls.push(uploadResult.url);
-          } catch (uploadError: any) {
-            console.error(`Image ${i + 1} upload error:`, uploadError.message);
-          }
-        } else if (typeof img === "string") {
-          finalImageUrls.push(img);
-        }
-      }
-
-      const combinedProductName = products.map((p: any) => p.productName).filter(Boolean).join(", ");
-      const combinedDescription = productDescriptions.join("\n\n");
-
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        console.error("Invalid user ID:", req.user.id);
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-
-      try {
-        const order = await Order.create({
-          userId: new mongoose.Types.ObjectId(req.user.id),
-          productName: combinedProductName || "Олон бараа",
-          description: combinedDescription,
-          imageUrl: finalImageUrls[0] || undefined,
-          imageUrls: finalImageUrls,
-          status: "niitlegdsen",
-        });
-
-        // Notify top 5 agents about new order
-        notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
-          console.error("Failed to notify agents:", err)
-        );
-
-        return res.status(201).json({
-          ...order.toObject(),
-          id: order._id.toString(),
-          userId: order.userId.toString(),
-        });
-      } catch (createError: any) {
-        console.error("Order creation error:", createError);
-        throw createError;
-      }
-    }
-
-    // Single product order
-    if (!productName || typeof productName !== "string" || productName.trim().length === 0) {
-      return res.status(400).json({ error: "Product name is required" });
-    }
-
-    if (!description || typeof description !== "string" || description.trim().length === 0) {
-      return res.status(400).json({ error: "Description is required" });
-    }
-
-    // Handle multiple images (imageUrls array) - max 3 images
-    let finalImageUrls: string[] = [];
-    if (imageUrls && Array.isArray(imageUrls)) {
-      const imagesToProcess = imageUrls.slice(0, 3);
-      for (let i = 0; i < imagesToProcess.length; i++) {
-        const img = imagesToProcess[i];
-        if (typeof img === "string" && img.startsWith("data:image")) {
-          try {
-            const uploadResult = await uploadImageToCloudinary(img);
-            finalImageUrls.push(uploadResult.url);
-          } catch (uploadError: any) {
-            console.error(`Image ${i + 1} upload error:`, uploadError.message);
-          }
-        } else if (typeof img === "string") {
-          finalImageUrls.push(img);
-        }
-      }
-    }
-
-    // Handle single image (backward compatibility)
-    let finalImageUrl: string | undefined = undefined;
-    if (imageUrl && typeof imageUrl === "string" && imageUrl.startsWith("data:image")) {
-      try {
-        const uploadResult = await uploadImageToCloudinary(imageUrl);
-        finalImageUrl = uploadResult.url;
-        if (!finalImageUrls.includes(finalImageUrl)) {
-          finalImageUrls.push(finalImageUrl);
-        }
-      } catch (uploadError: any) {
-        console.error("Single image upload error:", uploadError.message);
-      }
-    } else if (imageUrl && typeof imageUrl === "string") {
-      finalImageUrl = imageUrl;
-      if (!finalImageUrls.includes(finalImageUrl)) {
-        finalImageUrls.push(finalImageUrl);
-      }
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      console.error("Invalid user ID:", req.user.id);
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
-
-    try {
-      const order = await Order.create({
-        userId: new mongoose.Types.ObjectId(req.user.id),
-        productName: productName.trim(),
-        description: description.trim(),
-        imageUrl: finalImageUrl,
-        imageUrls: finalImageUrls,
-        status: "niitlegdsen",
-      });
-
-      // Notify top 5 agents about new order
-      notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
-        console.error("Failed to notify agents:", err)
-      );
-
-      res.status(201).json({
-        ...order.toObject(),
-        id: order._id.toString(),
-        userId: order.userId.toString(),
-      });
-    } catch (createError: any) {
-      console.error("Order creation error:", createError);
-      throw createError;
-    }
-  } catch (error: any) {
-    console.error("Error in POST /orders:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-    });
-    const errorMessage = process.env.NODE_ENV === "development"
-      ? error.message
-      : "Internal server error";
-    res.status(500).json({
-      error: "Internal server error",
-      message: errorMessage,
-      details: process.env.NODE_ENV === "development" ? {
-        stack: error.stack,
-        code: error.code,
-      } : undefined
-    });
+/**
+ * PUT /orders/:id/status - Update order status
+ */
+export const updateOrderStatus = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { status, cancelReason } = req.body;
+
+  const result = await orderService.updateStatus(
+    req.params.id,
+    req.user.id,
+    req.user.role,
+    status,
+    cancelReason
+  );
+
+  if (result.error) {
+    res.status(result.status || 500).json({ error: result.error });
+    return;
+  }
+
+  res.json(result.order);
 };
 
-export const updateOrderStatus = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    const orderId = req.params.id;
-    const { status, cancelReason } = req.body;
-
-    if (!status || typeof status !== "string") {
-      return res.status(400).json({ error: "Status is required" });
-    }
-
-    // Require cancelReason when agent cancels an order they are investigating
-    if (status === "tsutsalsan_zahialga" && req.user.role === "agent") {
-      if (!cancelReason || typeof cancelReason !== "string" || cancelReason.trim().length < 5) {
-        return res.status(400).json({ error: "Cancel reason is required (minimum 5 characters)" });
-      }
-    }
-
-    const validStatuses = ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga", "tsutsalsan_zahialga"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    const order = await Order.findById(orderId).lean();
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    // If agent is picking up the order, set agentId
-    const updateData: any = { status };
-    if (status === "agent_sudlaj_bn" && req.user.role === "agent" && !order.agentId) {
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      updateData.agentId = new mongoose.Types.ObjectId(req.user.id);
-    }
-
-    // Store cancel reason if provided
-    if (status === "tsutsalsan_zahialga" && cancelReason) {
-      updateData.cancelReason = cancelReason.trim();
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true }
-    ).lean();
-
-    // If agent picked up order, mark as assigned (stops further notifications)
-    if (status === "agent_sudlaj_bn" && updateData.agentId) {
-      markOrderAssigned(
-        new mongoose.Types.ObjectId(orderId),
-        updateData.agentId
-      ).catch((err) => console.error("Failed to mark order assigned:", err));
-    }
-
-    // If agent cancelled order, notify user
-    if (status === "tsutsalsan_zahialga" && req.user.role === "agent") {
-      notifyUserAgentCancelled(
-        order.userId,
-        new mongoose.Types.ObjectId(orderId),
-        order.productName,
-        cancelReason
-      ).catch((err) => console.error("Failed to notify user:", err));
-    }
-
-    // If admin cancelled order, notify user
-    if (status === "tsutsalsan_zahialga" && req.user.role === "admin") {
-      notifyUserAdminCancelled(
-        order.userId,
-        new mongoose.Types.ObjectId(orderId),
-        order.productName
-      ).catch((err) => console.error("Failed to notify user:", err));
-    }
-
-    res.json({
-      ...updatedOrder,
-      id: updatedOrder!._id.toString(),
-      userId: updatedOrder!.userId.toString(),
-      agentId: updatedOrder!.agentId?.toString(),
-    });
-  } catch (error: any) {
-    console.error("Error in PUT /orders/:id/status:", error);
-    res.status(500).json({ error: "Internal server error" });
+/**
+ * PUT /orders/:id/track-code - Update track code
+ */
+export const updateTrackCode = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { order, error, status } = await orderService.updateTrackCode(
+    req.params.id,
+    req.body.trackCode
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(order);
 };
 
-export const deleteOrder = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    const orderId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    const order = await Order.findById(orderId).lean();
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    // Users can only delete their own orders, agents/admins can delete any
-    if (req.user.role === "user") {
-      if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
-      if (order.userId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-    }
-
-    await Order.findByIdAndDelete(orderId);
-
-    res.json({ message: "Order deleted successfully" });
-  } catch (error) {
-    console.error("Error in DELETE /orders/:id:", error);
-    res.status(500).json({ error: "Internal server error" });
+/**
+ * DELETE /orders/:id - Delete order
+ */
+export const deleteOrder = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { success, error, status } = await orderService.deleteOrder(
+    req.params.id,
+    req.user.id,
+    req.user.role
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json({ message: "Order deleted successfully", success });
 };
 
-export const updateTrackCode = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    const orderId = req.params.id;
-    const { trackCode } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    // Get order first to get userId
-    const existingOrder = await Order.findById(orderId).lean();
-    if (!existingOrder) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      { trackCode: trackCode || undefined },
-      { new: true }
-    ).lean();
-
-    // Notify user about track code if added
-    if (trackCode && order) {
-      notifyUserTrackCodeAdded(
-        existingOrder.userId,
-        new mongoose.Types.ObjectId(orderId),
-        existingOrder.productName,
-        trackCode
-      ).catch((err) => console.error("Failed to notify user about track code:", err));
-    }
-
-    res.json({
-      ...order,
-      id: order!._id.toString(),
-      userId: order!.userId.toString(),
-      agentId: order!.agentId?.toString(),
-    });
-  } catch (error: any) {
-    console.error("Error in PUT /orders/:id/track-code:", error);
-    res.status(500).json({ error: "Internal server error" });
+/**
+ * PUT /orders/:id/archive - Archive order
+ */
+export const archiveOrder = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
+
+  const { order, error, status } = await orderService.archiveOrder(
+    req.params.id,
+    req.user.id,
+    req.user.role
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(order);
 };
 
-export const archiveOrder = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
-
-    const orderId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    const order = await (Order as any).findById(orderId).lean();
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    const updateData: any = {};
-
-    // User can archive their own orders
-    if (req.user.role === "user") {
-      if (order.userId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      updateData.archivedByUser = true;
-    }
-
-    // Agent can archive orders they are assigned to
-    if (req.user.role === "agent") {
-      if (!order.agentId || order.agentId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      updateData.archivedByAgent = true;
-    }
-
-    // Admin can archive any order (both user and agent)
-    if (req.user.role === "admin") {
-      updateData.archivedByUser = true;
-      updateData.archivedByAgent = true;
-    }
-
-    const updatedOrder = await (Order as any).findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true }
-    ).lean();
-
-    res.json({
-      ...updatedOrder,
-      id: updatedOrder!._id.toString(),
-      userId: updatedOrder!.userId.toString(),
-      agentId: updatedOrder!.agentId?.toString(),
-    });
-  } catch (error: any) {
-    console.error("Error in PUT /orders/:id/archive:", error);
-    res.status(500).json({ error: "Internal server error" });
+/**
+ * PUT /orders/:id/user-payment-confirmed - Confirm user payment
+ */
+export const confirmUserPayment = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
   }
-};
 
-export const confirmUserPayment = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthenticated" });
-    }
+  const { order, error, status } = await orderService.confirmPayment(
+    req.params.id,
+    req.user.id
+  );
 
-    const orderId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
-
-    const order = await Order.findById(orderId).lean();
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    // Users can only confirm payment for their own orders
-    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({ error: "Invalid user ID" });
-    }
-    if (order.userId.toString() !== req.user.id) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      { userPaymentVerified: true },
-      { new: true }
-    ).lean();
-
-    // Notify admin about payment verification request
-    const profile = await Profile.findOne({ userId: req.user.id }).lean();
-    const userName = profile?.name || "Хэрэглэгч";
-    notifyAdminPaymentRequest(
-      new mongoose.Types.ObjectId(orderId),
-      order.productName,
-      userName
-    ).catch((err) => console.error("Failed to notify admin:", err));
-
-    res.json({
-      ...updatedOrder,
-      id: updatedOrder!._id.toString(),
-      userId: updatedOrder!.userId.toString(),
-      agentId: updatedOrder!.agentId?.toString(),
-    });
-  } catch (error: any) {
-    console.error("Error in PUT /orders/:id/user-payment-confirmed:", error);
-    res.status(500).json({ error: "Internal server error" });
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
   }
-};
 
+  res.json(order);
+};

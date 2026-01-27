@@ -1,11 +1,17 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
+import swaggerUi from "swagger-ui-express";
 import connectDB from "./lib/mongodb";
 import { errorHandler } from "./middleware/errorHandler";
 import { clerkAuth } from "./middleware/clerkAuth";
 import { corsOptions } from "./config/cors";
+import { swaggerSpec } from "./config/swagger";
 import mongoose from "mongoose";
+import { generalLimiter, authLimiter } from "./middleware/rateLimit";
+import logger from "./utils/logger";
 
 // Import routes
 import authRoutes from "./routes/authRoutes";
@@ -23,12 +29,30 @@ import { initCronJobs } from "./services/cronService";
 
 const app = express();
 
+// Security headers with Helmet
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+}));
+
+// Response compression
+app.use(compression());
+
 // CORS configuration
 app.use(cors(corsOptions));
 
 // Increase body size limit for image uploads (50MB)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Rate limiting - бүх API endpoint-д хэрэглэнэ
+app.use(generalLimiter);
+
+// Swagger API Documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "AgentBuy API Docs",
+}));
 
 // Health check endpoint (public)
 app.get("/health", async (_req, res) => {
@@ -42,7 +66,7 @@ app.get("/health", async (_req, res) => {
       database: "connected"
     });
   } catch (error: any) {
-    console.error("Health check error:", error);
+    logger.error("Health check failed", { error: error.message });
     res.status(503).json({
       status: "error",
       database: "disconnected",
@@ -52,7 +76,7 @@ app.get("/health", async (_req, res) => {
 });
 
 // Public routes (before authentication)
-app.use("/auth", authRoutes);
+app.use("/auth", authLimiter, authRoutes);
 
 // Use Clerk authentication for protected routes
 app.use(clerkAuth);
@@ -85,18 +109,46 @@ app.use(errorHandler);
 // Connect to MongoDB
 connectDB()
   .then(() => {
-    console.log("✅ MongoDB connected");
+    logger.info("MongoDB connected successfully");
 
     // Initialize cron jobs for email processing and notifications
     initCronJobs();
   })
   .catch((err) => {
-    console.error("❌ MongoDB connection error:", err);
+    logger.error("MongoDB connection failed", { error: err.message });
     process.exit(1);
   });
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => {
-  console.log(`🚀 Backend running on http://localhost:${port}`);
-  console.log(`📊 Health check: http://localhost:${port}/health`);
+
+const server = app.listen(port, () => {
+  logger.info(`Server started on port ${port}`);
+  logger.info(`API Docs available at http://localhost:${port}/api-docs`);
+  logger.info(`Health check: http://localhost:${port}/health`);
 });
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal: string) => {
+  logger.info(`${signal} received. Starting graceful shutdown...`);
+
+  server.close(() => {
+    logger.info("HTTP server closed");
+
+    mongoose.connection.close(false).then(() => {
+      logger.info("MongoDB connection closed");
+      process.exit(0);
+    }).catch((err) => {
+      logger.error("Error closing MongoDB connection", { error: err.message });
+      process.exit(1);
+    });
+  });
+
+  // Force close after 30 seconds
+  setTimeout(() => {
+    logger.error("Could not close connections in time, forcefully shutting down");
+    process.exit(1);
+  }, 30000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
