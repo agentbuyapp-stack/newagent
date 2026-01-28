@@ -90,13 +90,14 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
 
   const addNewProductField = () => {
     const newId = nextProductId++;
-    setNewOrders([
-      ...newOrders,
+    // Use functional updates to avoid stale closure issues
+    setNewOrders(prev => [
+      ...prev,
       { id: newId, productName: "", description: "", imageUrls: [] },
     ]);
-    setNewOrderImagePreviews([...newOrderImagePreviews, []]);
-    // Expand new product, keep others expanded too
-    setExpandedProducts(prev => new Set([...prev, newId]));
+    setNewOrderImagePreviews(prev => [...prev, []]);
+    // Collapse all previous products, only expand the new one
+    setExpandedProducts(new Set([newId]));
   };
 
   const toggleProductExpand = (productId: number) => {

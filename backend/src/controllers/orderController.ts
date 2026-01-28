@@ -104,6 +104,8 @@ export const updateTrackCode = async (req: Request, res: Response): Promise<void
 
   const { order, error, status } = await orderService.updateTrackCode(
     req.params.id,
+    req.user.id,
+    req.user.role,
     req.body.trackCode
   );
 

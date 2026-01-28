@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 // Get notifications for current user with pagination
 export const getNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
@@ -52,7 +52,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 // Get unread notification count
 export const getNotificationCount = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
 
     const unreadCount = await Notification.countDocuments({
       userId,
@@ -72,7 +72,7 @@ export const getNotificationCount = async (req: Request, res: Response) => {
 // Mark single notification as read
 export const markAsRead = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
     const { notificationId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(notificationId)) {
@@ -112,7 +112,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 // Mark all notifications as read
 export const markAllAsRead = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
 
     await Notification.updateMany(
       { userId, isRead: false },
@@ -132,7 +132,7 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 // Delete a notification
 export const deleteNotification = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
     const { notificationId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(notificationId)) {
@@ -184,7 +184,7 @@ export const createNotification = async (
 // Send test email notification (placeholder)
 export const sendTestEmail = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.user?.id;
 
     // Get user profile for email
     const user = await User.findById(userId).lean();
