@@ -40,8 +40,10 @@ export const updateOrderStatusSchema = z.object({
 
 // ============ Message Schemas ============
 export const sendMessageSchema = z.object({
-  content: z.string().min(1, "Мессеж хоосон байж болохгүй").max(2000, "Мессеж хэт урт байна"),
+  text: z.string().min(1, "Мессеж хоосон байж болохгүй").max(2000, "Мессеж хэт урт байна").optional(),
   imageUrl: z.string().optional(),
+}).refine(data => data.text || data.imageUrl, {
+  message: "Мессеж эсвэл зураг шаардлагатай",
 });
 
 // ============ Agent Report Schemas ============
