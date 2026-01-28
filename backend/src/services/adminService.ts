@@ -1,4 +1,4 @@
-import { User, Profile, Order, AdminSettings, RewardRequest, AgentReport } from "../models";
+import { User, Profile, Order, BundleOrder, AdminSettings, RewardRequest, AgentReport } from "../models";
 import mongoose from "mongoose";
 import { notifyAgentPaymentVerified } from "./notificationService";
 
@@ -659,6 +659,85 @@ class AdminService {
     } catch (error: any) {
       console.error("Error rejecting reward request:", error);
       return { error: "Failed to reject reward request", status: 500 };
+    }
+  }
+
+  /**
+   * Cancel user payment - Admin cancels payment when money not received
+   * Works for both Order and BundleOrder
+   */
+  async cancelPayment(orderId: string, reason: string, orderType: "order" | "bundle" = "order"): Promise<AdminResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        return { error: "Invalid order ID", status: 400 };
+      }
+
+      const cancelReason = reason || "Админ төлбөрийг цуцалсан";
+
+      if (orderType === "bundle") {
+        // Handle BundleOrder
+        const bundleOrder = await BundleOrder.findById(orderId).lean();
+
+        if (!bundleOrder) {
+          return { error: "Bundle order not found", status: 404 };
+        }
+
+        const updatedOrder = await BundleOrder.findByIdAndUpdate(
+          orderId,
+          {
+            status: "tsutsalsan_zahialga",
+            userPaymentVerified: false,
+          },
+          { new: true }
+        ).lean();
+
+        if (!updatedOrder) {
+          return { error: "Failed to cancel payment", status: 500 };
+        }
+
+        return {
+          data: {
+            ...updatedOrder,
+            id: updatedOrder._id.toString(),
+            userId: updatedOrder.userId.toString(),
+            agentId: updatedOrder.agentId?.toString(),
+            cancelReason: cancelReason,
+          }
+        };
+      } else {
+        // Handle regular Order
+        const order = await Order.findById(orderId).lean();
+
+        if (!order) {
+          return { error: "Order not found", status: 404 };
+        }
+
+        const updatedOrder = await Order.findByIdAndUpdate(
+          orderId,
+          {
+            status: "tsutsalsan_zahialga",
+            userPaymentVerified: false,
+            cancelReason: cancelReason,
+          },
+          { new: true }
+        ).lean();
+
+        if (!updatedOrder) {
+          return { error: "Failed to cancel payment", status: 500 };
+        }
+
+        return {
+          data: {
+            ...updatedOrder,
+            id: updatedOrder._id.toString(),
+            userId: updatedOrder.userId.toString(),
+            agentId: updatedOrder.agentId?.toString(),
+          }
+        };
+      }
+    } catch (error: any) {
+      console.error("Error cancelling payment:", error);
+      return { error: "Failed to cancel payment", status: 500 };
     }
   }
 }

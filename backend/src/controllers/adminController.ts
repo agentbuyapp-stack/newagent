@@ -184,3 +184,23 @@ export const rejectRewardRequest = async (req: Request, res: Response): Promise<
 
   res.json(data);
 };
+
+/**
+ * PUT /admin/orders/:id/cancel-payment - Cancel user payment
+ */
+export const cancelPayment = async (req: Request, res: Response): Promise<void> => {
+  const { reason, orderType } = req.body;
+
+  const { data, error, status } = await adminService.cancelPayment(
+    req.params.id,
+    reason || "",
+    orderType || "order"
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
