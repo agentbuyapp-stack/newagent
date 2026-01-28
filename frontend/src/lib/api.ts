@@ -299,6 +299,13 @@ class ApiClient {
     });
   }
 
+  async cancelPayment(orderId: string, reason: string, orderType: "order" | "bundle" = "order"): Promise<Order> {
+    return this.request<Order>(`/admin/orders/${orderId}/cancel-payment`, {
+      method: "PUT",
+      body: JSON.stringify({ reason, orderType }),
+    });
+  }
+
   async markAgentPaymentPaid(orderId: string): Promise<Order> {
     return this.request<Order>(`/admin/orders/${orderId}/agent-payment`, {
       method: "PUT",

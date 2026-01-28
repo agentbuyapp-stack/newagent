@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
   >("agents");
   const [rewardRequests, setRewardRequests] = useState<RewardRequest[]>([]);
   const [orderFilter, setOrderFilter] = useState<
-    "pending_payment" | "active" | "completed"
+    "pending_payment" | "active" | "completed" | "cancelled"
   >("pending_payment");
   const [showCargoForm, setShowCargoForm] = useState(false);
   const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
@@ -66,19 +66,21 @@ export default function AdminDashboardPage() {
   const [uploadingCargoImage, setUploadingCargoImage] = useState(false);
 
   // Cargo зураг upload хийх
-  const handleCargoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCargoImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Зөвхөн зураг оруулах боломжтой');
+    if (!file.type.startsWith("image/")) {
+      alert("Зөвхөн зураг оруулах боломжтой");
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Зурагны хэмжээ 5MB-аас бага байх ёстой');
+      alert("Зурагны хэмжээ 5MB-аас бага байх ёстой");
       return;
     }
 
@@ -90,17 +92,17 @@ export default function AdminDashboardPage() {
         const base64 = reader.result as string;
         try {
           const result = await apiClient.uploadImage(base64);
-          setCargoFormData(prev => ({ ...prev, imageUrl: result.imageUrl }));
+          setCargoFormData((prev) => ({ ...prev, imageUrl: result.imageUrl }));
         } catch (err) {
-          console.error('Upload error:', err);
-          alert('Зураг upload хийхэд алдаа гарлаа');
+          console.error("Upload error:", err);
+          alert("Зураг upload хийхэд алдаа гарлаа");
         } finally {
           setUploadingCargoImage(false);
         }
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error('File read error:', err);
+      console.error("File read error:", err);
       setUploadingCargoImage(false);
     }
   };
@@ -295,6 +297,31 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleCancelPayment = async (
+    orderId: string,
+    isBundleOrder: boolean = false,
+  ) => {
+    const reason = prompt(
+      "Төлбөр цуцлах шалтгаан (заавал биш):",
+      "Төлбөр ирээгүй",
+    );
+    if (reason === null) return; // User cancelled prompt
+
+    try {
+      await apiClient.cancelPayment(
+        orderId,
+        reason,
+        isBundleOrder ? "bundle" : "order",
+      );
+      await loadData();
+      setOrderFilter("cancelled"); // Switch to cancelled tab
+      alert("Төлбөр цуцлагдлаа. Захиалга цуцлагдсан төлөвт шилжлээ.");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+      alert(errorMessage);
+    }
+  };
+
   const handleAgentPayment = async (orderId: string) => {
     try {
       await apiClient.markAgentPaymentPaid(orderId);
@@ -337,7 +364,7 @@ export default function AdminDashboardPage() {
     try {
       await apiClient.updateOrderStatus(orderId, "tsutsalsan_zahialga");
       await loadData();
-      setOrderFilter("completed");
+      setOrderFilter("cancelled"); // Switch to cancelled tab
       alert("Захиалга цуцлагдлаа");
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
@@ -352,7 +379,15 @@ export default function AdminDashboardPage() {
         return;
       }
       await apiClient.createCargo(cargoFormData);
-      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
+      setCargoFormData({
+        name: "",
+        description: "",
+        phone: "",
+        location: "",
+        website: "",
+        facebook: "",
+        imageUrl: "",
+      });
       setShowCargoForm(false);
       await loadData();
       alert("Cargo амжилттай үүслээ");
@@ -367,7 +402,15 @@ export default function AdminDashboardPage() {
     try {
       await apiClient.updateCargo(editingCargo.id, cargoFormData);
       setEditingCargo(null);
-      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
+      setCargoFormData({
+        name: "",
+        description: "",
+        phone: "",
+        location: "",
+        website: "",
+        facebook: "",
+        imageUrl: "",
+      });
       await loadData();
       alert("Cargo амжилттай шинэчлэгдлээ");
     } catch (e: unknown) {
@@ -393,7 +436,8 @@ export default function AdminDashboardPage() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      const updatedSettings = await apiClient.updateAdminSettings(settingsFormData);
+      const updatedSettings =
+        await apiClient.updateAdminSettings(settingsFormData);
       setAdminSettings(updatedSettings);
       setSettingsSaved(true);
       setIsEditingSettings(false);
@@ -771,9 +815,23 @@ export default function AdminDashboardPage() {
                     Дууссан (
                     {
                       orders.filter(
-                        (o) =>
-                          o.status === "amjilttai_zahialga" ||
-                          o.status === "tsutsalsan_zahialga",
+                        (o) => o.status === "amjilttai_zahialga",
+                      ).length
+                    }
+                    )
+                  </button>
+                  <button
+                    onClick={() => setOrderFilter("cancelled")}
+                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 whitespace-nowrap ${
+                      orderFilter === "cancelled"
+                        ? "text-red-600 bg-red-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                  >
+                    Цуцалсан (
+                    {
+                      orders.filter(
+                        (o) => o.status === "tsutsalsan_zahialga",
                       ).length
                     }
                     )
@@ -788,11 +846,12 @@ export default function AdminDashboardPage() {
                         return order.status === "tolbor_huleej_bn";
                       }
                       if (orderFilter === "completed") {
-                        // Дууссан: amjilttai_zahialga, tsutsalsan_zahialga
-                        return (
-                          order.status === "amjilttai_zahialga" ||
-                          order.status === "tsutsalsan_zahialga"
-                        );
+                        // Дууссан: amjilttai_zahialga
+                        return order.status === "amjilttai_zahialga";
+                      }
+                      if (orderFilter === "cancelled") {
+                        // Цуцалсан: tsutsalsan_zahialga
+                        return order.status === "tsutsalsan_zahialga";
                       }
                       return false;
                     })
@@ -904,13 +963,23 @@ export default function AdminDashboardPage() {
                             </div>
 
                             {/* Action buttons */}
-                            <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex flex-row sm:flex-row gap-2">
                               {order.status === "tolbor_huleej_bn" && (
                                 <button
                                   onClick={() => handleVerifyPayment(order.id)}
                                   className="px-3 py-2 text-xs sm:text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 active:bg-green-700 transition-colors font-medium text-center"
                                 >
                                   Төлбөр батлах
+                                </button>
+                              )}
+                              {order.status === "tolbor_huleej_bn" && (
+                                <button
+                                  onClick={() =>
+                                    handleCancelPayment(order.id, false)
+                                  }
+                                  className="px-3 py-2 text-xs sm:text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors font-medium text-center"
+                                >
+                                  Төлбөр цуцлах
                                 </button>
                               )}
                               {/* Урамшуулал олгох - зөвхөн амжилттай захиалгад, agent төлбөр олгоогүй бол */}
@@ -956,7 +1025,15 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={() => {
                       setEditingCargo(null);
-                      setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
+                      setCargoFormData({
+                        name: "",
+                        description: "",
+                        phone: "",
+                        location: "",
+                        website: "",
+                        facebook: "",
+                        imageUrl: "",
+                      });
                       setShowCargoForm(!showCargoForm);
                     }}
                     className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
@@ -1086,7 +1163,12 @@ export default function AdminDashboardPage() {
                               />
                               <button
                                 type="button"
-                                onClick={() => setCargoFormData(prev => ({ ...prev, imageUrl: "" }))}
+                                onClick={() =>
+                                  setCargoFormData((prev) => ({
+                                    ...prev,
+                                    imageUrl: "",
+                                  }))
+                                }
                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
                               >
                                 ✕
@@ -1098,10 +1180,22 @@ export default function AdminDashboardPage() {
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                               ) : (
                                 <>
-                                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  <svg
+                                    className="w-6 h-6 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
                                   </svg>
-                                  <span className="text-xs text-gray-500 mt-1">Зураг</span>
+                                  <span className="text-xs text-gray-500 mt-1">
+                                    Зураг
+                                  </span>
                                 </>
                               )}
                               <input
@@ -1128,7 +1222,15 @@ export default function AdminDashboardPage() {
                           <button
                             onClick={() => {
                               setEditingCargo(null);
-                              setCargoFormData({ name: "", description: "", phone: "", location: "", website: "", facebook: "", imageUrl: "" });
+                              setCargoFormData({
+                                name: "",
+                                description: "",
+                                phone: "",
+                                location: "",
+                                website: "",
+                                facebook: "",
+                                imageUrl: "",
+                              });
                             }}
                             className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
                           >
@@ -1169,32 +1271,71 @@ export default function AdminDashboardPage() {
                         <div className="mt-2 space-y-1 text-xs text-gray-500">
                           {cargo.phone && (
                             <p className="flex items-center gap-1">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                />
                               </svg>
                               {cargo.phone}
                             </p>
                           )}
                           {cargo.website && (
                             <p className="flex items-center gap-1">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                                />
                               </svg>
                               {cargo.website}
                             </p>
                           )}
                           {cargo.location && (
                             <p className="flex items-center gap-1">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
                               </svg>
                               <span className="truncate">Байршил</span>
                             </p>
                           )}
                           {cargo.facebook && (
                             <p className="flex items-center gap-1">
-                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
                                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                               </svg>
                               <span className="truncate">Facebook</span>
@@ -1360,7 +1501,8 @@ export default function AdminDashboardPage() {
                             onClick={() =>
                               setSettingsFormData({
                                 ...settingsFormData,
-                                orderLimitEnabled: !settingsFormData.orderLimitEnabled,
+                                orderLimitEnabled:
+                                  !settingsFormData.orderLimitEnabled,
                               })
                             }
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -1392,13 +1534,15 @@ export default function AdminDashboardPage() {
                                 onChange={(e) =>
                                   setSettingsFormData({
                                     ...settingsFormData,
-                                    maxOrdersPerDay: parseInt(e.target.value) || 10,
+                                    maxOrdersPerDay:
+                                      parseInt(e.target.value) || 10,
                                   })
                                 }
                                 className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                               />
                               <p className="text-xs text-gray-500 mt-1">
-                                Нэг хэрэглэгч өдөрт хамгийн ихдээ хэдэн захиалга үүсгэж болох
+                                Нэг хэрэглэгч өдөрт хамгийн ихдээ хэдэн захиалга
+                                үүсгэж болох
                               </p>
                             </div>
 
@@ -1413,13 +1557,15 @@ export default function AdminDashboardPage() {
                                 onChange={(e) =>
                                   setSettingsFormData({
                                     ...settingsFormData,
-                                    maxActiveOrders: parseInt(e.target.value) || 10,
+                                    maxActiveOrders:
+                                      parseInt(e.target.value) || 10,
                                   })
                                 }
                                 className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                               />
                               <p className="text-xs text-gray-500 mt-1">
-                                Нэг хэрэглэгч дуусаагүй хэдэн захиалгатай байж болох
+                                Нэг хэрэглэгч дуусаагүй хэдэн захиалгатай байж
+                                болох
                               </p>
                             </div>
                           </>
@@ -1442,9 +1588,12 @@ export default function AdminDashboardPage() {
                               accountName: adminSettings?.accountName || "",
                               bank: adminSettings?.bank || "",
                               exchangeRate: adminSettings?.exchangeRate || 1,
-                              orderLimitEnabled: adminSettings?.orderLimitEnabled ?? true,
-                              maxOrdersPerDay: adminSettings?.maxOrdersPerDay ?? 10,
-                              maxActiveOrders: adminSettings?.maxActiveOrders ?? 10,
+                              orderLimitEnabled:
+                                adminSettings?.orderLimitEnabled ?? true,
+                              maxOrdersPerDay:
+                                adminSettings?.maxOrdersPerDay ?? 10,
+                              maxActiveOrders:
+                                adminSettings?.maxActiveOrders ?? 10,
                             });
                           }}
                           className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
@@ -1498,23 +1647,35 @@ export default function AdminDashboardPage() {
                         </h5>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Төлөв:</span>
-                            <span className={`text-sm font-medium ${adminSettings?.orderLimitEnabled !== false ? "text-green-600" : "text-gray-500"}`}>
-                              {adminSettings?.orderLimitEnabled !== false ? "Идэвхтэй" : "Идэвхгүй"}
+                            <span className="text-sm text-gray-600">
+                              Төлөв:
+                            </span>
+                            <span
+                              className={`text-sm font-medium ${adminSettings?.orderLimitEnabled !== false ? "text-green-600" : "text-gray-500"}`}
+                            >
+                              {adminSettings?.orderLimitEnabled !== false
+                                ? "Идэвхтэй"
+                                : "Идэвхгүй"}
                             </span>
                           </div>
                           {adminSettings?.orderLimitEnabled !== false && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Өдөрт максимум:</span>
+                                <span className="text-sm text-gray-600">
+                                  Өдөрт максимум:
+                                </span>
                                 <span className="text-sm font-medium text-gray-900">
-                                  {adminSettings?.maxOrdersPerDay ?? 10} захиалга
+                                  {adminSettings?.maxOrdersPerDay ?? 10}{" "}
+                                  захиалга
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Идэвхтэй хязгаар:</span>
+                                <span className="text-sm text-gray-600">
+                                  Идэвхтэй хязгаар:
+                                </span>
                                 <span className="text-sm font-medium text-gray-900">
-                                  {adminSettings?.maxActiveOrders ?? 10} захиалга
+                                  {adminSettings?.maxActiveOrders ?? 10}{" "}
+                                  захиалга
                                 </span>
                               </div>
                             </>
