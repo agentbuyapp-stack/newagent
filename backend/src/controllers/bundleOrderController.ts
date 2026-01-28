@@ -24,7 +24,16 @@ export const getBundleOrders = async (req: Request, res: Response): Promise<void
  * GET /bundle-orders/:id - Get single bundle order
  */
 export const getBundleOrder = async (req: Request, res: Response): Promise<void> => {
-  const { order, error, status } = await bundleOrderService.getOrder(req.params.id);
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { order, error, status } = await bundleOrderService.getOrder(
+    req.params.id,
+    req.user.id,
+    req.user.role
+  );
 
   if (error) {
     res.status(status || 500).json({ error });
@@ -162,8 +171,15 @@ export const createBundleReport = async (req: Request, res: Response): Promise<v
  * PUT /bundle-orders/:id/track-code - Update track code
  */
 export const updateBundleTrackCode = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
   const { order, error, status } = await bundleOrderService.updateTrackCode(
     req.params.id,
+    req.user.id,
+    req.user.role,
     req.body.trackCode
   );
 

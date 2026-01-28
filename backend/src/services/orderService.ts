@@ -543,6 +543,25 @@ export class OrderService {
         return { error: "Order not found", status: 404 };
       }
 
+      // Validate status transitions
+      const validTransitions: Record<string, string[]> = {
+        "niitlegdsen": ["agent_sudlaj_bn", "tsutsalsan_zahialga"],
+        "agent_sudlaj_bn": ["tolbor_huleej_bn", "tsutsalsan_zahialga"],
+        "tolbor_huleej_bn": ["amjilttai_zahialga", "tsutsalsan_zahialga"],
+        "amjilttai_zahialga": [], // Final state - no transitions allowed
+        "tsutsalsan_zahialga": [], // Final state - no transitions allowed
+      };
+
+      const currentStatus = order.status;
+      const allowedNextStatuses = validTransitions[currentStatus] || [];
+
+      if (!allowedNextStatuses.includes(status)) {
+        return {
+          error: `"${currentStatus}" статусаас "${status}" статус руу шилжих боломжгүй`,
+          status: 400
+        };
+      }
+
       const updateData: any = { status };
 
       // Assign agent if picking up
@@ -601,6 +620,8 @@ export class OrderService {
    */
   async updateTrackCode(
     orderId: string,
+    userId: string,
+    role: string,
     trackCode: string
   ): Promise<{ order?: FormattedOrder; error?: string; status?: number }> {
     try {
@@ -611,6 +632,13 @@ export class OrderService {
       const existingOrder = await Order.findById(orderId).lean();
       if (!existingOrder) {
         return { error: "Order not found", status: 404 };
+      }
+
+      // Check authorization: only assigned agent or admin can update track code
+      if (role === "agent") {
+        if (!existingOrder.agentId || existingOrder.agentId.toString() !== userId) {
+          return { error: "Зөвхөн өөрт оноогдсон захиалгын track code оруулах боломжтой", status: 403 };
+        }
       }
 
       const order = await Order.findByIdAndUpdate(

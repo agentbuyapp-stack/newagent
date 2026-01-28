@@ -106,7 +106,7 @@ class BundleOrderService {
   /**
    * Get single bundle order by ID
    */
-  async getOrder(orderId: string): Promise<BundleOrderResult> {
+  async getOrder(orderId: string, userId: string, role: string): Promise<BundleOrderResult> {
     try {
       const order = await BundleOrder.findById(orderId)
         .populate("userId", "email")
@@ -115,6 +115,22 @@ class BundleOrderService {
       if (!order) {
         return { error: "Bundle order not found", status: 404 };
       }
+
+      // Check authorization based on role
+      if (role === "user") {
+        // Users can only view their own orders
+        if (order.userId._id.toString() !== userId) {
+          return { error: "Bundle order not found", status: 404 };
+        }
+      } else if (role === "agent") {
+        // Agents can view: their assigned orders OR unassigned orders with status "niitlegdsen"
+        const isAssigned = order.agentId && order.agentId._id.toString() === userId;
+        const isAvailable = !order.agentId && order.status === "niitlegdsen";
+        if (!isAssigned && !isAvailable) {
+          return { error: "Bundle order not found", status: 404 };
+        }
+      }
+      // Admins can view all orders
 
       return { order: formatOrder(order) };
     } catch (error) {
@@ -467,11 +483,23 @@ class BundleOrderService {
   /**
    * Update track code
    */
-  async updateTrackCode(orderId: string, trackCode: string): Promise<BundleOrderResult> {
+  async updateTrackCode(
+    orderId: string,
+    userId: string,
+    role: string,
+    trackCode: string
+  ): Promise<BundleOrderResult> {
     try {
       const order = await BundleOrder.findById(orderId);
       if (!order) {
         return { error: "Bundle order not found", status: 404 };
+      }
+
+      // Check authorization: only assigned agent or admin can update track code
+      if (role === "agent") {
+        if (!order.agentId || order.agentId.toString() !== userId) {
+          return { error: "Зөвхөн өөрт оноогдсон захиалгын track code оруулах боломжтой", status: 403 };
+        }
       }
 
       order.trackCode = trackCode;

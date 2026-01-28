@@ -188,7 +188,7 @@ export default function NotificationDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[60vh] overflow-hidden">
+        <div className="absolute right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[50vh] overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <h3 className="text-sm font-semibold text-gray-900">Мэдэгдэл</h3>
@@ -203,7 +203,7 @@ export default function NotificationDropdown() {
           </div>
 
           {/* Notification list */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -231,15 +231,15 @@ export default function NotificationDropdown() {
                   <li
                     key={`${notification.id}-${index}`}
                     onClick={() => handleMarkAsRead(notification)}
-                    className={`px-4 py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    className={`px-3 py-2 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
                       !notification.isRead ? "bg-blue-50" : ""
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
                               notificationTypeColors[notification.type] ||
                               "bg-gray-100 text-gray-800"
                             }`}
@@ -248,26 +248,23 @@ export default function NotificationDropdown() {
                               notification.type}
                           </span>
                           {!notification.isRead && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                           )}
+                          <span className="text-[10px] text-gray-400">
+                            {formatTimeAgo(notification.createdAt)}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-900 font-medium truncate">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs text-gray-600 line-clamp-2 mt-0.5">
+                        <p className="text-xs text-gray-700 line-clamp-1">
                           {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {formatTimeAgo(notification.createdAt)}
                         </p>
                       </div>
                       <button
                         onClick={(e) => handleDelete(notification.id, e)}
-                        className="text-gray-400 hover:text-red-500 p-1 shrink-0"
+                        className="text-gray-400 hover:text-red-500 p-0.5 shrink-0"
                         title="Устгах"
                       >
                         <svg
-                          className="w-4 h-4"
+                          className="w-3.5 h-3.5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
