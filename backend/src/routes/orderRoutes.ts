@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import {
   getOrders,
   getOrder,
@@ -17,10 +17,18 @@ import { orderLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
+// Rate limiter only for users, agents/admins bypass
+const conditionalOrderLimiter = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role === "agent" || req.user?.role === "admin") {
+    return next();
+  }
+  return orderLimiter(req, res, next);
+};
+
 // All order routes require authentication
 router.get("/", requireRole(["user", "agent", "admin"]), getOrders);
 router.get("/:id", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getOrder);
-router.post("/", requireRole(["user", "agent", "admin"]), orderLimiter, validate(createOrderSchema), createOrder);
+router.post("/", requireRole(["user", "agent", "admin"]), conditionalOrderLimiter, validate(createOrderSchema), createOrder);
 router.put("/:id/status", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), validate(updateOrderStatusSchema), updateOrderStatus);
 router.put("/:id/track-code", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), updateTrackCode);
 router.put("/:id/user-payment-confirmed", requireRole("user"), validateParams(mongoIdSchema), confirmUserPayment);
