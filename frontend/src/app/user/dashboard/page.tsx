@@ -50,6 +50,8 @@ export default function UserDashboardPage() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatOrder, setChatOrder] = useState<Order | BundleOrder | null>(null);
   const [zoomedImageIndex, setZoomedImageIndex] = useState<number | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<PublicAgent | null>(null);
+  const [showAgentModal, setShowAgentModal] = useState(false);
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
   >({});
@@ -72,12 +74,14 @@ export default function UserDashboardPage() {
     exchangeRate?: number;
   } | null>(null);
   const [showUserInfoInModal, setShowUserInfoInModal] = useState(false);
+  const [showPaymentSection, setShowPaymentSection] = useState(true);
 
   // Action loading states
   const [cancelLoading, setCancelLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [archiveLoading, setArchiveLoading] = useState(false);
+  const [removeItemLoading, setRemoveItemLoading] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function UserDashboardPage() {
         const [settingsResult, cargosResult, agentsResult, ordersResult, bundleOrdersResult] = await Promise.allSettled([
           apiClient.getAdminSettings(),
           apiClient.getCargos(),
-          apiClient.getPublicAgents(),
+          apiClient.getTopAgents(),
           apiClient.getOrders(),
           apiClient.getBundleOrders(),
         ]);
@@ -138,7 +142,17 @@ export default function UserDashboardPage() {
           setCargos(cargosResult.value);
         }
         if (agentsResult.status === "fulfilled") {
-          setAgents(agentsResult.value);
+          // If no top agents set, fall back to public agents
+          if (agentsResult.value.length === 0) {
+            try {
+              const publicAgents = await apiClient.getPublicAgents();
+              setAgents(publicAgents.slice(0, 10));
+            } catch {
+              setAgents([]);
+            }
+          } else {
+            setAgents(agentsResult.value);
+          }
         }
         if (bundleOrdersResult.status === "fulfilled") {
           setBundleOrders(bundleOrdersResult.value);
@@ -528,13 +542,13 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#E8F5FF] via-[#F5F9FF] to-[#EEF2FF]">
+    <div className="min-h-screen bg-linear-to-br from-[#E8F5FF] via-[#F5F9FF] to-[#EEF2FF] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Order Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {/* Box 1: Шинэ захиалга үүсгэх */}
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
               <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() => {
@@ -562,10 +576,10 @@ export default function UserDashboardPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                       Шинэ захиалга үүсгэх
                     </h3>
-                    <p className="text-xs text-gray-500">Бараа захиалах</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Бараа захиалах</p>
                   </div>
                 </div>
                 {isProfileComplete && (
@@ -630,7 +644,7 @@ export default function UserDashboardPage() {
 
               {/* Box 3: Cargonууд - Dropdown */}
               {cargos.length > 0 && (
-                <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
                   <div
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => setShowCargos(!showCargos)}
@@ -652,16 +666,16 @@ export default function UserDashboardPage() {
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                           Каргонууд
                         </h3>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Түншлэгч карго компаниуд ({cargos.length})
                         </p>
                       </div>
                     </div>
                     <svg
-                      className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showCargos ? "rotate-180" : ""}`}
+                      className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${showCargos ? "rotate-180" : ""}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -680,7 +694,7 @@ export default function UserDashboardPage() {
                       {cargos.map((cargo) => (
                         <div
                           key={cargo.id}
-                          className="relative rounded-xl overflow-hidden border border-orange-100 hover:border-orange-200 hover:shadow-lg transition-all min-h-55"
+                          className="relative rounded-xl overflow-hidden border border-orange-100 dark:border-orange-900/50 hover:border-orange-200 dark:hover:border-orange-800 hover:shadow-lg transition-all min-h-55"
                           style={{
                             backgroundImage: cargo.imageUrl
                               ? `url(${cargo.imageUrl})`
@@ -694,19 +708,19 @@ export default function UserDashboardPage() {
                             className={`absolute inset-x-0 bottom-0 h-1/2 ${cargo.imageUrl ? "bg-linear-to-t from-black/90 to-transparent" : ""}`}
                           />
                           {!cargo.imageUrl && (
-                            <div className="absolute inset-0 bg-linear-to-br from-white to-orange-50/50" />
+                            <div className="absolute inset-0 bg-linear-to-br from-white dark:from-gray-800 to-orange-50/50 dark:to-orange-900/20" />
                           )}
 
                           {/* Content positioned at bottom */}
                           <div className="absolute bottom-0 left-0 right-0 p-4">
                             <h4
-                              className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? "text-white drop-shadow-md" : "text-gray-900"}`}
+                              className={`font-bold text-base sm:text-lg ${cargo.imageUrl ? "text-white drop-shadow-md" : "text-gray-900 dark:text-white"}`}
                             >
                               {cargo.name}
                             </h4>
                             {cargo.description && (
                               <p
-                                className={`text-xs mt-1 ${cargo.imageUrl ? "text-gray-100" : "text-gray-500"}`}
+                                className={`text-xs mt-1 ${cargo.imageUrl ? "text-gray-100" : "text-gray-500 dark:text-gray-400"}`}
                               >
                                 {cargo.description}
                               </p>
@@ -716,7 +730,7 @@ export default function UserDashboardPage() {
                               {cargo.phone && (
                                 <a
                                   href={`tel:${cargo.phone}`}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-orange-50 hover:bg-orange-100 text-orange-700"}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-400"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -744,7 +758,7 @@ export default function UserDashboardPage() {
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-blue-50 hover:bg-blue-100 text-blue-700"}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -772,7 +786,7 @@ export default function UserDashboardPage() {
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -790,7 +804,7 @@ export default function UserDashboardPage() {
                                   href={cargo.location}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-green-50 hover:bg-green-100 text-green-700"}`}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${cargo.imageUrl ? "bg-white/20 hover:bg-white/30 text-white" : "bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"}`}
                                 >
                                   <svg
                                     className="w-3.5 h-3.5"
@@ -823,15 +837,15 @@ export default function UserDashboardPage() {
                 </div>
               )}
 
-              {/* Box 4: Агентууд - Dropdown */}
+              {/* Box 4: Топ 10 Агентууд - Dropdown */}
               {agents.length > 0 && (
-                <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
                   <div
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => setShowAgents(!showAgents)}
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-md shadow-purple-500/20">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-md shadow-yellow-500/20">
                         <svg
                           className="w-4 h-4 sm:w-5 sm:h-5 text-white"
                           fill="none"
@@ -842,21 +856,21 @@ export default function UserDashboardPage() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                           />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                          Агентууд
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                          Топ 10 Агентууд
                         </h3>
-                        <p className="text-xs text-gray-500">
-                          Манай агентууд ({agents.length})
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Шилдэг агентуудын жагсаалт
                         </p>
                       </div>
                     </div>
                     <svg
-                      className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showAgents ? "rotate-180" : ""}`}
+                      className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${showAgents ? "rotate-180" : ""}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -871,58 +885,212 @@ export default function UserDashboardPage() {
                   </div>
 
                   {showAgents && (
-                    <div className="mt-4 space-y-3">
-                      {agents.slice(0, 10).map((agent, index) => (
-                        <div
-                          key={agent.id}
-                          className="bg-linear-to-br from-white to-purple-50/50 border border-purple-100 rounded-xl p-4 hover:border-purple-200 hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                                  index < 5
-                                    ? "bg-linear-to-br from-purple-500 to-indigo-500 text-white"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                #{index + 1}
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900 text-sm sm:text-base">
-                                  {agent.name}
-                                </h4>
-                                {agent.email && (
-                                  <p className="text-xs text-gray-500 truncate max-w-37.5">
-                                    {agent.email}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-1 text-purple-600">
+                    <div className="mt-4 space-y-4">
+                      {agents.map((agent, index) => {
+                        const getStatusColor = (status: string) => {
+                          switch (status) {
+                            case "online": return "bg-green-500";
+                            case "busy": return "bg-yellow-500";
+                            default: return "bg-gray-400";
+                          }
+                        };
+                        const getStatusText = (status: string) => {
+                          switch (status) {
+                            case "online": return "Онлайн";
+                            case "busy": return "Завгүй";
+                            default: return "Офлайн";
+                          }
+                        };
+                        const renderStars = (rating: number) => {
+                          const fullStars = Math.floor(rating);
+                          const hasHalf = rating - fullStars >= 0.5;
+                          return (
+                            <div className="flex items-center gap-0.5">
+                              {[...Array(5)].map((_, i) => (
                                 <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                                  key={i}
+                                  className={`w-3.5 h-3.5 ${
+                                    i < fullStars
+                                      ? "text-yellow-400"
+                                      : i === fullStars && hasHalf
+                                        ? "text-yellow-400"
+                                        : "text-gray-300"
+                                  }`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                  />
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                <span className="font-bold text-sm">
-                                  {agent.orderCount}
-                                </span>
+                              ))}
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <div
+                            key={agent.id}
+                            onClick={() => {
+                              setSelectedAgent(agent);
+                              setShowAgentModal(true);
+                            }}
+                            className={`relative overflow-hidden rounded-2xl border transition-all hover:shadow-lg cursor-pointer ${
+                              index === 0
+                                ? "bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/30 dark:via-amber-900/20 dark:to-orange-900/30 border-yellow-200 dark:border-yellow-700 shadow-md"
+                                : index === 1
+                                  ? "bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-gray-700 dark:via-slate-800 dark:to-gray-700 border-gray-200 dark:border-gray-600"
+                                  : index === 2
+                                    ? "bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-900/30 dark:via-amber-900/20 dark:to-yellow-900/30 border-orange-200 dark:border-orange-700"
+                                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"
+                            }`}
+                          >
+                            {/* Top Badge for top 3 */}
+                            {index < 3 && (
+                              <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-xs font-bold ${
+                                index === 0
+                                  ? "bg-gradient-to-r from-yellow-400 to-amber-500 text-white"
+                                  : index === 1
+                                    ? "bg-gradient-to-r from-gray-400 to-slate-500 text-white"
+                                    : "bg-gradient-to-r from-orange-400 to-amber-500 text-white"
+                              }`}>
+                                {index === 0 ? "🥇 #1" : index === 1 ? "🥈 #2" : "🥉 #3"}
                               </div>
-                              <p className="text-xs text-gray-500">захиалга</p>
+                            )}
+
+                            <div className="p-4">
+                              <div className="flex gap-4">
+                                {/* Avatar with Online Status */}
+                                <div className="relative flex-shrink-0">
+                                  {agent.avatarUrl ? (
+                                    <img
+                                      src={agent.avatarUrl}
+                                      alt={agent.name}
+                                      className={`w-16 h-16 rounded-full object-cover border-2 ${
+                                        index < 3 ? "border-yellow-300 dark:border-yellow-600" : "border-gray-200 dark:border-gray-600"
+                                      }`}
+                                    />
+                                  ) : (
+                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl ${
+                                      index === 0
+                                        ? "bg-gradient-to-br from-yellow-400 to-amber-500"
+                                        : index === 1
+                                          ? "bg-gradient-to-br from-gray-400 to-slate-500"
+                                          : index === 2
+                                            ? "bg-gradient-to-br from-orange-400 to-amber-500"
+                                            : "bg-gradient-to-br from-purple-400 to-indigo-500"
+                                    }`}>
+                                      {agent.name[0]?.toUpperCase()}
+                                    </div>
+                                  )}
+                                  {/* Online Status Indicator */}
+                                  <div
+                                    className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(agent.availabilityStatus)}`}
+                                    title={getStatusText(agent.availabilityStatus)}
+                                  />
+                                  {/* Rank Badge for non-top-3 */}
+                                  {index >= 3 && (
+                                    <div className="absolute -top-1 -left-1 w-6 h-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
+                                      {index + 1}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Info Section */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <h4 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+                                        {agent.name}
+                                        {agent.featured && (
+                                          <span className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-400 text-xs rounded font-medium">
+                                            Онцлох
+                                          </span>
+                                        )}
+                                      </h4>
+                                      {/* Rating */}
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {renderStars(agent.avgRating)}
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                          ({agent.reviewCount} үнэлгээ)
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Bio */}
+                                  {agent.bio && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                                      {agent.bio}
+                                    </p>
+                                  )}
+
+                                  {/* Specialties */}
+                                  {agent.specialties && agent.specialties.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-3">
+                                      {agent.specialties.slice(0, 3).map((specialty, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 text-xs rounded-full font-medium"
+                                        >
+                                          {specialty}
+                                        </span>
+                                      ))}
+                                      {agent.specialties.length > 3 && (
+                                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
+                                          +{agent.specialties.length - 3}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Stats Row */}
+                                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-1.5 text-sm">
+                                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="text-gray-700 dark:text-gray-300 font-semibold">{agent.successRate}%</span>
+                                      <span className="text-gray-500 dark:text-gray-400 text-xs">амжилт</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-sm">
+                                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                      </svg>
+                                      <span className="text-gray-700 dark:text-gray-300 font-semibold">{agent.totalTransactions}</span>
+                                      <span className="text-gray-500 dark:text-gray-400 text-xs">гүйлгээ</span>
+                                    </div>
+                                    {agent.experienceYears && agent.experienceYears > 0 && (
+                                      <div className="flex items-center gap-1.5 text-sm">
+                                        <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span className="text-gray-700 dark:text-gray-300 font-semibold">{agent.experienceYears}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs">жил</span>
+                                      </div>
+                                    )}
+                                    {agent.responseTime && (
+                                      <div className="hidden sm:flex items-center gap-1.5 text-sm">
+                                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs">{agent.responseTime}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
+                        );
+                      })}
+
+                      {agents.length === 0 && (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <p>Одоогоор топ агент байхгүй байна</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
@@ -1382,264 +1550,221 @@ export default function UserDashboardPage() {
                     )}
                   </div>
 
-                  {/* Agent Report Section */}
-                  {hasAgentReport && currentReport && (
-                    <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden shadow-sm">
-                      <div className="px-4 py-3 bg-linear-to-r from-indigo-500 to-purple-500">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          <h3 className="font-semibold text-white">
-                            Agent тайлан
-                          </h3>
-                        </div>
-                      </div>
-
-                      <div className="p-4 space-y-4">
-                        {/* Payment Amount */}
-                        <div className="bg-white rounded-xl p-4 border border-indigo-100">
-                          <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
-                            Төлөх дүн
-                          </p>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">
-                            {(() => {
-                              const exchangeRate =
-                                adminSettings?.exchangeRate ||
-                                paymentInfo[selectedOrder.id]?.exchangeRate ||
-                                1;
-                              const calculatedAmount =
-                                calculateUserPaymentAmount(
-                                  currentReport,
-                                  exchangeRate,
-                                );
-                              return calculatedAmount.toLocaleString();
-                            })()}
-                            <span className="text-lg font-semibold text-gray-500 ml-1">
-                              ₮
-                            </span>
-                          </p>
-                        </div>
-
-                        {/* Quantity */}
-                        {currentReport.quantity && (
-                          <div className="flex items-center justify-between py-2 border-b border-indigo-100">
-                            <span className="text-sm text-gray-600">
-                              Тоо ширхэг
-                            </span>
-                            <span className="font-semibold text-gray-900">
-                              {currentReport.quantity}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Additional Description */}
-                        {currentReport.additionalDescription && (
-                          <div>
-                            <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">
-                              Нэмэлт тайлбар
-                            </p>
-                            <p className="text-sm text-gray-700 bg-white rounded-lg p-3 border border-indigo-100 whitespace-pre-wrap">
-                              {currentReport.additionalDescription}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Additional Images */}
-                        {currentReport.additionalImages &&
-                          currentReport.additionalImages.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">
-                                Нэмэлт зурагнууд
-                              </p>
-                              <div className="grid grid-cols-3 gap-2">
-                                {currentReport.additionalImages.map(
-                                  (imgUrl, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="aspect-square bg-white rounded-lg overflow-hidden border border-indigo-100"
-                                    >
-                                      <img
-                                        src={imgUrl}
-                                        alt={`Additional ${idx + 1}`}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  ),
-                                )}
-                              </div>
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Payment Section for tolbor_huleej_bn status */}
-                  {selectedOrder.status === "tolbor_huleej_bn" && (
-                    <div className="space-y-4">
-                      {/* Bank Account Info */}
-                      <div className="bg-linear-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-linear-to-r from-amber-500 to-orange-500">
-                          <div className="flex items-center gap-2">
-                            <svg
-                              className="w-5 h-5 text-white"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                              />
+                  {/* Report Section - Collapsible */}
+                  {selectedOrder.status === "tolbor_huleej_bn" && hasAgentReport && currentReport && (
+                    <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                      {/* Header */}
+                      <button
+                        onClick={() => setShowPaymentSection(!showPaymentSection)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <h3 className="font-semibold text-white">
-                              Төлбөр шилжүүлэх данс
-                            </h3>
                           </div>
+                          <span className="font-semibold text-gray-900">Тайлан</span>
                         </div>
+                        <svg
+                          className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${showPaymentSection ? "rotate-180" : ""}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
 
-                        <div className="p-4 space-y-3">
+                      {/* Content */}
+                      {showPaymentSection && (
+                        <div className="border-t border-gray-200 bg-white">
                           {(() => {
-                            const accountInfo =
-                              paymentInfo[selectedOrder.id] || adminSettings;
-                            if (!accountInfo && !adminSettings) {
-                              if (!showPaymentInfo[selectedOrder.id]) {
-                                loadPaymentInfo(selectedOrder.id);
-                              }
-                              return (
-                                <div className="flex items-center justify-center py-4">
-                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
-                                </div>
-                              );
-                            }
-                            const info = accountInfo || adminSettings;
+                            const exchangeRate = adminSettings?.exchangeRate || paymentInfo[selectedOrder.id]?.exchangeRate || 1;
+                            const yuanAmount = currentReport.userAmount || 0;
+                            const totalMNT = Math.round(yuanAmount * exchangeRate * 1.05);
+                            const accountInfo = paymentInfo[selectedOrder.id] || adminSettings;
+
                             return (
                               <>
-                                <div className="bg-white rounded-lg p-3 border border-amber-100">
-                                  <p className="text-xs text-gray-500">Банк</p>
-                                  <p className="font-semibold text-gray-900">
-                                    {info?.bank}
-                                  </p>
-                                </div>
-                                <div className="bg-white rounded-lg p-3 border border-amber-100">
-                                  <p className="text-xs text-gray-500">
-                                    Дансны нэр
-                                  </p>
-                                  <p className="font-semibold text-gray-900">
-                                    {info?.accountName}
-                                  </p>
-                                </div>
-                                <div className="bg-white rounded-lg p-3 border border-amber-100">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-xs text-gray-500">
-                                        Дансны дугаар
-                                      </p>
-                                      <p className="font-bold text-gray-900 font-mono text-lg">
-                                        {info?.accountNumber}
-                                      </p>
+                                {/* 1. Agent Images */}
+                                {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
+                                  <div className="p-3 border-b border-gray-100">
+                                    <div className="flex gap-2">
+                                      {currentReport.additionalImages.map((img, i) => (
+                                        <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+                                          <img src={img} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                      ))}
                                     </div>
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(
-                                          info?.accountNumber || "",
-                                        );
-                                        alert("Дансны дугаар хуулагдлаа!");
-                                      }}
-                                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors"
-                                    >
-                                      Хуулах
-                                    </button>
                                   </div>
+                                )}
+
+                                {/* 2. Quantity & Description */}
+                                {(currentReport.quantity || currentReport.additionalDescription) && (
+                                  <div className="p-3 space-y-2 text-sm border-b border-gray-100">
+                                    {currentReport.quantity && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Тоо ширхэг</span>
+                                        <span className="font-medium">{currentReport.quantity}</span>
+                                      </div>
+                                    )}
+                                    {currentReport.additionalDescription && (
+                                      <div>
+                                        <span className="text-gray-500 text-xs">Тайлбар:</span>
+                                        <p className="text-gray-700 mt-1">{currentReport.additionalDescription}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* 3. Total Amount */}
+                                <div className="p-3 border-b border-gray-100">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-500">Нийт дүн</span>
+                                    <div className="text-right">
+                                      <p className="text-xl font-bold text-gray-900">{totalMNT.toLocaleString()} ₮</p>
+                                      <p className="text-xs text-gray-400">{yuanAmount.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮ + 5%</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* 4. Bank Info */}
+                                <div className="p-3 space-y-1.5 text-sm border-b border-gray-100 bg-gray-50">
+                                  <p className="text-xs text-gray-400 font-medium mb-2">Шилжүүлэх данс</p>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Банк</span>
+                                    <span className="font-medium">{accountInfo?.bank}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Нэр</span>
+                                    <span className="font-medium">{accountInfo?.accountName}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-500">Данс</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold font-mono">{accountInfo?.accountNumber}</span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(accountInfo?.accountNumber || "");
+                                          alert("Хуулагдлаа!");
+                                        }}
+                                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                                      >
+                                        Хуулах
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* 5. Actions */}
+                                <div className="p-3">
+                                  {selectedOrder.userPaymentVerified ? (
+                                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-2.5 text-sm">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="font-medium">Баталгаажуулахыг хүлээж байна</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handlePaymentPaid(selectedOrder.id)}
+                                        disabled={paymentLoading}
+                                        className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                      >
+                                        {paymentLoading ? (
+                                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                        )}
+                                        Төлбөр төлсөн
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelOrder(selectedOrder.id)}
+                                        disabled={cancelLoading}
+                                        className="px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
+                                      >
+                                        Цуцлах
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </>
                             );
                           })()}
                         </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Agent Report for non-payment statuses (amjilttai, etc.) */}
+                  {hasAgentReport && currentReport && selectedOrder.status !== "tolbor_huleej_bn" && (
+                    <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                      {/* Header */}
+                      <div className="px-4 py-3 bg-gray-100 border-b border-gray-200">
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span className="text-sm font-medium">Тайлан</span>
+                        </div>
                       </div>
 
-                      {/* Payment Status Message */}
-                      {selectedOrder.userPaymentVerified && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
-                          <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
-                            <svg
-                              className="w-5 h-5 text-yellow-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-yellow-800">
-                              Төлбөр баталгаажуулахыг хүлээж байна
-                            </p>
-                            <p className="text-sm text-yellow-700 mt-1">
-                              Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ.
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      {/* Content */}
+                      <div className="bg-white">
+                        {(() => {
+                          const exchangeRate = adminSettings?.exchangeRate || 1;
+                          const yuanAmount = currentReport.userAmount || 0;
+                          const totalMNT = Math.round(yuanAmount * exchangeRate * 1.05);
+                          return (
+                            <>
+                              {/* Images */}
+                              {currentReport.additionalImages && currentReport.additionalImages.length > 0 && (
+                                <div className="p-3 border-b border-gray-100">
+                                  <div className="flex gap-2">
+                                    {currentReport.additionalImages.map((img, i) => (
+                                      <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+                                        <img src={img} alt="" className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
 
-                      {/* Payment Action Buttons */}
-                      {!selectedOrder.userPaymentVerified && (
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => handlePaymentPaid(selectedOrder.id)}
-                            disabled={paymentLoading}
-                            className="flex-1 px-4 py-3 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {paymentLoading ? (
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            )}
-                            {paymentLoading
-                              ? "Уншиж байна..."
-                              : "Төлбөр төлсөн"}
-                          </button>
-                          <button
-                            onClick={() => handleCancelOrder(selectedOrder.id)}
-                            disabled={cancelLoading}
-                            className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-semibold transition-colors border border-red-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {cancelLoading && (
-                              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                            )}
-                            {cancelLoading ? "..." : "Цуцлах"}
-                          </button>
-                        </div>
-                      )}
+                              {/* Quantity & Description */}
+                              {(currentReport.quantity || currentReport.additionalDescription) && (
+                                <div className="p-3 space-y-2 text-sm border-b border-gray-100">
+                                  {currentReport.quantity && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Тоо ширхэг</span>
+                                      <span className="font-medium">{currentReport.quantity}</span>
+                                    </div>
+                                  )}
+                                  {currentReport.additionalDescription && (
+                                    <div>
+                                      <span className="text-gray-500 text-xs">Тайлбар:</span>
+                                      <p className="text-gray-700 mt-1">{currentReport.additionalDescription}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Total Amount */}
+                              <div className="p-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-500">Төлсөн дүн</span>
+                                  <div className="text-right">
+                                    <p className="text-lg font-bold text-green-600">{totalMNT.toLocaleString()} ₮</p>
+                                    <p className="text-xs text-gray-400">{yuanAmount.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮ + 5%</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
 
@@ -1753,8 +1878,8 @@ export default function UserDashboardPage() {
                       </button>
                     )}
 
-                    {/* Cancel/Delete Button */}
-                    {canCancelOrder(selectedOrder) && (
+                    {/* Cancel/Delete Button - not shown for tolbor_huleej_bn (handled in payment section) */}
+                    {canCancelOrder(selectedOrder) && selectedOrder.status !== "tolbor_huleej_bn" && (
                       <button
                         onClick={() => handleCancelOrder(selectedOrder.id)}
                         disabled={cancelLoading}
@@ -1848,6 +1973,21 @@ export default function UserDashboardPage() {
             }
           }}
           cancelLoading={cancelLoading}
+          onRemoveItem={async (bundleOrderId: string, itemId: string) => {
+            setRemoveItemLoading(itemId);
+            try {
+              const updatedOrder = await apiClient.removeItemFromBundle(bundleOrderId, itemId);
+              // Update local state with updated bundle order
+              setSelectedBundleOrder(updatedOrder);
+              await loadData();
+            } catch (e: unknown) {
+              const errorMessage = e instanceof Error ? e.message : "Бараа хасахад алдаа гарлаа";
+              alert(errorMessage);
+            } finally {
+              setRemoveItemLoading(null);
+            }
+          }}
+          removeItemLoading={removeItemLoading}
           onOpenChat={(bundleOrder) => {
             setSelectedBundleOrder(null);
             setShowBundleOrderModal(false);
@@ -1855,6 +1995,212 @@ export default function UserDashboardPage() {
             setShowChatModal(true);
           }}
         />
+      )}
+
+      {/* Agent Detail Modal */}
+      {showAgentModal && selectedAgent && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setSelectedAgent(null);
+            setShowAgentModal(false);
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with gradient */}
+            <div className={`relative p-6 pb-16 rounded-t-2xl ${
+              selectedAgent.rank === 1
+                ? "bg-gradient-to-br from-yellow-400 via-amber-400 to-orange-400"
+                : selectedAgent.rank === 2
+                  ? "bg-gradient-to-br from-gray-300 via-slate-400 to-gray-400"
+                  : selectedAgent.rank === 3
+                    ? "bg-gradient-to-br from-orange-300 via-amber-400 to-yellow-400"
+                    : "bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-500"
+            }`}>
+              <button
+                onClick={() => {
+                  setSelectedAgent(null);
+                  setShowAgentModal(false);
+                }}
+                className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Rank badge */}
+              {selectedAgent.rank && selectedAgent.rank <= 10 && (
+                <div className="absolute top-4 left-4 px-3 py-1 bg-white/20 rounded-full text-white text-sm font-bold">
+                  {selectedAgent.rank === 1 ? "🥇 #1" : selectedAgent.rank === 2 ? "🥈 #2" : selectedAgent.rank === 3 ? "🥉 #3" : `#${selectedAgent.rank}`}
+                </div>
+              )}
+            </div>
+
+            {/* Avatar - overlapping header */}
+            <div className="relative -mt-12 flex justify-center">
+              {selectedAgent.avatarUrl ? (
+                <img
+                  src={selectedAgent.avatarUrl}
+                  alt={selectedAgent.name}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-3xl border-4 border-white shadow-lg ${
+                  selectedAgent.rank === 1
+                    ? "bg-gradient-to-br from-yellow-400 to-amber-500"
+                    : selectedAgent.rank === 2
+                      ? "bg-gradient-to-br from-gray-400 to-slate-500"
+                      : selectedAgent.rank === 3
+                        ? "bg-gradient-to-br from-orange-400 to-amber-500"
+                        : "bg-gradient-to-br from-purple-400 to-indigo-500"
+                }`}>
+                  {selectedAgent.name[0]?.toUpperCase()}
+                </div>
+              )}
+              {/* Online status */}
+              <div className={`absolute bottom-0 right-1/2 translate-x-10 w-5 h-5 rounded-full border-3 border-white ${
+                selectedAgent.availabilityStatus === "online" ? "bg-green-500" : selectedAgent.availabilityStatus === "busy" ? "bg-yellow-500" : "bg-gray-400"
+              }`} />
+            </div>
+
+            {/* Content */}
+            <div className="p-6 pt-4">
+              {/* Name and status */}
+              <div className="text-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                  {selectedAgent.name}
+                  {selectedAgent.featured && (
+                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded font-medium">
+                      Онцлох
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedAgent.availabilityStatus === "online" ? "🟢 Онлайн" : selectedAgent.availabilityStatus === "busy" ? "🟡 Завгүй" : "⚫ Офлайн"}
+                </p>
+              </div>
+
+              {/* Rating */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className={`w-5 h-5 ${i < Math.floor(selectedAgent.avgRating) ? "text-yellow-400" : "text-gray-300"}`}
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-gray-700 font-semibold">{selectedAgent.avgRating.toFixed(1)}</span>
+                <span className="text-gray-500 text-sm">({selectedAgent.reviewCount} үнэлгээ)</span>
+              </div>
+
+              {/* Bio */}
+              {selectedAgent.bio && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Танилцуулга</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedAgent.bio}
+                  </p>
+                </div>
+              )}
+
+              {/* Specialties */}
+              {selectedAgent.specialties && selectedAgent.specialties.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Мэргэшил</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAgent.specialties.map((specialty, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-medium"
+                      >
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-green-50 rounded-xl p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{selectedAgent.successRate}%</p>
+                  <p className="text-xs text-gray-500">Амжилтын хувь</p>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{selectedAgent.totalTransactions}</p>
+                  <p className="text-xs text-gray-500">Нийт гүйлгээ</p>
+                </div>
+                {selectedAgent.experienceYears && selectedAgent.experienceYears > 0 && (
+                  <div className="bg-purple-50 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{selectedAgent.experienceYears}</p>
+                    <p className="text-xs text-gray-500">Жилийн туршлага</p>
+                  </div>
+                )}
+                {selectedAgent.responseTime && (
+                  <div className="bg-amber-50 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1 text-amber-600 mb-1">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">{selectedAgent.responseTime}</p>
+                    <p className="text-xs text-gray-500">Хариу өгөх хугацаа</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Info */}
+              <div className="space-y-3 border-t border-gray-100 pt-4">
+                {selectedAgent.languages && selectedAgent.languages.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    <div>
+                      <p className="text-xs text-gray-500">Хэл</p>
+                      <p className="text-sm text-gray-700">{selectedAgent.languages.join(", ")}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedAgent.workingHours && (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-xs text-gray-500">Ажлын цаг</p>
+                      <p className="text-sm text-gray-700">{selectedAgent.workingHours}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

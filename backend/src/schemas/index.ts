@@ -18,13 +18,14 @@ export const updateProfileSchema = z.object({
 
 // ============ Order Schemas ============
 export const createOrderSchema = z.object({
-  productName: z.string().min(3, "Барааны нэр хамгийн багадаа 3 тэмдэгт байх ёстой").max(255),
-  description: z.string().min(10, "Тайлбар хамгийн багадаа 10 тэмдэгт байх ёстой").max(5000),
-  imageUrl: z.string().optional(),
+  productName: z.string().max(255).optional(),
+  description: z.string().max(5000).optional(),
+  imageUrl: z.string().optional().nullable(),
   imageUrls: z.array(z.string()).max(3, "Хамгийн ихдээ 3 зураг оруулах боломжтой").optional(),
   products: z.array(z.object({
     productName: z.string().min(1),
     description: z.string().min(1),
+    imageUrls: z.array(z.string()).optional(),
   })).optional(),
 });
 
@@ -94,4 +95,19 @@ export const mongoIdSchema = z.object({
 
 export const orderIdSchema = z.object({
   orderId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Order ID буруу формат"),
+});
+
+// ============ Card Schemas ============
+export const giftCardsSchema = z.object({
+  recipientPhone: z.string().min(8, "Утасны дугаар хамгийн багадаа 8 тэмдэгт").max(20),
+  amount: z.number().min(1, "Хамгийн багадаа 1 карт илгээх боломжтой"),
+});
+
+export const purchaseCardsSchema = z.object({
+  amount: z.number().min(1, "Хамгийн багадаа 1 карт худалдан авах боломжтой"),
+});
+
+export const adminGiftCardsSchema = z.object({
+  recipientPhone: z.string().min(8, "Утасны дугаар хамгийн багадаа 8 тэмдэгт").max(20),
+  amount: z.number().min(1, "Хамгийн багадаа 1 карт бэлэглэх боломжтой"),
 });

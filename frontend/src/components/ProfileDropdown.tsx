@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { type User, type Profile } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import ProfileForm from "./ProfileForm";
 
 export default function ProfileDropdown() {
   const { user: clerkUser } = useUser();
+  const { signOut } = useClerk();
+  const router = useRouter();
   const apiClient = useApiClient();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -98,6 +101,14 @@ export default function ProfileDropdown() {
     setShowProfileForm(false);
   };
 
+  const handleSignOut = async () => {
+    if (!confirm("Та системээс гарахдаа итгэлтэй байна уу?")) {
+      return;
+    }
+    await signOut();
+    router.push("/");
+  };
+
   return (
     <>
       {/* Agent Points Display - Outside dropdown container */}
@@ -169,7 +180,7 @@ export default function ProfileDropdown() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors min-h-10 min-w-10"
+          className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors min-h-10 min-w-10"
           title="Миний мэдээлэл"
         >
           <svg
@@ -188,15 +199,15 @@ export default function ProfileDropdown() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl border border-gray-200 z-50 max-h-[85vh] overflow-y-auto shadow-lg">
+          <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[85vh] overflow-y-auto shadow-lg">
             <div className="p-3 sm:p-4">
-              <div className="flex justify-between items-center mb-2 sm:mb-3 sticky top-0 bg-white pb-2 border-b border-gray-100">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+              <div className="flex justify-between items-center mb-2 sm:mb-3 sticky top-0 bg-white dark:bg-gray-800 pb-2 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                   Миний мэдээлэл
                 </h3>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 min-h-8 min-w-8"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 min-h-8 min-w-8"
                 >
                   <svg
                     className="w-5 h-5"
@@ -227,7 +238,7 @@ export default function ProfileDropdown() {
                   />
                   <button
                     onClick={handleCancelForm}
-                    className="mt-3 w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
+                    className="mt-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 active:bg-gray-400 transition-colors font-medium min-h-11"
                   >
                     Цуцлах
                   </button>
@@ -235,47 +246,43 @@ export default function ProfileDropdown() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                       Имэйл
                     </label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">
                       {clerkUser?.primaryEmailAddress?.emailAddress}
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-600">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                       Эрх
                     </label>
-                    <p className="mt-1 text-sm text-gray-900 capitalize">
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white capitalize">
                       {user?.role === "agent"
                         ? user?.isApproved
                           ? "agent"
                           : "agent (батлагдаагүй)"
-                        : user?.role === "user"
-                          ? user?.isApproved
-                            ? "user"
-                            : "user (батлагдаагүй)"
-                          : user?.role || "user"}
+                        : user?.role || "user"}
                     </p>
                   </div>
 
                   {profile ? (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-600">
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                           Нэр
                         </label>
-                        <p className="mt-1 text-sm text-gray-900">
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
                           {profile.name}
                         </p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-600">
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                           Утас
                         </label>
-                        <p className="mt-1 text-sm text-gray-900">
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
                           {profile.phone}
                         </p>
                       </div>
@@ -283,20 +290,20 @@ export default function ProfileDropdown() {
                       {user?.role === "agent"
                         ? profile.accountNumber && (
                             <div>
-                              <label className="block text-sm font-medium text-gray-600">
+                              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                                 Дансны дугаар
                               </label>
-                              <p className="mt-1 text-sm text-gray-900">
+                              <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                 {profile.accountNumber}
                               </p>
                             </div>
                           )
                         : profile.cargo && (
                             <div>
-                              <label className="block text-sm font-medium text-gray-600">
+                              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                                 Карго
                               </label>
-                              <p className="mt-1 text-sm text-gray-900">
+                              <p className="mt-1 text-sm text-gray-900 dark:text-white">
                                 {profile.cargo}
                               </p>
                             </div>
@@ -304,10 +311,10 @@ export default function ProfileDropdown() {
 
                       {/* Email notification status */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-600">
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                           Email мэдэгдэл
                         </label>
-                        <p className="mt-1 text-sm text-gray-900">
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">
                           {profile.emailNotificationsEnabled !== false ? "Идэвхтэй" : "Идэвхгүй"}
                         </p>
                       </div>
@@ -321,7 +328,7 @@ export default function ProfileDropdown() {
                     </>
                   ) : (
                     <>
-                      <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl">
                         Профайл үүсгээгүй байна.
                       </div>
                       <button
@@ -334,16 +341,26 @@ export default function ProfileDropdown() {
                   )}
 
                   {user?.role === "admin" && (
-                    <div className="pt-4 border-t border-gray-200 space-y-2">
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
                       <Link
                         href="/admin/dashboard"
-                        className="block w-full px-4 py-2.5 text-sm text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-center font-medium min-h-10"
+                        className="block w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 active:bg-gray-300 transition-colors text-center font-medium min-h-10"
                         onClick={() => setIsOpen(false)}
                       >
                         Admin Dashboard
                       </Link>
                     </div>
                   )}
+
+                  {/* Sign Out Button */}
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-white hover:bg-red-500 border border-red-200 dark:border-red-800 hover:border-red-500 rounded-xl transition-colors font-medium min-h-11"
+                    >
+                      Гарах
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

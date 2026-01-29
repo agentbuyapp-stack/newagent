@@ -236,6 +236,30 @@ export const cancelBundleOrder = async (req: Request, res: Response): Promise<vo
 };
 
 /**
+ * DELETE /bundle-orders/:id/items/:itemId - Remove item from bundle order
+ */
+export const removeItemFromBundle = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { order, error, status } = await bundleOrderService.removeItemFromBundle(
+    req.params.id,
+    req.params.itemId,
+    req.user.id,
+    req.user.role
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(order);
+};
+
+/**
  * DELETE /bundle-orders/:id - Delete bundle order
  */
 export const deleteBundleOrder = async (req: Request, res: Response): Promise<void> => {
@@ -256,4 +280,27 @@ export const deleteBundleOrder = async (req: Request, res: Response): Promise<vo
   }
 
   res.json({ message: "Bundle order deleted successfully", success });
+};
+
+/**
+ * PUT /bundle-orders/:id/archive - Archive bundle order
+ */
+export const archiveBundleOrder = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { order, error, status } = await bundleOrderService.archiveOrder(
+    req.params.id,
+    req.user.id,
+    req.user.role
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(order);
 };

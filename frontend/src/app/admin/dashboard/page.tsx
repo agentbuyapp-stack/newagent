@@ -11,8 +11,13 @@ import {
   type AdminSettingsData,
   type AgentReport,
   type RewardRequest,
+  type AgentSpecialty,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
+import AgentProfileEditor from "@/components/admin/AgentProfileEditor";
+import AgentRankingManager from "@/components/admin/AgentRankingManager";
+import SpecialtyManager from "@/components/admin/SpecialtyManager";
+import CardManager from "@/components/admin/CardManager";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -26,7 +31,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<
-    "agents" | "orders" | "cargos" | "settings" | "rewards"
+    "agents" | "orders" | "cargos" | "settings" | "rewards" | "ranking" | "specialties" | "cards"
   >("agents");
   const [rewardRequests, setRewardRequests] = useState<RewardRequest[]>([]);
   const [orderFilter, setOrderFilter] = useState<
@@ -64,6 +69,8 @@ export default function AdminDashboardPage() {
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [addingAgent, setAddingAgent] = useState(false);
   const [uploadingCargoImage, setUploadingCargoImage] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<User | null>(null);
+  const [specialties, setSpecialties] = useState<AgentSpecialty[]>([]);
 
   // Cargo зураг upload хийх
   const handleCargoImageUpload = async (
@@ -139,13 +146,14 @@ export default function AdminDashboardPage() {
           return;
         }
 
-        // Load agents, orders, cargos, admin settings, and reward requests
+        // Load agents, orders, cargos, admin settings, specialties and reward requests
         try {
           const promises: Promise<unknown>[] = [
             apiClient.getAgents(),
             apiClient.getAdminOrders(),
             apiClient.getCargos(),
             apiClient.getAdminSettings(),
+            apiClient.getAdminSpecialties(),
           ];
 
           if (includeRewards) {
@@ -158,12 +166,14 @@ export default function AdminDashboardPage() {
             ordersData,
             cargosData,
             settingsData,
+            specialtiesData,
             rewardRequestsData,
           ] = results as [
             User[],
             Order[],
             Cargo[],
             AdminSettings,
+            AgentSpecialty[],
             RewardRequest[] | undefined,
           ];
 
@@ -187,6 +197,7 @@ export default function AdminDashboardPage() {
           setOrders(ordersData);
           setCargos(cargosData);
           setAdminSettings(settingsData);
+          setSpecialties(specialtiesData || []);
           if (includeRewards && rewardRequestsData) {
             setRewardRequests(rewardRequestsData);
           }
@@ -689,6 +700,36 @@ export default function AdminDashboardPage() {
               >
                 Урамшуулал ({rewardRequests.length})
               </button>
+              <button
+                onClick={() => setActiveTab("ranking")}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                  activeTab === "ranking"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Топ 10
+              </button>
+              <button
+                onClick={() => setActiveTab("specialties")}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                  activeTab === "specialties"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Мэргэжил ({specialties.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("cards")}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+                  activeTab === "cards"
+                    ? "text-amber-600 border-b-2 border-amber-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Карт
+              </button>
             </div>
 
             {/* Agents Tab */}
@@ -760,12 +801,20 @@ export default function AdminDashboardPage() {
                               Батлагдсан
                             </p>
                           </div>
-                          <button
-                            onClick={() => handleApproveAgent(agent.id, false)}
-                            className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
-                          >
-                            Цуцлах
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingAgent(agent)}
+                              className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
+                            >
+                              Профайл
+                            </button>
+                            <button
+                              onClick={() => handleApproveAgent(agent.id, false)}
+                              className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
+                            >
+                              Цуцлах
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1685,6 +1734,34 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Agent Stats Section */}
+                <div className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white mt-4">
+                  <h4 className="text-base font-semibold text-gray-900 mb-4">
+                    Агентуудын статистик
+                  </h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Агентуудын гүйлгээний тоо болон амжилтын хувийг захиалгын түүхээс дахин тооцоолох
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Бүх агентуудын статистикийг дахин тооцоолох уу? Энэ үйлдэл хэдэн секунд болж магадгүй.")) {
+                        return;
+                      }
+                      try {
+                        const result = await apiClient.recalculateAgentStats();
+                        alert(`Амжилттай! ${result.agents?.length || 0} агентын статистик шинэчлэгдлээ.`);
+                        await loadData();
+                      } catch (e: unknown) {
+                        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
+                        alert(errorMessage);
+                      }
+                    }}
+                    className="px-4 py-2.5 text-sm text-white bg-purple-500 rounded-xl hover:bg-purple-600 active:bg-purple-700 transition-colors font-medium min-h-10"
+                  >
+                    Статистик дахин тооцоолох
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1959,9 +2036,48 @@ export default function AdminDashboardPage() {
                 })()}
               </div>
             )}
+
+            {/* Ranking Tab */}
+            {activeTab === "ranking" && (
+              <AgentRankingManager
+                agents={agents.filter((a) => a.isApproved)}
+                onUpdate={(updatedAgents) => {
+                  setAgents((prev) =>
+                    prev.map((a) => {
+                      const updated = updatedAgents.find((u) => u.id === a.id);
+                      return updated || a;
+                    })
+                  );
+                }}
+              />
+            )}
+
+            {/* Specialties Tab */}
+            {activeTab === "specialties" && (
+              <SpecialtyManager
+                onSpecialtiesChange={(newSpecialties) => setSpecialties(newSpecialties)}
+              />
+            )}
+
+            {/* Cards Tab */}
+            {activeTab === "cards" && <CardManager />}
           </div>
         </div>
       </main>
+
+      {/* Agent Profile Editor Modal */}
+      {editingAgent && (
+        <AgentProfileEditor
+          agent={editingAgent}
+          specialties={specialties}
+          onUpdate={(updatedAgent) => {
+            setAgents((prev) =>
+              prev.map((a) => (a.id === updatedAgent.id ? updatedAgent : a))
+            );
+          }}
+          onClose={() => setEditingAgent(null)}
+        />
+      )}
     </div>
   );
 }

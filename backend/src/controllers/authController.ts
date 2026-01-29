@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { User, Profile } from "../models";
 import { validateEmail } from "../utils/validation";
 import { parseRole } from "../middleware/requireRole";
+import { cardService } from "../services/cardService";
 
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -30,6 +31,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         approvedAt: user.approvedAt,
         approvedBy: user.approvedBy,
         agentPoints: user.agentPoints || 0,
+        researchCards: user.researchCards || 0,
         profile: profile ? {
           ...profile,
           id: profile._id.toString(),
@@ -80,10 +82,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       role: userRole,
     });
 
+    // Grant initial research cards to new users (5 cards)
+    if (userRole === "user") {
+      await cardService.grantInitialCards(user._id.toString());
+    }
+
     res.status(201).json({
       id: user._id.toString(),
       email: user.email,
       role: user.role,
+      researchCards: userRole === "user" ? 5 : 0,
     });
   } catch (error: any) {
     if (error.code === 11000) {

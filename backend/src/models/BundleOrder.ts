@@ -42,6 +42,7 @@ export interface IBundleOrder extends Document {
   reportMode?: "single" | "per_item";
   // Bundle-level report (used when reportMode is "single")
   bundleReport?: IBundleReport;
+  archivedByUser: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -132,6 +133,10 @@ const BundleOrderSchema = new Schema<IBundleOrder>(
     },
     bundleReport: {
       type: BundleReportSchema,
+    },
+    archivedByUser: {
+      type: Boolean,
+      default: false,
     },
   },
   {

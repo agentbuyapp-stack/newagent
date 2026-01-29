@@ -51,9 +51,9 @@ export default function OrderHistorySection({
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
   const [orderFilter, setOrderFilter] = useState<
-    "all" | "active" | "completed" | "cancelled" | "archived"
-  >("all");
-  const [orderViewMode, setOrderViewMode] = useState<"list" | "card">("card");
+    "active" | "completed" | "cancelled" | "archived"
+  >("active");
+  const [orderViewMode, setOrderViewMode] = useState<"list" | "card" | "compact">("card");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Combine and filter orders
@@ -88,7 +88,6 @@ export default function OrderHistorySection({
     return combinedOrders
       .filter((item) => {
         const status = item.data.status;
-        if (orderFilter === "all") return true;
         if (orderFilter === "active") {
           return [
             "niitlegdsen",
@@ -173,7 +172,7 @@ export default function OrderHistorySection({
   const archivedCount = combinedArchivedOrders.length;
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-20">
+    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-20">
       <div className="flex items-center justify-between">
         <div
           className="flex items-center gap-2 sm:gap-3 flex-1 cursor-pointer min-w-0"
@@ -195,10 +194,10 @@ export default function OrderHistorySection({
             </svg>
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
               Өмнөх захиалгууд
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Нийт захиалга ({totalOrdersCount})
             </p>
           </div>
@@ -225,32 +224,13 @@ export default function OrderHistorySection({
         <div className="mt-4 space-y-2">
           {/* Category tabs */}
           <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
-            <div className="flex items-center justify-start sm:justify-center border-b border-gray-200 min-w-max sm:min-w-0 gap-2 pt-2">
-              <button
-                onClick={() => setOrderFilter("all")}
-                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
-                  orderFilter === "all"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-              >
-                Бүгд
-                <span
-                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
-                    orderFilter === "all"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-700"
-                  }`}
-                >
-                  {totalOrdersCount}
-                </span>
-              </button>
+            <div className="flex items-center justify-start sm:justify-center border-b border-gray-200 dark:border-gray-700 min-w-max sm:min-w-0 gap-2 pt-2">
               <button
                 onClick={() => setOrderFilter("active")}
                 className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
                   orderFilter === "active"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 Идэвхтэй
@@ -258,7 +238,7 @@ export default function OrderHistorySection({
                   className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
                     orderFilter === "active"
                       ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-700"
+                      : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {activeCount}
@@ -268,8 +248,8 @@ export default function OrderHistorySection({
                 onClick={() => setOrderFilter("completed")}
                 className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
                   orderFilter === "completed"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 Амжилттай
@@ -277,7 +257,7 @@ export default function OrderHistorySection({
                   className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
                     orderFilter === "completed"
                       ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-700"
+                      : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {completedCount}
@@ -287,8 +267,8 @@ export default function OrderHistorySection({
                 onClick={() => setOrderFilter("cancelled")}
                 className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
                   orderFilter === "cancelled"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 Цуцлагдсан
@@ -296,7 +276,7 @@ export default function OrderHistorySection({
                   className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
                     orderFilter === "cancelled"
                       ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-700"
+                      : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {cancelledCount}
@@ -306,8 +286,8 @@ export default function OrderHistorySection({
                 onClick={() => setOrderFilter("archived")}
                 className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
                   orderFilter === "archived"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 Архив
@@ -315,7 +295,7 @@ export default function OrderHistorySection({
                   className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
                     orderFilter === "archived"
                       ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-700"
+                      : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
                   }`}
                 >
                   {archivedCount}
@@ -350,16 +330,16 @@ export default function OrderHistorySection({
 
           {/* View Mode Toggle */}
           <div className="flex items-center justify-between mb-3 gap-2">
-            <span className="text-xs sm:text-sm text-gray-500 shrink-0">
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 shrink-0">
               Харах:
             </span>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 sm:p-1">
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 sm:p-1">
               <button
-                onClick={() => setOrderViewMode("list")}
+                onClick={() => setOrderViewMode("compact")}
                 className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  orderViewMode === "list"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                  orderViewMode === "compact"
+                    ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <svg
@@ -372,17 +352,17 @@ export default function OrderHistorySection({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                    d="M4 6h16M4 12h16M4 18h16"
                   />
                 </svg>
-                <span className="hidden xs:inline">Жагсаалт</span>
+                <span className="hidden xs:inline">Энгийн</span>
               </button>
               <button
                 onClick={() => setOrderViewMode("card")}
                 className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   orderViewMode === "card"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <svg
@@ -409,7 +389,7 @@ export default function OrderHistorySection({
               <>
                 <div
                   className={
-                    orderViewMode === "list" ? "space-y-2" : "space-y-4"
+                    orderViewMode === "card" ? "space-y-4" : orderViewMode === "compact" ? "space-y-1" : "space-y-2"
                   }
                 >
                   {paginatedOrders.map((item) => {
@@ -538,9 +518,8 @@ export default function OrderHistorySection({
                 )}
               </>
             ) : (
-              <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
+              <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl text-center">
                 <p>
-                  {orderFilter === "all" && "Өмнөх захиалга байхгүй байна."}
                   {orderFilter === "active" &&
                     "Идэвхтэй захиалга байхгүй байна."}
                   {orderFilter === "completed" &&

@@ -90,13 +90,13 @@ export default function ProfileForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-3 py-2 rounded-lg text-sm">
           Профайл амжилттай шинэчлэгдлээ!
         </div>
       )}
@@ -104,7 +104,7 @@ export default function ProfileForm({
       <div>
         <label
           htmlFor="name"
-          className="block text-sm font-medium text-gray-900 mb-1"
+          className="block text-sm font-medium text-gray-900 dark:text-white mb-1"
         >
           Нэр
         </label>
@@ -114,7 +114,7 @@ export default function ProfileForm({
           required
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Жишээ: Бат"
         />
       </div>
@@ -122,7 +122,7 @@ export default function ProfileForm({
       <div>
         <label
           htmlFor="phone"
-          className="block text-sm font-medium text-gray-900 mb-1"
+          className="block text-sm font-medium text-gray-900 dark:text-white mb-1"
         >
           Утас
         </label>
@@ -132,7 +132,7 @@ export default function ProfileForm({
           required
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="99112233"
         />
       </div>
@@ -140,7 +140,7 @@ export default function ProfileForm({
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-900 mb-1"
+          className="block text-sm font-medium text-gray-900 dark:text-white mb-1"
         >
           Имэйл
         </label>
@@ -150,7 +150,7 @@ export default function ProfileForm({
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          className="w-full px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="example@email.com"
         />
       </div>
@@ -159,12 +159,12 @@ export default function ProfileForm({
         <div>
           <label
             htmlFor="cargo"
-            className="block text-sm font-medium text-gray-900 mb-1"
+            className="block text-sm font-medium text-gray-900 dark:text-white mb-1"
           >
             Карго сонгох
           </label>
           {loadingCargos ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Ачааны төрлүүдийг ачааллаж байна...
             </p>
           ) : (
@@ -175,7 +175,7 @@ export default function ProfileForm({
               onChange={(e) =>
                 setFormData({ ...formData, cargo: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="">Карго сонгоно уу</option>
               {cargos.map((cargo) => (
@@ -186,7 +186,7 @@ export default function ProfileForm({
             </select>
           )}
           {!loadingCargos && cargos.length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Ачааны төрөл байхгүй байна. Admin-аас нэмэх хэрэгтэй.
             </p>
           )}
@@ -195,7 +195,7 @@ export default function ProfileForm({
         <div>
           <label
             htmlFor="accountNumber"
-            className="block text-sm font-medium text-gray-900 mb-1"
+            className="block text-sm font-medium text-gray-900 dark:text-white mb-1"
           >
             Дансны дугаар
           </label>
@@ -206,23 +206,23 @@ export default function ProfileForm({
             onChange={(e) =>
               setFormData({ ...formData, accountNumber: e.target.value })
             }
-            className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 text-sm text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="Жишээ: 1234567890"
           />
         </div>
       )}
 
       {/* Email notification toggle */}
-      <div className="p-3 bg-gray-50 rounded-lg">
+      <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
             <label
               htmlFor="emailNotifications"
-              className="text-sm font-medium text-gray-900"
+              className="text-sm font-medium text-gray-900 dark:text-white"
             >
               Email мэдэгдэл
             </label>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Захиалгын статус өөрчлөгдөхөд email авах
             </p>
           </div>
@@ -235,8 +235,8 @@ export default function ProfileForm({
                 emailNotificationsEnabled: !formData.emailNotificationsEnabled,
               })
             }
-            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              formData.emailNotificationsEnabled ? "bg-blue-500" : "bg-gray-300"
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+              formData.emailNotificationsEnabled ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
             }`}
             role="switch"
             aria-checked={formData.emailNotificationsEnabled}

@@ -162,7 +162,7 @@ export default function NotificationDropdown() {
       {/* Bell icon button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+        className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none"
         aria-label="Мэдэгдэл"
       >
         <svg
@@ -188,14 +188,14 @@ export default function NotificationDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 mt-2 w-72 sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[50vh] overflow-hidden">
+        <div className="absolute right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 mt-2 w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[50vh] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900">Мэдэгдэл</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Мэдэгдэл</h3>
             {notifications.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className="text-xs text-red-600 hover:text-red-800"
+                className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
               >
                 Clear
               </button>
@@ -209,9 +209,9 @@ export default function NotificationDropdown() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="py-8 text-center text-gray-500">
+              <div className="py-8 text-center text-gray-500 dark:text-gray-400">
                 <svg
-                  className="w-12 h-12 mx-auto mb-2 text-gray-300"
+                  className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -231,8 +231,8 @@ export default function NotificationDropdown() {
                   <li
                     key={`${notification.id}-${index}`}
                     onClick={() => handleMarkAsRead(notification)}
-                    className={`px-3 py-2 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      !notification.isRead ? "bg-blue-50" : ""
+                    className={`px-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                      !notification.isRead ? "bg-blue-50 dark:bg-blue-900/30" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -241,7 +241,7 @@ export default function NotificationDropdown() {
                           <span
                             className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
                               notificationTypeColors[notification.type] ||
-                              "bg-gray-100 text-gray-800"
+                              "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                             }`}
                           >
                             {notificationTypeLabels[notification.type] ||
@@ -250,17 +250,17 @@ export default function NotificationDropdown() {
                           {!notification.isRead && (
                             <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                           )}
-                          <span className="text-[10px] text-gray-400">
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">
                             {formatTimeAgo(notification.createdAt)}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-700 line-clamp-1">
+                        <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-1">
                           {notification.message}
                         </p>
                       </div>
                       <button
                         onClick={(e) => handleDelete(notification.id, e)}
-                        className="text-gray-400 hover:text-red-500 p-0.5 shrink-0"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-0.5 shrink-0"
                         title="Устгах"
                       >
                         <svg
@@ -286,13 +286,13 @@ export default function NotificationDropdown() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
               <button
                 onClick={() => {
                   setIsOpen(false);
                   // Navigate to notifications page if needed
                 }}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-800"
+                className="w-full text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
               >
                 Бүгдийг харах
               </button>

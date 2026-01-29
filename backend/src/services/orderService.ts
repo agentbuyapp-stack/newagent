@@ -10,6 +10,7 @@ import {
   notifyUserTrackCodeAdded,
   notifyAdminPaymentRequest,
 } from "./notificationService";
+import { cardService } from "./cardService";
 
 // Types
 export interface OrderUser {
@@ -358,6 +359,12 @@ export class OrderService {
         if (!limitCheck.allowed) {
           return { error: limitCheck.reason, status: 429 };
         }
+
+        // Check if user has research cards
+        const hasCards = await cardService.hasCardsForOrder(userId, role);
+        if (!hasCards) {
+          return { error: "Судалгааны карт хүрэлцэхгүй байна", status: 400 };
+        }
       }
 
       if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -368,7 +375,7 @@ export class OrderService {
 
       // Handle multiple products
       if (products && Array.isArray(products) && products.length > 0) {
-        return await this.createMultiProductOrder(userId, products);
+        return await this.createMultiProductOrder(userId, role, products);
       }
 
       // Single product order
@@ -390,6 +397,11 @@ export class OrderService {
         imageUrls: finalImageUrls,
         status: "niitlegdsen",
       });
+
+      // Deduct 1 card for users
+      if (role === "user") {
+        await cardService.deductCardForOrder(userId, order._id.toString());
+      }
 
       // Notify agents
       notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
@@ -414,6 +426,7 @@ export class OrderService {
    */
   private async createMultiProductOrder(
     userId: string,
+    role: string,
     products: Array<{ productName: string; description: string; imageUrls?: string[] }>
   ): Promise<{ order?: FormattedOrder; error?: string; status?: number }> {
     // Validate products
@@ -451,6 +464,11 @@ export class OrderService {
       imageUrls: finalImageUrls,
       status: "niitlegdsen",
     });
+
+    // Deduct 1 card for users
+    if (role === "user") {
+      await cardService.deductCardForOrder(userId, order._id.toString());
+    }
 
     notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
       console.error("Failed to notify agents:", err)

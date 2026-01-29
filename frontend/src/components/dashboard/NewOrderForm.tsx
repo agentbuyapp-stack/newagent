@@ -189,13 +189,13 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
   return (
     <form onSubmit={handleNewOrderSubmit} className="space-y-4 sm:space-y-6">
       {newOrderError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm">
           {newOrderError}
         </div>
       )}
 
       {newOrderSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl text-sm">
           Захиалга амжилттай үүслээ!
         </div>
       )}
@@ -205,15 +205,15 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
         return (
           <div
             key={order.id}
-            className="border border-gray-200 rounded-xl bg-gray-50"
+            className="border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800"
           >
             <div
-              className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+              className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               onClick={() => toggleProductExpand(order.id)}
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <svg
-                  className={`w-4 h-4 text-gray-500 transition-transform shrink-0 ${
+                  className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform shrink-0 ${
                     isExpanded ? "rotate-90" : ""
                   }`}
                   fill="none"
@@ -227,7 +227,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-                <h3 className="font-medium text-gray-900 text-sm truncate">
+                <h3 className="font-medium text-gray-900 dark:text-white text-sm truncate">
                   {index === 0 ? "Бараа #1" : `Бараа #${index + 1}`}
                   {order.productName && ` - ${order.productName}`}
                 </h3>
@@ -260,9 +260,9 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
             </div>
 
             {isExpanded && (
-              <div className="p-4 space-y-4 border-t border-gray-200">
+              <div className="p-4 space-y-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Зураг (Дээд тал нь 3 зураг)
                   </label>
                   <input
@@ -271,7 +271,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                     multiple
                     onChange={(e) => handleNewOrderImageChange(e, index)}
                     disabled={newOrderImagePreviews[index]?.length >= 3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   />
                   {newOrderImagePreviews[index] &&
                     newOrderImagePreviews[index].length > 0 && (
@@ -282,7 +282,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                               <img
                                 src={preview}
                                 alt={`Preview ${index + 1}-${imgIndex + 1}`}
-                                className="w-full h-20 object-cover rounded-lg border border-gray-300"
+                                className="w-full h-20 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
                               />
                               <button
                                 type="button"
@@ -312,14 +312,14 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                       </div>
                     )}
                   {newOrderImagePreviews[index]?.length >= 3 && (
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Дээд тал нь 3 зураг оруулах боломжтой
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Барааны нэр
                   </label>
                   <input
@@ -331,13 +331,13 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                       updatedOrders[index].productName = e.target.value;
                       setNewOrders(updatedOrders);
                     }}
-                    className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 text-base text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Барааны нэр оруулах"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Тайлбар
                   </label>
                   <textarea
@@ -349,7 +349,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
                       updatedOrders[index].description = e.target.value;
                       setNewOrders(updatedOrders);
                     }}
-                    className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 text-base text-black dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Барааны дэлгэрэнгүй тайлбар оруулах..."
                   />
                 </div>
@@ -362,7 +362,7 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
       <button
         type="button"
         onClick={addNewProductField}
-        className="w-full px-4 py-3 border border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-11"
+        className="w-full px-4 py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 font-medium text-base min-h-11"
       >
         <svg
           className="w-5 h-5"
@@ -382,12 +382,12 @@ export default function NewOrderForm({ onSuccess }: NewOrderFormProps) {
 
       {/* Info about order type */}
       {isBundleOrder && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+        <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-xl p-3">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
-            <p className="text-xs text-purple-700">
+            <p className="text-xs text-purple-700 dark:text-purple-300">
               <span className="font-medium">Багц захиалга:</span> {newOrders.filter(o => o.productName && o.description).length} бараа нэгтгэгдэнэ
             </p>
           </div>

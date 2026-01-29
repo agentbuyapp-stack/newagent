@@ -1,14 +1,15 @@
 import { Request, Response } from "express";
-import { User, RewardRequest, Order, Profile } from "../models";
+import { User, RewardRequest, Order, Profile, AgentReview, AgentSpecialty } from "../models";
 import mongoose from "mongoose";
 import { notifyAdminRewardRequest } from "../services/notificationService";
+import { agentProfileService } from "../services/agentProfileService";
 
 // Public endpoint - get all approved agents with stats
 export const getPublicAgents = async (_req: Request, res: Response): Promise<void> => {
   try {
     // Get all approved agents
     const agents = await User.find({ role: "agent", isApproved: true })
-      .select("_id email agentPoints createdAt")
+      .select("_id email agentPoints agentProfile createdAt")
       .lean();
 
     if (agents.length === 0) {
@@ -39,23 +40,68 @@ export const getPublicAgents = async (_req: Request, res: Response): Promise<voi
     ]);
     const orderStatsMap = new Map(orderStats.map(s => [s._id.toString(), s.orderCount]));
 
+    // Get review stats
+    const reviewStats = await AgentReview.aggregate([
+      {
+        $match: {
+          agentId: { $in: agentIds },
+          isApproved: true,
+          isVisible: true
+        }
+      },
+      {
+        $group: {
+          _id: "$agentId",
+          avgRating: { $avg: "$rating" },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+    const reviewMap = new Map(reviewStats.map(r => [r._id.toString(), r]));
+
     // Format response
     const agentsWithStats = agents.map(agent => {
       const profile = profileMap.get(agent._id.toString());
       const orderCount = orderStatsMap.get(agent._id.toString()) || 0;
+      const reviews = reviewMap.get(agent._id.toString());
 
       return {
         id: agent._id.toString(),
-        name: profile?.name || "Агент",
+        name: (agent as any).agentProfile?.displayName || profile?.name || "Агент",
         email: agent.email,
+        avatarUrl: (agent as any).agentProfile?.avatarUrl,
+        bio: (agent as any).agentProfile?.bio,
+        specialties: (agent as any).agentProfile?.specialties || [],
+        experienceYears: (agent as any).agentProfile?.experienceYears,
+        rank: (agent as any).agentProfile?.rank || 999,
+        isTopAgent: (agent as any).agentProfile?.isTopAgent || false,
         orderCount,
+        totalTransactions: (agent as any).agentProfile?.totalTransactions || orderCount,
+        successRate: (agent as any).agentProfile?.successRate || 0,
+        languages: (agent as any).agentProfile?.languages || [],
+        responseTime: (agent as any).agentProfile?.responseTime,
+        featured: (agent as any).agentProfile?.featured || false,
+        availabilityStatus: (agent as any).agentProfile?.availabilityStatus || "offline",
+        workingHours: (agent as any).agentProfile?.workingHours,
+        avgRating: reviews?.avgRating ? Math.round(reviews.avgRating * 10) / 10 : 0,
+        reviewCount: reviews?.reviewCount || 0,
         agentPoints: agent.agentPoints || 0,
         createdAt: agent.createdAt,
       };
     });
 
-    // Sort by orderCount (desc), then by agentPoints (desc)
+    // Sort by rank first (top agents), then by orderCount (desc), then by agentPoints (desc)
     agentsWithStats.sort((a, b) => {
+      // Top agents come first
+      if (a.isTopAgent && !b.isTopAgent) return -1;
+      if (!a.isTopAgent && b.isTopAgent) return 1;
+
+      // Among top agents, sort by rank
+      if (a.isTopAgent && b.isTopAgent) {
+        return a.rank - b.rank;
+      }
+
+      // For non-top agents, sort by orderCount then points
       if (b.orderCount !== a.orderCount) {
         return b.orderCount - a.orderCount;
       }
@@ -65,6 +111,93 @@ export const getPublicAgents = async (_req: Request, res: Response): Promise<voi
     res.json(agentsWithStats);
   } catch (error: any) {
     console.error("Error in GET /agents/public:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Get top 10 agents (public)
+export const getTopAgents = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { data, error, status } = await agentProfileService.getTopAgents(10);
+
+    if (error) {
+      res.status(status || 500).json({ error });
+      return;
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error in GET /agents/top:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Get agent reviews (public)
+export const getAgentReviews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { data, error, status } = await agentProfileService.getAgentReviews(
+      req.params.id,
+      10
+    );
+
+    if (error) {
+      res.status(status || 500).json({ error });
+      return;
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error in GET /agents/:id/reviews:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Create review (user only)
+export const createAgentReview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
+    }
+
+    const { rating, comment } = req.body;
+    const { agentId, orderId } = req.params;
+
+    const { data, error, status } = await agentProfileService.createReview(
+      req.user.id,
+      agentId,
+      orderId,
+      rating,
+      comment
+    );
+
+    if (error) {
+      res.status(status || 500).json({ error });
+      return;
+    }
+
+    res.status(201).json(data);
+  } catch (error: any) {
+    console.error("Error in POST /agents/:agentId/reviews/:orderId:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Get public specialties
+export const getPublicSpecialties = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const specialties = await AgentSpecialty.find({ isActive: true })
+      .sort({ order: 1, name: 1 })
+      .lean();
+
+    res.json(specialties.map(s => ({
+      id: s._id.toString(),
+      name: s.name,
+      nameEn: s.nameEn,
+      icon: s.icon,
+    })));
+  } catch (error: any) {
+    console.error("Error in GET /agents/specialties:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

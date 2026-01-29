@@ -4,6 +4,7 @@ import { Profile } from "../models/Profile";
 import { checkOrderLimits } from "../utils/orderLimits";
 import { OrderStatus } from "../models/Order";
 import mongoose from "mongoose";
+import { cardService } from "./cardService";
 
 interface BundleOrderResult {
   order?: any;
@@ -159,6 +160,12 @@ class BundleOrderService {
         if (!limitCheck.allowed) {
           return { error: limitCheck.reason, status: 429 };
         }
+
+        // Check if user has enough cards for all items (1 card per item)
+        const hasEnoughCards = await cardService.hasEnoughCards(userId, role, items.length);
+        if (!hasEnoughCards) {
+          return { error: `Судалгааны карт хүрэлцэхгүй байна. ${items.length} бараанд ${items.length} карт шаардлагатай.`, status: 400 };
+        }
       }
 
       // Get user profile for snapshot
@@ -193,6 +200,11 @@ class BundleOrderService {
         })),
         status: "niitlegdsen",
       });
+
+      // Deduct cards for users after successful order creation (1 card per item)
+      if (role === "user") {
+        await cardService.deductCardsForBundleOrder(userId, order._id.toString(), items.length);
+      }
 
       return {
         order: {
@@ -603,6 +615,114 @@ class BundleOrderService {
   }
 
   /**
+   * Remove item from bundle order (only when status is "tolbor_huleej_bn")
+   * Card is burned (not refunded) when item is removed
+   */
+  async removeItemFromBundle(
+    orderId: string,
+    itemId: string,
+    userId: string,
+    role: string
+  ): Promise<BundleOrderResult> {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return { error: "User not found", status: 404 };
+      }
+
+      const order = await BundleOrder.findById(orderId);
+      if (!order) {
+        return { error: "Bundle order not found", status: 404 };
+      }
+
+      // Only allow the order owner to remove items (or admin)
+      if (role !== "admin" && order.userId.toString() !== user._id.toString()) {
+        return { error: "Not authorized to modify this order", status: 403 };
+      }
+
+      // Only allow removal when status is "tolbor_huleej_bn" (before payment)
+      if (order.status !== "tolbor_huleej_bn") {
+        return { error: "Зөвхөн төлбөр хүлээж байгаа үед бараа хасах боломжтой", status: 400 };
+      }
+
+      // Find the item
+      const item = order.items.id(itemId);
+      if (!item) {
+        return { error: "Item not found", status: 404 };
+      }
+
+      // Cannot remove if payment already verified
+      if (order.userPaymentVerified) {
+        return { error: "Төлбөр баталгаажсан тул бараа хасах боломжгүй", status: 400 };
+      }
+
+      // Must have at least 2 items to remove one (can't remove last item - should cancel instead)
+      if (order.items.length <= 1) {
+        return { error: "Сүүлийн барааг хасах боломжгүй. Захиалга цуцлах уу?", status: 400 };
+      }
+
+      const itemName = item.productName;
+
+      // Remove the item
+      order.items.pull(itemId);
+      await order.save();
+
+      // Burn the card for the removed item (record the transaction but don't refund)
+      // Only burn card if the order was created by a user (not agent/admin)
+      const orderUser = await User.findById(order.userId);
+      if (orderUser && orderUser.role === "user") {
+        await cardService.burnCardForRemovedItem(
+          order.userId.toString(),
+          orderId,
+          itemId,
+          itemName
+        );
+      }
+
+      // Reload the order to get the full data
+      const updatedOrder = await BundleOrder.findById(orderId).lean();
+      if (!updatedOrder) {
+        return { error: "Order not found after update", status: 500 };
+      }
+
+      return {
+        order: {
+          id: updatedOrder._id.toString(),
+          userId: updatedOrder.userId.toString(),
+          agentId: updatedOrder.agentId?.toString(),
+          userSnapshot: updatedOrder.userSnapshot,
+          items: updatedOrder.items.map((i: any) => ({
+            id: i._id.toString(),
+            productName: i.productName,
+            description: i.description,
+            imageUrls: i.imageUrls,
+            status: i.status,
+            agentReport: i.report ? {
+              userAmount: i.report.userAmount,
+              paymentLink: i.report.paymentLink,
+              additionalImages: i.report.additionalImages,
+              additionalDescription: i.report.additionalDescription,
+              quantity: i.report.quantity,
+              createdAt: i.report.createdAt,
+            } : undefined,
+          })),
+          status: updatedOrder.status,
+          userPaymentVerified: updatedOrder.userPaymentVerified,
+          agentPaymentPaid: updatedOrder.agentPaymentPaid,
+          trackCode: updatedOrder.trackCode,
+          reportMode: updatedOrder.reportMode,
+          bundleReport: updatedOrder.bundleReport,
+          createdAt: updatedOrder.createdAt,
+          updatedAt: updatedOrder.updatedAt,
+        },
+      };
+    } catch (error) {
+      console.error("Error removing item from bundle:", error);
+      return { error: "Failed to remove item from bundle", status: 500 };
+    }
+  }
+
+  /**
    * Delete bundle order
    */
   async deleteOrder(orderId: string, userId: string, role: string): Promise<DeleteResult> {
@@ -628,6 +748,81 @@ class BundleOrderService {
     } catch (error) {
       console.error("Error deleting bundle order:", error);
       return { error: "Failed to delete bundle order", status: 500 };
+    }
+  }
+
+  /**
+   * Archive bundle order
+   */
+  async archiveOrder(
+    orderId: string,
+    userId: string,
+    role: string
+  ): Promise<BundleOrderResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        return { error: "Invalid order ID", status: 400 };
+      }
+
+      const order = await BundleOrder.findById(orderId).lean();
+      if (!order) {
+        return { error: "Bundle order not found", status: 404 };
+      }
+
+      // Only user can archive their own orders
+      if (role === "user" && order.userId.toString() !== userId) {
+        return { error: "Forbidden", status: 403 };
+      }
+
+      // Admin can archive any order
+      if (role !== "user" && role !== "admin") {
+        return { error: "Forbidden", status: 403 };
+      }
+
+      const updatedOrder = await BundleOrder.findByIdAndUpdate(
+        orderId,
+        { archivedByUser: true },
+        { new: true }
+      ).lean();
+
+      if (!updatedOrder) {
+        return { error: "Bundle order not found", status: 404 };
+      }
+
+      return {
+        order: {
+          id: updatedOrder._id.toString(),
+          userId: updatedOrder.userId.toString(),
+          agentId: updatedOrder.agentId?.toString(),
+          userSnapshot: updatedOrder.userSnapshot,
+          items: updatedOrder.items.map((i: any) => ({
+            id: i._id.toString(),
+            productName: i.productName,
+            description: i.description,
+            imageUrls: i.imageUrls,
+            status: i.status,
+            agentReport: i.report ? {
+              userAmount: i.report.userAmount,
+              paymentLink: i.report.paymentLink,
+              additionalImages: i.report.additionalImages,
+              additionalDescription: i.report.additionalDescription,
+              quantity: i.report.quantity,
+            } : undefined,
+          })),
+          status: updatedOrder.status,
+          userPaymentVerified: updatedOrder.userPaymentVerified,
+          agentPaymentPaid: updatedOrder.agentPaymentPaid,
+          trackCode: updatedOrder.trackCode,
+          reportMode: updatedOrder.reportMode,
+          bundleReport: updatedOrder.bundleReport,
+          archivedByUser: updatedOrder.archivedByUser,
+          createdAt: updatedOrder.createdAt,
+          updatedAt: updatedOrder.updatedAt,
+        },
+      };
+    } catch (error) {
+      console.error("Error archiving bundle order:", error);
+      return { error: "Failed to archive bundle order", status: 500 };
     }
   }
 }
