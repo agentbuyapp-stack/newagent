@@ -1,6 +1,7 @@
 import { User, Profile, Order, BundleOrder, AdminSettings, RewardRequest, AgentReport } from "../models";
 import mongoose from "mongoose";
 import { notifyAgentPaymentVerified } from "./notificationService";
+import { cardService } from "./cardService";
 
 interface AdminResult {
   data?: any;
@@ -330,6 +331,17 @@ class AdminService {
         ? (order.agentId as any)._id || order.agentId
         : new mongoose.Types.ObjectId(String(order.agentId));
 
+      // Get total orders taken by this agent and successful ones for success rate calculation
+      const [totalAgentOrders, successfulOrders] = await Promise.all([
+        Order.countDocuments({ agentId: agentId }),
+        Order.countDocuments({ agentId: agentId, status: "amjilttai_zahialga" })
+      ]);
+
+      // Calculate success rate: (successful + 1) / total * 100 (adding 1 because this order is being marked successful)
+      const newSuccessRate = totalAgentOrders > 0
+        ? Math.round(((successfulOrders + 1) / totalAgentOrders) * 100)
+        : 100;
+
       const [updatedOrder] = await Promise.all([
         Order.findByIdAndUpdate(
           orderId,
@@ -341,8 +353,31 @@ class AdminService {
           [
             {
               $set: {
-                agentPoints: {
-                  $max: [0, { $add: ["$agentPoints", agentPoints] }]
+                agentPoints: { $add: [{ $ifNull: ["$agentPoints", 0] }, agentPoints] },
+                agentProfile: {
+                  $mergeObjects: [
+                    {
+                      // Default values if agentProfile doesn't exist
+                      specialties: [],
+                      rank: 999,
+                      isTopAgent: false,
+                      totalTransactions: 0,
+                      successRate: 0,
+                      languages: [],
+                      featured: false,
+                      availabilityStatus: "offline"
+                    },
+                    { $ifNull: ["$agentProfile", {}] },
+                    {
+                      totalTransactions: {
+                        $add: [
+                          { $ifNull: ["$agentProfile.totalTransactions", 0] },
+                          1
+                        ]
+                      },
+                      successRate: newSuccessRate
+                    }
+                  ]
                 }
               }
             }
@@ -357,6 +392,17 @@ class AdminService {
 
       console.log(`[DEBUG] Agent points added: ${agentPoints} to agent ${agentId.toString()}`);
 
+      // Refund card to user for successful order
+      const orderUser = await User.findById(order.userId).lean();
+      if (orderUser && orderUser.role === "user") {
+        await cardService.refundCardsForOrder(
+          order.userId.toString(),
+          orderId,
+          1
+        );
+        console.log(`[DEBUG] Card refunded to user ${order.userId.toString()} for order ${orderId}`);
+      }
+
       return {
         data: {
           ...updatedOrder,
@@ -367,6 +413,142 @@ class AdminService {
       };
     } catch (error: any) {
       console.error("Error marking agent payment:", error);
+      return { error: "Failed to mark agent payment", status: 500 };
+    }
+  }
+
+  /**
+   * Mark bundle order agent payment as paid
+   */
+  async markBundleAgentPaymentPaid(orderId: string): Promise<AdminResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        return { error: "Invalid order ID", status: 400 };
+      }
+
+      // Get bundle order first
+      const bundleOrder = await BundleOrder.findById(orderId).lean();
+      if (!bundleOrder) {
+        return { error: "Bundle order not found", status: 404 };
+      }
+
+      if (!bundleOrder.agentId) {
+        return { error: "Bundle order has no assigned agent", status: 400 };
+      }
+
+      // Get admin settings for exchange rate
+      const settings = await AdminSettings.findOne().lean();
+      const exchangeRate = settings?.exchangeRate || 1;
+
+      // Calculate total user amount from bundle
+      let totalUserAmount = 0;
+      if (bundleOrder.reportMode === "single" && bundleOrder.bundleReport) {
+        totalUserAmount = bundleOrder.bundleReport.totalUserAmount || 0;
+      } else if (bundleOrder.reportMode === "per_item") {
+        totalUserAmount = bundleOrder.items.reduce((sum: number, item: any) => {
+          return sum + (item.report?.userAmount || 0);
+        }, 0);
+      }
+
+      // Calculate agent points: totalUserAmount * exchangeRate * 0.05 (5% of user payment)
+      const agentPoints = totalUserAmount * exchangeRate * 0.05;
+
+      // Update order and add points to agent
+      const agentId = typeof bundleOrder.agentId === 'object' && bundleOrder.agentId !== null
+        ? (bundleOrder.agentId as any)._id || bundleOrder.agentId
+        : new mongoose.Types.ObjectId(String(bundleOrder.agentId));
+
+      // Get total orders taken by this agent and successful ones for success rate calculation
+      const [totalAgentOrders, successfulOrders] = await Promise.all([
+        Order.countDocuments({ agentId: agentId }),
+        Order.countDocuments({ agentId: agentId, status: "amjilttai_zahialga" })
+      ]);
+
+      // Also count bundle orders
+      const [totalBundleOrders, successfulBundleOrders] = await Promise.all([
+        BundleOrder.countDocuments({ agentId: agentId }),
+        BundleOrder.countDocuments({ agentId: agentId, status: "amjilttai_zahialga" })
+      ]);
+
+      const totalOrders = totalAgentOrders + totalBundleOrders;
+      const allSuccessful = successfulOrders + successfulBundleOrders;
+
+      // Calculate success rate: (successful + 1) / total * 100
+      const newSuccessRate = totalOrders > 0
+        ? Math.round(((allSuccessful + 1) / totalOrders) * 100)
+        : 100;
+
+      const [updatedOrder] = await Promise.all([
+        BundleOrder.findByIdAndUpdate(
+          orderId,
+          { agentPaymentPaid: true },
+          { new: true }
+        ).lean(),
+        User.findByIdAndUpdate(
+          agentId,
+          [
+            {
+              $set: {
+                agentPoints: { $add: [{ $ifNull: ["$agentPoints", 0] }, agentPoints] },
+                agentProfile: {
+                  $mergeObjects: [
+                    {
+                      specialties: [],
+                      rank: 999,
+                      isTopAgent: false,
+                      totalTransactions: 0,
+                      successRate: 0,
+                      languages: [],
+                      featured: false,
+                      availabilityStatus: "offline"
+                    },
+                    { $ifNull: ["$agentProfile", {}] },
+                    {
+                      totalTransactions: {
+                        $add: [
+                          { $ifNull: ["$agentProfile.totalTransactions", 0] },
+                          1
+                        ]
+                      },
+                      successRate: newSuccessRate
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          { new: true }
+        ).lean()
+      ]);
+
+      if (!updatedOrder) {
+        return { error: "Bundle order not found", status: 404 };
+      }
+
+      console.log(`[DEBUG] Agent points added: ${agentPoints} to agent ${agentId.toString()} for bundle order`);
+
+      // Refund cards to user for successful bundle order (1 card per item)
+      const orderUser = await User.findById(bundleOrder.userId).lean();
+      if (orderUser && orderUser.role === "user") {
+        const itemCount = bundleOrder.items.length;
+        await cardService.refundCardsForOrder(
+          bundleOrder.userId.toString(),
+          orderId,
+          itemCount
+        );
+        console.log(`[DEBUG] ${itemCount} cards refunded to user ${bundleOrder.userId.toString()} for bundle order ${orderId}`);
+      }
+
+      return {
+        data: {
+          ...updatedOrder,
+          id: updatedOrder._id.toString(),
+          userId: updatedOrder.userId.toString(),
+          agentId: updatedOrder.agentId?.toString(),
+        }
+      };
+    } catch (error: any) {
+      console.error("Error marking bundle agent payment:", error);
       return { error: "Failed to mark agent payment", status: 500 };
     }
   }
@@ -738,6 +920,93 @@ class AdminService {
     } catch (error: any) {
       console.error("Error cancelling payment:", error);
       return { error: "Failed to cancel payment", status: 500 };
+    }
+  }
+
+  /**
+   * Recalculate all agent statistics based on order history
+   */
+  async recalculateAgentStats(): Promise<AdminResult> {
+    try {
+      // Get all agents
+      const agents = await User.find({ role: "agent", isApproved: true }).lean();
+
+      const results: Array<{
+        agentId: string;
+        email: string;
+        totalOrders: number;
+        successfulOrders: number;
+        successRate: number;
+      }> = [];
+
+      for (const agent of agents) {
+        const agentId = agent._id;
+
+        // Count total orders taken by this agent
+        const totalOrders = await Order.countDocuments({ agentId: agentId });
+
+        // Count successful orders (amjilttai_zahialga)
+        const successfulOrders = await Order.countDocuments({
+          agentId: agentId,
+          status: "amjilttai_zahialga"
+        });
+
+        // Calculate success rate
+        const successRate = totalOrders > 0
+          ? Math.round((successfulOrders / totalOrders) * 100)
+          : 0;
+
+        // Update agent's agentProfile - ensure agentProfile exists first
+        await User.findByIdAndUpdate(
+          agentId,
+          [
+            {
+              $set: {
+                agentProfile: {
+                  $mergeObjects: [
+                    {
+                      // Default values if agentProfile doesn't exist
+                      specialties: [],
+                      rank: 999,
+                      isTopAgent: false,
+                      totalTransactions: 0,
+                      successRate: 0,
+                      languages: [],
+                      featured: false,
+                      availabilityStatus: "offline"
+                    },
+                    { $ifNull: ["$agentProfile", {}] },
+                    {
+                      totalTransactions: successfulOrders,
+                      successRate: successRate
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        );
+
+        results.push({
+          agentId: agentId.toString(),
+          email: agent.email,
+          totalOrders,
+          successfulOrders,
+          successRate
+        });
+
+        console.log(`[DEBUG] Updated agent ${agent.email}: ${successfulOrders} transactions, ${successRate}% success rate`);
+      }
+
+      return {
+        data: {
+          message: `Successfully recalculated stats for ${agents.length} agents`,
+          agents: results
+        }
+      };
+    } catch (error: any) {
+      console.error("Error recalculating agent stats:", error);
+      return { error: "Failed to recalculate agent stats", status: 500 };
     }
   }
 }

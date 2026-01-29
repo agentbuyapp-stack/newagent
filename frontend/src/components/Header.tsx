@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { SignedIn, useAuth } from "@clerk/nextjs";
 import ProfileDropdown from "@/components/ProfileDropdown";
-import SignOutButton from "@/components/SignOutButton";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import ResearchCardDisplay from "@/components/ResearchCardDisplay";
+import ThemeToggle from "@/components/ThemeToggle";
 import { apiClient, type User } from "@/lib/api";
 
 // Footer page-үүд (нэвтрэлгүйгээр харах боломжтой)
@@ -60,25 +61,26 @@ export default function Header() {
   };
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
         <Link href={isSignedIn ? getDashboardUrl() : "/"} className="flex items-center gap-2 sm:gap-3">
           <img src="/icon.png" alt="AgentBuy" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
-          <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">Agentbuy.mn</span>
+          <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">Agentbuy.mn</span>
         </Link>
         {!isPublicPage ? (
           <SignedIn>
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+              {user && <ResearchCardDisplay userRole={user.role} />}
               <NotificationDropdown />
+              <ThemeToggle />
               <ProfileDropdown />
-              <SignOutButton />
             </div>
           </SignedIn>
         ) : (
           <SignedIn>
             <Link
               href={getDashboardUrl()}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

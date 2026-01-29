@@ -10,6 +10,7 @@ export interface User {
   approvedAt?: string;
   approvedBy?: string;
   agentPoints?: number;
+  researchCards?: number;
   profile?: Profile;
 }
 
@@ -269,6 +270,101 @@ class ApiClient {
     return this.request<PublicAgent[]>("/agents/public");
   }
 
+  async getTopAgents(): Promise<PublicAgent[]> {
+    // Public endpoint - get top 10 agents
+    return this.request<PublicAgent[]>("/agents/top");
+  }
+
+  async getAgentSpecialties(): Promise<AgentSpecialty[]> {
+    // Public endpoint - get available specialties
+    return this.request<AgentSpecialty[]>("/agents/specialties");
+  }
+
+  async getAgentReviews(agentId: string): Promise<AgentReview[]> {
+    // Public endpoint - get agent reviews
+    return this.request<AgentReview[]>(`/agents/${agentId}/reviews`);
+  }
+
+  async createAgentReview(agentId: string, orderId: string, rating: number, comment?: string): Promise<AgentReview> {
+    // Create review for agent (user only)
+    return this.request<AgentReview>(`/agents/${agentId}/reviews/${orderId}`, {
+      method: "POST",
+      body: JSON.stringify({ rating, comment }),
+    });
+  }
+
+  // Admin: Agent Profile Management
+  async updateAgentProfile(agentId: string, data: AgentProfileData): Promise<User> {
+    return this.request<User>(`/admin/agents/${agentId}/profile`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAgentRank(agentId: string, rank: number): Promise<{ id: string; rank: number; isTopAgent: boolean }> {
+    return this.request<{ id: string; rank: number; isTopAgent: boolean }>(`/admin/agents/${agentId}/rank`, {
+      method: "PUT",
+      body: JSON.stringify({ rank }),
+    });
+  }
+
+  async toggleAgentTop(agentId: string, isTop: boolean): Promise<{ id: string; isTopAgent: boolean; rank: number }> {
+    return this.request<{ id: string; isTopAgent: boolean; rank: number }>(`/admin/agents/${agentId}/toggle-top`, {
+      method: "PUT",
+      body: JSON.stringify({ isTop }),
+    });
+  }
+
+  async reorderAgents(agentIds: string[]): Promise<Array<{ id: string; rank: number; isTopAgent: boolean }>> {
+    return this.request<Array<{ id: string; rank: number; isTopAgent: boolean }>>("/admin/agents/reorder", {
+      method: "POST",
+      body: JSON.stringify({ agentIds }),
+    });
+  }
+
+  // Admin: Specialties Management
+  async getAdminSpecialties(): Promise<AgentSpecialty[]> {
+    return this.request<AgentSpecialty[]>("/admin/specialties");
+  }
+
+  async createSpecialty(data: { name: string; nameEn?: string; icon?: string; description?: string }): Promise<AgentSpecialty> {
+    return this.request<AgentSpecialty>("/admin/specialties", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSpecialty(specialtyId: string, data: { name?: string; nameEn?: string; icon?: string; description?: string; isActive?: boolean; order?: number }): Promise<AgentSpecialty> {
+    return this.request<AgentSpecialty>(`/admin/specialties/${specialtyId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSpecialty(specialtyId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/admin/specialties/${specialtyId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Admin: Reviews Management
+  async getAdminReviews(): Promise<AgentReview[]> {
+    return this.request<AgentReview[]>("/admin/reviews");
+  }
+
+  async approveAgentReview(reviewId: string, approved: boolean): Promise<AgentReview> {
+    return this.request<AgentReview>(`/admin/reviews/${reviewId}/approve`, {
+      method: "PUT",
+      body: JSON.stringify({ approved }),
+    });
+  }
+
+  async deleteAgentReview(reviewId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/admin/reviews/${reviewId}`, {
+      method: "DELETE",
+    });
+  }
+
   async createCargo(data: { name: string; description?: string; phone?: string; location?: string; website?: string; facebook?: string }): Promise<Cargo> {
     return this.request<Cargo>("/admin/cargos", {
       method: "POST",
@@ -308,6 +404,12 @@ class ApiClient {
 
   async markAgentPaymentPaid(orderId: string): Promise<Order> {
     return this.request<Order>(`/admin/orders/${orderId}/agent-payment`, {
+      method: "PUT",
+    });
+  }
+
+  async markBundleAgentPaymentPaid(orderId: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/admin/bundle-orders/${orderId}/agent-payment`, {
       method: "PUT",
     });
   }
@@ -380,6 +482,13 @@ class ApiClient {
   async rejectRewardRequest(requestId: string): Promise<RewardRequest> {
     return this.request<RewardRequest>(`/admin/reward-requests/${requestId}/reject`, {
       method: "PUT",
+    });
+  }
+
+  // Recalculate agent stats (admin)
+  async recalculateAgentStats(): Promise<{ message: string; agents: Array<{ agentId: string; email: string; totalOrders: number; successfulOrders: number; successRate: number }> }> {
+    return this.request<{ message: string; agents: Array<{ agentId: string; email: string; totalOrders: number; successfulOrders: number; successRate: number }> }>("/admin/recalculate-stats", {
+      method: "POST",
     });
   }
 
@@ -485,6 +594,20 @@ class ApiClient {
     });
   }
 
+  // Archive bundle order (user only)
+  async archiveBundleOrder(orderId: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/archive`, {
+      method: "PUT",
+    });
+  }
+
+  // Remove item from bundle order (user only, when status is tolbor_huleej_bn)
+  async removeItemFromBundle(orderId: string, itemId: string): Promise<BundleOrder> {
+    return this.request<BundleOrder>(`/bundle-orders/${orderId}/items/${itemId}`, {
+      method: "DELETE",
+    });
+  }
+
   // Create or update bundle report (single or per-item mode)
   async createBundleReport(orderId: string, data: BundleReportData): Promise<BundleOrder> {
     return this.request<BundleOrder>(`/bundle-orders/${orderId}/report`, {
@@ -501,6 +624,36 @@ class ApiClient {
     });
     return { imageUrl: result.url };
   }
+
+  // Card (Research Cards) endpoints
+  async getCardBalance(): Promise<CardBalanceResponse> {
+    return this.request<CardBalanceResponse>("/cards/balance");
+  }
+
+  async getCardHistory(page: number = 1, limit: number = 20): Promise<{ success: boolean; data: CardHistoryResponse }> {
+    return this.request<{ success: boolean; data: CardHistoryResponse }>(`/cards/history?page=${page}&limit=${limit}`);
+  }
+
+  async giftCards(recipientPhone: string, amount: number): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>("/cards/gift", {
+      method: "POST",
+      body: JSON.stringify({ recipientPhone, amount }),
+    });
+  }
+
+  async adminGiftCards(recipientPhone: string, amount: number): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>("/cards/admin/gift", {
+      method: "POST",
+      body: JSON.stringify({ recipientPhone, amount }),
+    });
+  }
+
+  async grantCardsToAllUsers(amount?: number): Promise<{ success: boolean; message: string; data: { usersUpdated: number } }> {
+    return this.request<{ success: boolean; message: string; data: { usersUpdated: number } }>("/cards/admin/grant-all", {
+      method: "POST",
+      body: JSON.stringify({ amount }),
+    });
+  }
 }
 
 export interface Cargo {
@@ -516,13 +669,80 @@ export interface Cargo {
   updatedAt: string;
 }
 
+export interface AgentProfile {
+  avatarUrl?: string;
+  displayName?: string;
+  bio?: string;
+  specialties: string[];
+  experienceYears?: number;
+  rank: number;
+  isTopAgent: boolean;
+  totalTransactions: number;
+  successRate: number;
+  languages: string[];
+  responseTime?: string;
+  featured: boolean;
+  availabilityStatus: "online" | "busy" | "offline";
+  workingHours?: string;
+  verifiedAt?: string;
+}
+
 export interface PublicAgent {
   id: string;
   name: string;
   email?: string;
+  avatarUrl?: string;
+  bio?: string;
+  specialties: string[];
+  experienceYears?: number;
+  rank: number;
+  isTopAgent: boolean;
   orderCount: number;
+  totalTransactions: number;
+  successRate: number;
+  languages: string[];
+  responseTime?: string;
+  featured: boolean;
+  availabilityStatus: "online" | "busy" | "offline";
+  workingHours?: string;
+  avgRating: number;
+  reviewCount: number;
   agentPoints: number;
   createdAt: string;
+}
+
+export interface AgentSpecialty {
+  id: string;
+  name: string;
+  nameEn?: string;
+  icon?: string;
+  description?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
+export interface AgentReview {
+  id: string;
+  agentId: string;
+  userId: string;
+  orderId: string;
+  rating: number;
+  comment?: string;
+  userName?: string;
+  createdAt: string;
+}
+
+export interface AgentProfileData {
+  avatarUrl?: string;
+  displayName?: string;
+  bio?: string;
+  specialties?: string[];
+  experienceYears?: number;
+  languages?: string[];
+  responseTime?: string;
+  workingHours?: string;
+  availabilityStatus?: "online" | "busy" | "offline";
+  featured?: boolean;
 }
 
 export interface Message {
@@ -655,6 +875,7 @@ export interface BundleOrder {
   reportMode?: "single" | "per_item";
   // Bundle-level report (used when reportMode is "single")
   bundleReport?: BundleReport;
+  archivedByUser?: boolean;
   createdAt: string;
   updatedAt: string;
   user?: User;
@@ -746,6 +967,47 @@ export interface NotificationsResponse {
   success: boolean;
   data: Notification[];
   pagination: NotificationPagination;
+}
+
+// Card (Research Cards) types
+export type CardTransactionType =
+  | "initial_grant"
+  | "admin_gift"
+  | "agent_gift"
+  | "user_transfer"
+  | "order_deduction"
+  | "order_refund"
+  | "bundle_item_removal";
+
+export interface CardTransaction {
+  id: string;
+  fromUserId?: string;
+  toUserId: string;
+  amount: number;
+  type: CardTransactionType;
+  recipientPhone?: string;
+  orderId?: string;
+  note?: string;
+  createdAt: string;
+  fromUserName?: string;
+  toUserName?: string;
+}
+
+export interface CardHistoryResponse {
+  transactions: CardTransaction[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface CardBalanceResponse {
+  success: boolean;
+  data: {
+    balance: number;
+  };
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

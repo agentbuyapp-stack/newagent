@@ -10,9 +10,11 @@ interface BundleOrderDetailModalProps {
   exchangeRate?: number;
   onConfirmPayment?: (bundleOrderId: string) => Promise<void>;
   onCancelOrder?: (bundleOrderId: string) => Promise<void>;
+  onRemoveItem?: (bundleOrderId: string, itemId: string) => Promise<void>;
   onOpenChat?: (bundleOrder: BundleOrder) => void;
   paymentLoading?: boolean;
   cancelLoading?: boolean;
+  removeItemLoading?: string | null;
   adminSettings?: {
     accountNumber?: string;
     accountName?: string;
@@ -23,32 +25,32 @@ interface BundleOrderDetailModalProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "niitlegdsen":
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 text-gray-800";
     case "agent_sudlaj_bn":
-      return "bg-amber-100 text-amber-700";
+      return "bg-yellow-100 text-yellow-800";
     case "tolbor_huleej_bn":
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 text-blue-800";
     case "amjilttai_zahialga":
-      return "bg-green-100 text-green-700";
+      return "bg-green-100 text-green-800";
     case "tsutsalsan_zahialga":
-      return "bg-red-100 text-red-700";
+      return "bg-red-100 text-red-800";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 text-gray-800";
   }
 };
 
 const getStatusText = (status: string) => {
   switch (status) {
     case "niitlegdsen":
-      return "Шинэ";
+      return "Нийтэлсэн";
     case "agent_sudlaj_bn":
-      return "Судлагдаж буй";
+      return "Agent шалгаж байна";
     case "tolbor_huleej_bn":
-      return "Төлбөр хүлээж";
+      return "Төлбөр хүлээж байна";
     case "amjilttai_zahialga":
-      return "Амжилттай";
+      return "Амжилттай захиалга";
     case "tsutsalsan_zahialga":
-      return "Цуцлагдсан";
+      return "Цуцлагдсан захиалга";
     default:
       return status;
   }
@@ -60,65 +62,44 @@ export default function BundleOrderDetailModal({
   exchangeRate = 1,
   onConfirmPayment,
   onCancelOrder,
+  onRemoveItem,
   onOpenChat,
   paymentLoading = false,
   cancelLoading = false,
+  removeItemLoading = null,
   adminSettings,
 }: BundleOrderDetailModalProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-  const [showMyOrder, setShowMyOrder] = useState(false);
-  const [showAgentReport, setShowAgentReport] = useState(true);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
-  // Toggle item expansion
-  const toggleItem = (itemId: string) => {
-    const next = new Set(expandedItems);
-    if (next.has(itemId)) {
-      next.delete(itemId);
-    } else {
-      next.add(itemId);
-    }
-    setExpandedItems(next);
-  };
+  const [showUserInfo, setShowUserInfo] = useState(false);
 
   // Calculate total with 5% markup for user
   const isSingleMode = bundleOrder.reportMode === "single" && bundleOrder.bundleReport;
   const agentTotalYuan = isSingleMode
     ? bundleOrder.bundleReport?.totalUserAmount || 0
     : bundleOrder.items.reduce((sum, item) => sum + (item.agentReport?.userAmount || 0), 0);
-  const userTotalYuan = agentTotalYuan * 1.05; // 5% markup
+  const userTotalYuan = agentTotalYuan * 1.05;
   const userTotalMNT = userTotalYuan * exchangeRate;
 
   // Check status
   const hasReport = bundleOrder.status === "tolbor_huleej_bn" || bundleOrder.status === "amjilttai_zahialga";
-  const isPendingPayment = bundleOrder.status === "tolbor_huleej_bn" && !bundleOrder.userPaymentVerified;
-  const canCancel = bundleOrder.status === "tolbor_huleej_bn" && !bundleOrder.userPaymentVerified;
+  const canCancel =
+    bundleOrder.status === "niitlegdsen" ||
+    bundleOrder.status === "tsutsalsan_zahialga" ||
+    bundleOrder.status === "tolbor_huleej_bn";
+  const canRemoveItems = bundleOrder.status === "tolbor_huleej_bn" && !bundleOrder.userPaymentVerified && bundleOrder.items.length > 1;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 sm:p-4">
-        <div className="bg-white w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
+        <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="bg-linear-to-r from-purple-600 to-indigo-600 px-4 sm:px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">Багц захиалга</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-white/70 text-xs">{bundleOrder.items.length} бараа</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bundleOrder.status)}`}>
-                    {getStatusText(bundleOrder.status)}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Багц захиалгын дэлгэрэнгүй
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-10 min-w-10"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -126,454 +107,392 @@ export default function BundleOrderDetailModal({
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-5 space-y-4">
-              {/* Quick Info Bar */}
-              <div className="flex items-center gap-3 text-sm flex-wrap">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="font-medium">{bundleOrder.userSnapshot.name}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span>{bundleOrder.userSnapshot.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                  </svg>
-                  <span>{bundleOrder.userSnapshot.cargo}</span>
-                </div>
-              </div>
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            {/* Order ID */}
+            <div>
+              <label className="text-sm font-medium text-gray-500">Захиалгын ID</label>
+              <p className="text-lg font-mono text-gray-900 mt-1">
+                #{bundleOrder.id.slice(-4).toUpperCase()}
+              </p>
+            </div>
 
-              {/* Track Code */}
-              {bundleOrder.trackCode && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <span className="text-sm text-green-700">Трак код:</span>
-                  <span className="font-bold text-green-800">{bundleOrder.trackCode}</span>
+            {/* Status */}
+            <div>
+              <label className="text-sm font-medium text-gray-500">Статус</label>
+              <div className="mt-1">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(bundleOrder.status)}`}>
+                  {getStatusText(bundleOrder.status)}
+                </span>
+              </div>
+            </div>
+
+            {/* Track Code - Show for successful orders */}
+            {bundleOrder.status === "amjilttai_zahialga" && bundleOrder.trackCode && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-600">Track Code</label>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(bundleOrder.trackCode || "");
+                      alert("Track code хуулагдлаа!");
+                    }}
+                    className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[10]"
+                    title="Хуулах"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs font-medium">Хуулах</span>
+                  </button>
+                </div>
+                <p
+                  className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(bundleOrder.trackCode || "");
+                    alert("Track code хуулагдлаа!");
+                  }}
+                  title="Хуулах"
+                >
+                  {bundleOrder.trackCode}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Таны захиалгын track code. Энэ кодыг ашиглан захиалгаа хянах боломжтой.
+                </p>
+              </div>
+            )}
+
+            {/* User Info Section - Collapsible */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <button
+                onClick={() => setShowUserInfo(!showUserInfo)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Миний захиалга ({bundleOrder.items.length} бараа)
+                </h3>
+                <svg
+                  className={`w-5 h-5 transition-transform ${showUserInfo ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showUserInfo && (
+                <div className="mt-4 space-y-4">
+                  {bundleOrder.items.map((item, idx) => (
+                    <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
+                        <h4 className="font-semibold text-gray-900">{item.productName}</h4>
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap text-sm">{item.description}</p>
+
+                      {/* Images */}
+                      {item.imageUrls && item.imageUrls.length > 0 && (
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {item.imageUrls.map((imgUrl, imgIdx) => (
+                            <img
+                              key={imgIdx}
+                              src={imgUrl}
+                              alt={`${item.productName} - ${imgIdx + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => setZoomedImage(imgUrl)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
 
-              {/* My Order Dropdown - User's original order details */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setShowMyOrder(!showMyOrder)}
-                  className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <span className="font-semibold text-gray-800">Миний захиалга</span>
-                    <span className="text-xs text-gray-500">({bundleOrder.items.length} бараа)</span>
+            {/* Agent Report Section */}
+            {hasReport && agentTotalYuan > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Agent-ийн тайлан</h3>
+
+                {/* Single Mode Report */}
+                {isSingleMode && bundleOrder.bundleReport && (
+                  <div className="space-y-3">
+                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                      <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
+                      <div className="mt-2">
+                        <p className="text-xl font-bold text-green-700">
+                          {userTotalMNT.toLocaleString()}₮
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
+                        </p>
+                      </div>
+                    </div>
+
+                    {bundleOrder.bundleReport.paymentLink && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Төлбөрийн мэдээлэл:</label>
+                        {bundleOrder.bundleReport.paymentLink.startsWith("http") ? (
+                          <a href={bundleOrder.bundleReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block mt-1">
+                            {bundleOrder.bundleReport.paymentLink}
+                          </a>
+                        ) : (
+                          <p className="text-gray-700 mt-1">{bundleOrder.bundleReport.paymentLink}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {bundleOrder.bundleReport.additionalDescription && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
+                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">{bundleOrder.bundleReport.additionalDescription}</p>
+                      </div>
+                    )}
+
+                    {bundleOrder.bundleReport.additionalImages && bundleOrder.bundleReport.additionalImages.length > 0 && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {bundleOrder.bundleReport.additionalImages.map((imgUrl, idx) => (
+                            <img
+                              key={idx}
+                              src={imgUrl}
+                              alt={`Additional ${idx + 1}`}
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80"
+                              onClick={() => setZoomedImage(imgUrl)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${showMyOrder ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                )}
 
-                {showMyOrder && (
-                  <div className="p-4 space-y-3 bg-white">
-                    {bundleOrder.items.map((item, index) => {
-                      const isExpanded = expandedItems.has(`my-${item.id}`);
+                {/* Per-item Reports */}
+                {!isSingleMode && bundleOrder.items.some(item => item.agentReport) && (
+                  <div className="space-y-3">
+                    {bundleOrder.items.map((item, idx) => {
+                      if (!item.agentReport) return null;
+                      const itemUserYuan = item.agentReport.userAmount * 1.05;
+                      const itemUserMNT = itemUserYuan * exchangeRate;
                       return (
-                        <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
-                          <div
-                            className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => toggleItem(`my-${item.id}`)}
-                          >
-                            {item.imageUrls && item.imageUrls.length > 0 ? (
-                              <div className="w-10 h-10 shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                                <img src={item.imageUrls[0]} alt={item.productName} className="w-full h-full object-cover" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 font-mono">#{index + 1}</span>
-                                <h4 className="font-medium text-gray-900 text-sm truncate">{item.productName}</h4>
-                              </div>
-                              <p className="text-xs text-gray-500 truncate">{item.description}</p>
+                        <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
+                              <span className="font-medium text-gray-900">{item.productName}</span>
                             </div>
-                            <svg
-                              className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-
-                          {isExpanded && (
-                            <div className="border-t border-gray-100 p-3 bg-gray-50 space-y-2">
-                              <p className="text-sm text-gray-700">{item.description}</p>
-                              {item.imageUrls && item.imageUrls.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {item.imageUrls.map((url, i) => (
-                                    <div
-                                      key={i}
-                                      className="w-14 h-14 bg-white rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-purple-400 transition-all"
-                                      onClick={() => setZoomedImage(url)}
-                                    >
-                                      <img src={url} alt={`${item.productName} ${i + 1}`} className="w-full h-full object-cover" />
-                                    </div>
-                                  ))}
-                                </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-green-600">{itemUserMNT.toLocaleString()}₮</span>
+                              {/* Remove Item Button */}
+                              {canRemoveItems && onRemoveItem && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`"${item.productName}" барааг хасахдаа итгэлтэй байна уу? Энэ бараанд зарцуулсан карт буцаагдахгүй.`)) {
+                                      onRemoveItem(bundleOrder.id, item.id);
+                                    }
+                                  }}
+                                  disabled={removeItemLoading === item.id}
+                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Бараа хасах"
+                                >
+                                  {removeItemLoading === item.id ? (
+                                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  )}
+                                </button>
                               )}
+                            </div>
+                          </div>
+                          {item.agentReport.quantity && (
+                            <p className="text-sm text-gray-600">Тоо: {item.agentReport.quantity}</p>
+                          )}
+                          {item.agentReport.additionalDescription && (
+                            <p className="text-sm text-gray-600 mt-1">{item.agentReport.additionalDescription}</p>
+                          )}
+                          {item.agentReport.paymentLink && (
+                            <a href={item.agentReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline mt-1 inline-block">
+                              Төлбөрийн линк
+                            </a>
+                          )}
+                          {item.agentReport.additionalImages && item.agentReport.additionalImages.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 mt-2">
+                              {item.agentReport.additionalImages.map((imgUrl, imgIdx) => (
+                                <img
+                                  key={imgIdx}
+                                  src={imgUrl}
+                                  alt={`Report ${imgIdx + 1}`}
+                                  className="w-full h-16 object-cover rounded border border-gray-200 cursor-pointer"
+                                  onClick={() => setZoomedImage(imgUrl)}
+                                />
+                              ))}
                             </div>
                           )}
                         </div>
                       );
                     })}
+
+                    {/* Total for per-item mode */}
+                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                      <span className="text-sm text-gray-600">Нийт төлөх дүн:</span>
+                      <div className="mt-2">
+                        <p className="text-xl font-bold text-green-700">
+                          {userTotalMNT.toLocaleString()}₮
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Agent Report Dropdown - Only show when has report */}
-              {hasReport && (
-                <div className="border border-green-200 rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setShowAgentReport(!showAgentReport)}
-                    className="w-full px-4 py-3 flex items-center justify-between bg-green-50 hover:bg-green-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="font-semibold text-green-800">Агентын тайлан</span>
+            {/* Action Buttons for orders waiting for payment */}
+            {bundleOrder.status === "tolbor_huleej_bn" && (
+              <div className="space-y-3 pt-4 border-t border-gray-200">
+                {/* Payment Info */}
+                {adminSettings ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
+                      <p className="text-gray-900 font-mono">{adminSettings.accountNumber}</p>
                     </div>
-                    <svg
-                      className={`w-5 h-5 text-green-600 transition-transform ${showAgentReport ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {showAgentReport && (
-                    <div className="p-4 bg-white space-y-4">
-                      {/* Single Mode Report */}
-                      {isSingleMode && bundleOrder.bundleReport && (
-                        <div className="space-y-3">
-                          <div className="bg-green-50 rounded-lg p-3">
-                            <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
-                            <div className="mt-2">
-                              <p className="text-xl font-bold text-green-700">
-                                {userTotalMNT.toLocaleString()}₮
-                              </p>
-                              <p className="text-sm text-gray-500 mt-1">
-                                ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
-                              </p>
-                            </div>
-                          </div>
-                          {bundleOrder.bundleReport.paymentLink && (
-                            <div className="text-sm">
-                              <span className="text-gray-500">Төлбөрийн мэдээлэл: </span>
-                              {bundleOrder.bundleReport.paymentLink.startsWith("http") ? (
-                                <a href={bundleOrder.bundleReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                  {bundleOrder.bundleReport.paymentLink}
-                                </a>
-                              ) : (
-                                <span className="text-gray-700">{bundleOrder.bundleReport.paymentLink}</span>
-                              )}
-                            </div>
-                          )}
-                          {bundleOrder.bundleReport.additionalDescription && (
-                            <div className="text-sm">
-                              <span className="text-gray-500">Тайлбар: </span>
-                              <span className="text-gray-700">{bundleOrder.bundleReport.additionalDescription}</span>
-                            </div>
-                          )}
-                          {bundleOrder.bundleReport.additionalImages && bundleOrder.bundleReport.additionalImages.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {bundleOrder.bundleReport.additionalImages.map((url, i) => (
-                                <div
-                                  key={i}
-                                  className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 ring-green-400 transition-all"
-                                  onClick={() => setZoomedImage(url)}
-                                >
-                                  <img src={url} alt={`Image ${i + 1}`} className="w-full h-full object-cover" />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Per-item Reports */}
-                      {!isSingleMode && bundleOrder.items.some(item => item.agentReport) && (
-                        <div className="space-y-3">
-                          {bundleOrder.items.map((item, index) => {
-                            if (!item.agentReport) return null;
-                            const isExpanded = expandedItems.has(`report-${item.id}`);
-                            return (
-                              <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
-                                <div
-                                  className="p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                                  onClick={() => toggleItem(`report-${item.id}`)}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-400 font-mono">#{index + 1}</span>
-                                      <h4 className="font-medium text-gray-900 text-sm truncate">{item.productName}</h4>
-                                    </div>
-                                    <p className="text-sm font-semibold text-green-600">
-                                      {(item.agentReport.userAmount * 1.05 * exchangeRate).toLocaleString()}₮
-                                    </p>
-                                  </div>
-                                  <svg
-                                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-
-                                {isExpanded && (
-                                  <div className="border-t border-gray-100 p-3 bg-gray-50 space-y-2">
-                                    <div className="text-sm">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-gray-500">Үнэ:</span>
-                                        <div className="text-right">
-                                          <span className="font-semibold text-green-600">
-                                            {(item.agentReport.userAmount * 1.05 * exchangeRate).toLocaleString()}₮
-                                          </span>
-                                          <span className="text-xs text-gray-400 ml-2">
-                                            ({(item.agentReport.userAmount * 1.05).toLocaleString()}¥)
-                                          </span>
-                                        </div>
-                                      </div>
-                                      {item.agentReport.quantity && (
-                                        <div className="flex justify-between items-center mt-1">
-                                          <span className="text-gray-500">Тоо:</span>
-                                          <span className="font-medium">{item.agentReport.quantity}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    {item.agentReport.additionalDescription && (
-                                      <p className="text-sm text-gray-600">{item.agentReport.additionalDescription}</p>
-                                    )}
-                                    {item.agentReport.paymentLink && (
-                                      <a
-                                        href={item.agentReport.paymentLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                        Төлбөрийн линк
-                                      </a>
-                                    )}
-                                    {item.agentReport.additionalImages && item.agentReport.additionalImages.length > 0 && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {item.agentReport.additionalImages.map((url, i) => (
-                                          <div
-                                            key={i}
-                                            className="w-12 h-12 bg-gray-100 rounded overflow-hidden cursor-pointer hover:ring-2 ring-green-400 transition-all"
-                                            onClick={() => setZoomedImage(url)}
-                                          >
-                                            <img src={url} alt={`Report ${i + 1}`} className="w-full h-full object-cover" />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-
-                          {/* Total for per-item mode */}
-                          <div className="bg-green-50 rounded-lg p-3 border-t border-green-200">
-                            <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
-                            <div className="mt-2">
-                              <p className="text-xl font-bold text-green-700">
-                                {userTotalMNT.toLocaleString()}₮
-                              </p>
-                              <p className="text-sm text-gray-500 mt-1">
-                                ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
+                      <p className="text-gray-900">{adminSettings.accountName}</p>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Total Section - Only show if there's a price and report is collapsed */}
-              {agentTotalYuan > 0 && !showAgentReport && hasReport && (
-                <div className="bg-linear-to-r from-purple-50 to-indigo-50 rounded-xl p-4 flex items-center justify-between">
-                  <span className="font-semibold text-gray-700">Таны төлөх дүн</span>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-purple-700">{userTotalMNT.toLocaleString()}₮</p>
-                    <p className="text-sm text-gray-500">{userTotalYuan.toLocaleString()}¥</p>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Банк:</label>
+                      <p className="text-gray-900">{adminSettings.bank}</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-center text-gray-500">Дансны мэдээлэл олдсонгүй</p>
+                  </div>
+                )}
 
-              {/* Payment Section */}
-              {isPendingPayment && onConfirmPayment && (
-                <div className="space-y-3">
-                  {/* Bank Info */}
-                  {adminSettings && (adminSettings.accountNumber || adminSettings.bank) && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        Төлбөр шилжүүлэх данс
-                      </h4>
-                      <div className="grid grid-cols-1 gap-2 text-sm">
-                        {adminSettings.bank && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Банк:</span>
-                            <span className="font-medium">{adminSettings.bank}</span>
-                          </div>
-                        )}
-                        {adminSettings.accountName && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Дансны нэр:</span>
-                            <span className="font-medium">{adminSettings.accountName}</span>
-                          </div>
-                        )}
-                        {adminSettings.accountNumber && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Дансны дугаар:</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold font-mono">{adminSettings.accountNumber}</span>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(adminSettings.accountNumber || "");
-                                  alert("Хуулагдлаа!");
-                                }}
-                                className="px-2 py-1 bg-amber-200 hover:bg-amber-300 text-amber-800 rounded text-xs font-medium"
-                              >
-                                Хуулах
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                {/* If payment is verified, show waiting message */}
+                {bundleOrder.userPaymentVerified && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <p className="text-sm text-yellow-800 font-medium">
+                      Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
+                    </p>
+                  </div>
+                )}
 
-                  {/* Confirm Payment Button */}
-                  <button
-                    onClick={() => onConfirmPayment(bundleOrder.id)}
-                    disabled={paymentLoading}
-                    className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {paymentLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Баталгаажуулж байна...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Төлбөр төлсөн
-                      </>
-                    )}
-                  </button>
-
-                  {/* Chat with Agent Button */}
-                  {onOpenChat && (
+                {/* Payment and Cancel Buttons - Only show if payment not verified */}
+                {!bundleOrder.userPaymentVerified && onConfirmPayment && (
+                  <>
                     <button
-                      onClick={() => onOpenChat(bundleOrder)}
-                      className="w-full py-3 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-200 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                      onClick={() => onConfirmPayment(bundleOrder.id)}
+                      disabled={paymentLoading}
+                      className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      Агенттай чатлах
-                    </button>
-                  )}
-
-                  {/* Cancel Order Button */}
-                  {canCancel && onCancelOrder && (
-                    <button
-                      onClick={() => {
-                        if (confirm("Захиалгыг цуцлахдаа итгэлтэй байна уу?")) {
-                          onCancelOrder(bundleOrder.id);
-                        }
-                      }}
-                      disabled={cancelLoading}
-                      className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {cancelLoading ? (
+                      {paymentLoading ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                          Цуцлаж байна...
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Баталгаажуулж байна...
                         </>
                       ) : (
-                        <>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Захиалга цуцлах
-                        </>
+                        "Төлбөр төлсөн"
                       )}
                     </button>
-                  )}
-                </div>
-              )}
 
-              {/* Payment Verified */}
-              {bundleOrder.userPaymentVerified && (
-                <div className="flex items-center justify-center gap-2 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-medium">Төлбөр баталгаажсан</span>
-                </div>
-              )}
+                    {/* Chat with Agent Button */}
+                    {onOpenChat && (
+                      <button
+                        onClick={() => onOpenChat(bundleOrder)}
+                        className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors font-medium min-h-[44px] flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Агенттай чатлах
+                      </button>
+                    )}
 
-              {/* Date */}
-              <p className="text-xs text-gray-400 text-center">
-                Үүсгэсэн: {new Date(bundleOrder.createdAt).toLocaleDateString("mn-MN", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
+                    {onCancelOrder && (
+                      <button
+                        onClick={() => {
+                          if (confirm("Захиалгыг цуцлахдаа итгэлтэй байна уу?")) {
+                            onCancelOrder(bundleOrder.id);
+                          }
+                        }}
+                        disabled={cancelLoading}
+                        className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {cancelLoading ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Цуцлаж байна...
+                          </>
+                        ) : (
+                          "Цуцлах"
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Үүсгэсэн огноо</label>
+                <p className="text-gray-700 mt-1">
+                  {new Date(bundleOrder.createdAt).toLocaleDateString("mn-MN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Шинэчлэгдсэн огноо</label>
+                <p className="text-gray-700 mt-1">
+                  {new Date(bundleOrder.updatedAt).toLocaleDateString("mn-MN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
             </div>
+
+            {/* Cancel Button - For cancellable orders not in tolbor_huleej_bn */}
+            {canCancel && bundleOrder.status !== "tolbor_huleej_bn" && onCancelOrder && (
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    if (confirm("Захиалгыг цуцлахдаа итгэлтэй байна уу?")) {
+                      onCancelOrder(bundleOrder.id);
+                    }
+                  }}
+                  disabled={cancelLoading}
+                  className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[44px] disabled:opacity-50"
+                >
+                  Захиалга цуцлах / Устгах
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -581,17 +500,21 @@ export default function BundleOrderDetailModal({
       {/* Zoomed Image Modal */}
       {zoomedImage && (
         <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-60 p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-60 p-4"
           onClick={() => setZoomedImage(null)}
         >
           <img
             src={zoomedImage}
             alt="Zoomed"
-            className="max-w-full max-h-full object-contain rounded-lg"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomedImage(null);
+            }}
           />
           <button
             onClick={() => setZoomedImage(null)}
-            className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
+            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75 transition"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
