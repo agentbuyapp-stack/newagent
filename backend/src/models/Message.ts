@@ -5,6 +5,8 @@ export interface IMessage extends Document {
   senderId: string;
   text?: string;
   imageUrl?: string;
+  audioUrl?: string;
+  audioDuration?: number; // seconds
   createdAt: Date;
 }
 
@@ -24,6 +26,12 @@ const MessageSchema = new Schema<IMessage>(
     },
     imageUrl: {
       type: String,
+    },
+    audioUrl: {
+      type: String,
+    },
+    audioDuration: {
+      type: Number,
     },
   },
   {

@@ -364,6 +364,21 @@ export default function UserDashboardPage() {
     }
   };
 
+  const handleSendVoiceMessage = useCallback(async (orderId: string, audioBase64: string, duration: number) => {
+    try {
+      // Upload audio first
+      const uploadResult = await apiClient.uploadAudio(audioBase64);
+      // Then send as message
+      await apiClient.sendMessage(orderId, {
+        audioUrl: uploadResult.url,
+        audioDuration: duration,
+      });
+    } catch (e: unknown) {
+      console.error("Failed to send voice message:", e);
+      throw e;
+    }
+  }, [apiClient]);
+
   const canArchiveOrder = (order: Order) => {
     // Only completed or cancelled orders can be archived
     return (
@@ -640,6 +655,7 @@ export default function UserDashboardPage() {
                 onReload={loadData}
                 deleteLoading={deleteLoading}
                 archiveLoading={archiveLoading}
+                onSendVoiceMessage={handleSendVoiceMessage}
               />
 
               {/* Box 3: Cargonууд - Dropdown */}

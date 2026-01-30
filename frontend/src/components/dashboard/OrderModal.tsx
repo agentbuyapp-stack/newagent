@@ -90,14 +90,14 @@ export default function OrderModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-xl border border-gray-200 dark:border-gray-700 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
             Захиалгын дэлгэрэнгүй
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-10 min-w-10"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-10 min-w-10"
           >
             <svg
               className="w-6 h-6"
@@ -118,17 +118,17 @@ export default function OrderModal({
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Order ID */}
           <div>
-            <label className="text-sm font-medium text-gray-500">
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Захиалгын ID
             </label>
-            <p className="text-lg font-mono text-gray-900 mt-1">
+            <p className="text-lg font-mono text-gray-900 dark:text-white mt-1">
               #{order.id.slice(-4).toUpperCase()}
             </p>
           </div>
 
           {/* Status */}
           <div>
-            <label className="text-sm font-medium text-gray-500">
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
               Статус
             </label>
             <div className="mt-1">
@@ -159,12 +159,12 @@ export default function OrderModal({
           </div>
 
           {/* User Info Section - Collapsible */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl p-4">
             <button
               onClick={() => setShowUserInfoInModal(!showUserInfoInModal)}
               className="w-full flex items-center justify-between text-left"
             >
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Хэрэглэгчийн мэдээлэл
               </h3>
               <svg
@@ -188,7 +188,7 @@ export default function OrderModal({
                 {order.imageUrls &&
                   order.imageUrls.length > 0 && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500 mb-2 block">
+                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">
                         Зургууд
                       </label>
                       <div className="grid grid-cols-3 gap-3">
@@ -198,7 +198,7 @@ export default function OrderModal({
                               key={index}
                               src={imgUrl}
                               alt={`${order.productName} - ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() =>
                                 setZoomedImageIndex(
                                   zoomedImageIndex === index
@@ -251,17 +251,17 @@ export default function OrderModal({
 
                 {/* Product Name */}
                 <div>
-                  <label className="text-sm font-medium text-gray-500">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Барааны нэр
                   </label>
-                  <p className="text-base font-semibold text-gray-900 mt-1">
+                  <p className="text-base font-semibold text-gray-900 dark:text-white mt-1">
                     {order.productName}
                   </p>
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="text-sm font-medium text-gray-500">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Тайлбар
                   </label>
                   {order.description &&
@@ -278,13 +278,13 @@ export default function OrderModal({
                           return (
                             <div
                               key={idx}
-                              className="bg-blue-50 border border-blue-200 rounded-xl p-3"
+                              className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3"
                             >
-                              <p className="text-sm font-medium text-gray-900">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
                                 {productName}
                               </p>
                               {productDescription && (
-                                <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">
                                   {productDescription}
                                 </p>
                               )}
@@ -293,7 +293,7 @@ export default function OrderModal({
                         })}
                     </div>
                   ) : (
-                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">
+                    <p className="text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">
                       {order.description}
                     </p>
                   )}
@@ -306,13 +306,13 @@ export default function OrderModal({
           {hasAgentReport && report && (
             <>
               {/* Agent Report Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Agent-ийн тайлан
                 </h3>
 
-                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                  <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
+                <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Таны төлөх дүн:</span>
                   {(() => {
                     const exchangeRate = adminSettings?.exchangeRate || 1;
                     const agentYuan = report.userAmount;
@@ -320,13 +320,13 @@ export default function OrderModal({
                     const userMNT = userYuan * exchangeRate;
                     return (
                       <div className="mt-2">
-                        <p className="text-xl font-bold text-green-700">
+                        <p className="text-xl font-bold text-green-700 dark:text-green-400">
                           {userMNT.toLocaleString()}₮
                         </p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           ({userYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           Агент үнэ: {agentYuan.toLocaleString()}¥ + 5% = {userYuan.toLocaleString()}¥
                         </p>
                       </div>
@@ -336,10 +336,10 @@ export default function OrderModal({
 
                 {report.quantity && (
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Тоо ширхэг:
                     </label>
-                    <p className="text-gray-900 mt-1">
+                    <p className="text-gray-900 dark:text-white mt-1">
                       {report.quantity}
                     </p>
                   </div>
@@ -347,10 +347,10 @@ export default function OrderModal({
 
                 {report.additionalDescription && (
                   <div>
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Нэмэлт тайлбар:
                     </label>
-                    <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                    <p className="text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">
                       {report.additionalDescription}
                     </p>
                   </div>
@@ -359,7 +359,7 @@ export default function OrderModal({
                 {report.additionalImages &&
                   report.additionalImages.length > 0 && (
                     <div>
-                      <label className="text-sm font-medium text-gray-600 mb-2 block">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">
                         Нэмэлт зураг:
                       </label>
                       <div className="grid grid-cols-3 gap-3">
@@ -369,7 +369,7 @@ export default function OrderModal({
                               key={idx}
                               src={imgUrl}
                               alt={`Additional ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-600"
                             />
                           ),
                         )}
@@ -380,38 +380,38 @@ export default function OrderModal({
 
               {/* Action Buttons for orders with agent report */}
               {order.status === "tolbor_huleej_bn" && (
-                <div className="space-y-3 pt-4 border-t border-gray-200">
+                <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   {/* Payment Info */}
                   {adminSettings ? (
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl p-4 space-y-2">
                        <div>
-                        <label className="text-sm font-medium text-gray-600">
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                           Дансны дугаар:
                         </label>
-                        <p className="text-gray-900 font-mono">
+                        <p className="text-gray-900 dark:text-white font-mono">
                           {adminSettings.accountNumber}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                           Дансны нэр:
                         </label>
-                        <p className="text-gray-900">
+                        <p className="text-gray-900 dark:text-white">
                           {adminSettings.accountName}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                           Банк:
                         </label>
-                        <p className="text-gray-900">
+                        <p className="text-gray-900 dark:text-white">
                           {adminSettings.bank}
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <p className="text-sm text-center text-gray-500">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                      <p className="text-sm text-center text-gray-500 dark:text-gray-400">
                         Дансны мэдээлэл олдсонгүй
                       </p>
                     </div>
@@ -419,8 +419,8 @@ export default function OrderModal({
 
                   {/* If payment is verified, show waiting message */}
                   {order.userPaymentVerified && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                      <p className="text-sm text-yellow-800 font-medium">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
                         Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin
                         баталгаажуулахад хүлээнэ үү.
                       </p>
@@ -453,10 +453,10 @@ export default function OrderModal({
           {/* Track Code - Show for successful orders */}
           {order.status === "amjilttai_zahialga" &&
             order.trackCode && (
-              <div className="pt-4 border-t border-gray-200">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-600">
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Track Code
                     </label>
                     <button
@@ -466,7 +466,7 @@ export default function OrderModal({
                         );
                         alert("Track code хуулагдлаа!");
                       }}
-                      className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[10]"
+                      className="p-2 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl transition-colors flex items-center gap-1 min-h-[10]"
                       title="Хуулах"
                     >
                       <svg
@@ -488,7 +488,7 @@ export default function OrderModal({
                     </button>
                   </div>
                   <p
-                    className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
+                    className="text-base font-mono text-blue-500 dark:text-blue-400 font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
                     onClick={() => {
                       navigator.clipboard.writeText(
                         order.trackCode || "",
@@ -499,7 +499,7 @@ export default function OrderModal({
                   >
                     {order.trackCode}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                     Таны захиалгын track code. Энэ кодыг ашиглан
                     захиалгаа хянах боломжтой.
                   </p>
@@ -510,10 +510,10 @@ export default function OrderModal({
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-500">
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Үүсгэсэн огноо
               </label>
-              <p className="text-gray-700 mt-1">
+              <p className="text-gray-700 dark:text-gray-300 mt-1">
                 {new Date(order.createdAt).toLocaleDateString(
                   "mn-MN",
                   {
@@ -527,10 +527,10 @@ export default function OrderModal({
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Шинэчлэгдсэн огноо
               </label>
-              <p className="text-gray-700 mt-1">
+              <p className="text-gray-700 dark:text-gray-300 mt-1">
                 {new Date(order.updatedAt).toLocaleDateString(
                   "mn-MN",
                   {
@@ -547,7 +547,7 @@ export default function OrderModal({
 
           {/* Cancel Button - Only for cancellable orders */}
           {canCancel && (
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => onCancel(order.id)}
                 className="w-full px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-[11]"

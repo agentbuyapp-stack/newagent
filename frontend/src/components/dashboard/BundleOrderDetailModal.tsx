@@ -91,15 +91,15 @@ export default function BundleOrderDetailModal({
   return (
     <>
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-0 sm:p-4">
-        <div className="bg-white rounded-none sm:rounded-xl border border-gray-200 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-xl border border-gray-200 dark:border-gray-700 max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 flex justify-between items-center z-10">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
               Багц захиалгын дэлгэрэнгүй
             </h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors min-h-10 min-w-10"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-10 min-w-10"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -110,15 +110,15 @@ export default function BundleOrderDetailModal({
           <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Order ID */}
             <div>
-              <label className="text-sm font-medium text-gray-500">Захиалгын ID</label>
-              <p className="text-lg font-mono text-gray-900 mt-1">
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Захиалгын ID</label>
+              <p className="text-lg font-mono text-gray-900 dark:text-white mt-1">
                 #{bundleOrder.id.slice(-4).toUpperCase()}
               </p>
             </div>
 
             {/* Status */}
             <div>
-              <label className="text-sm font-medium text-gray-500">Статус</label>
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Статус</label>
               <div className="mt-1">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(bundleOrder.status)}`}>
                   {getStatusText(bundleOrder.status)}
@@ -128,15 +128,15 @@ export default function BundleOrderDetailModal({
 
             {/* Track Code - Show for successful orders */}
             {bundleOrder.status === "amjilttai_zahialga" && bundleOrder.trackCode && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-600">Track Code</label>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Track Code</label>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(bundleOrder.trackCode || "");
                       alert("Track code хуулагдлаа!");
                     }}
-                    className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-xl transition-colors flex items-center gap-1 min-h-[10]"
+                    className="p-2 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl transition-colors flex items-center gap-1 min-h-[10]"
                     title="Хуулах"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +146,7 @@ export default function BundleOrderDetailModal({
                   </button>
                 </div>
                 <p
-                  className="text-base font-mono text-blue-500 font-semibold cursor-pointer hover:text-blue-600 transition-colors"
+                  className="text-base font-mono text-blue-500 dark:text-blue-400 font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
                   onClick={() => {
                     navigator.clipboard.writeText(bundleOrder.trackCode || "");
                     alert("Track code хуулагдлаа!");
@@ -155,23 +155,23 @@ export default function BundleOrderDetailModal({
                 >
                   {bundleOrder.trackCode}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Таны захиалгын track code. Энэ кодыг ашиглан захиалгаа хянах боломжтой.
                 </p>
               </div>
             )}
 
             {/* User Info Section - Collapsible */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+            <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl p-4">
               <button
                 onClick={() => setShowUserInfo(!showUserInfo)}
                 className="w-full flex items-center justify-between text-left"
               >
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Миний захиалга ({bundleOrder.items.length} бараа)
                 </h3>
                 <svg
-                  className={`w-5 h-5 transition-transform ${showUserInfo ? "rotate-180" : ""}`}
+                  className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${showUserInfo ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -183,12 +183,12 @@ export default function BundleOrderDetailModal({
               {showUserInfo && (
                 <div className="mt-4 space-y-4">
                   {bundleOrder.items.map((item, idx) => (
-                    <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                    <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
-                        <h4 className="font-semibold text-gray-900">{item.productName}</h4>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">#{idx + 1}</span>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">{item.productName}</h4>
                       </div>
-                      <p className="text-gray-700 whitespace-pre-wrap text-sm">{item.description}</p>
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">{item.description}</p>
 
                       {/* Images */}
                       {item.imageUrls && item.imageUrls.length > 0 && (
@@ -198,7 +198,7 @@ export default function BundleOrderDetailModal({
                               key={imgIdx}
                               src={imgUrl}
                               alt={`${item.productName} - ${imgIdx + 1}`}
-                              className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                              className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => setZoomedImage(imgUrl)}
                             />
                           ))}
@@ -212,22 +212,22 @@ export default function BundleOrderDetailModal({
 
             {/* Agent Report Section */}
             {hasReport && agentTotalYuan > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Agent-ийн тайлан</h3>
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Agent-ийн тайлан</h3>
 
                 {/* Single Mode Report */}
                 {isSingleMode && bundleOrder.bundleReport && (
                   <div className="space-y-3">
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                      <span className="text-sm text-gray-600">Таны төлөх дүн:</span>
+                    <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                      <span className="text-sm text-gray-600 dark:text-gray-300">Таны төлөх дүн:</span>
                       <div className="mt-2">
-                        <p className="text-xl font-bold text-green-700">
+                        <p className="text-xl font-bold text-green-700 dark:text-green-400">
                           {userTotalMNT.toLocaleString()}₮
                         </p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
                         </p>
                       </div>
@@ -235,34 +235,34 @@ export default function BundleOrderDetailModal({
 
                     {bundleOrder.bundleReport.paymentLink && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Төлбөрийн мэдээлэл:</label>
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Төлбөрийн мэдээлэл:</label>
                         {bundleOrder.bundleReport.paymentLink.startsWith("http") ? (
-                          <a href={bundleOrder.bundleReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block mt-1">
+                          <a href={bundleOrder.bundleReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline block mt-1">
                             {bundleOrder.bundleReport.paymentLink}
                           </a>
                         ) : (
-                          <p className="text-gray-700 mt-1">{bundleOrder.bundleReport.paymentLink}</p>
+                          <p className="text-gray-700 dark:text-gray-300 mt-1">{bundleOrder.bundleReport.paymentLink}</p>
                         )}
                       </div>
                     )}
 
                     {bundleOrder.bundleReport.additionalDescription && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Нэмэлт тайлбар:</label>
-                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">{bundleOrder.bundleReport.additionalDescription}</p>
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Нэмэлт тайлбар:</label>
+                        <p className="text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{bundleOrder.bundleReport.additionalDescription}</p>
                       </div>
                     )}
 
                     {bundleOrder.bundleReport.additionalImages && bundleOrder.bundleReport.additionalImages.length > 0 && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600 mb-2 block">Нэмэлт зураг:</label>
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Нэмэлт зураг:</label>
                         <div className="grid grid-cols-3 gap-3">
                           {bundleOrder.bundleReport.additionalImages.map((imgUrl, idx) => (
                             <img
                               key={idx}
                               src={imgUrl}
                               alt={`Additional ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer hover:opacity-80"
+                              className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80"
                               onClick={() => setZoomedImage(imgUrl)}
                             />
                           ))}
@@ -280,14 +280,14 @@ export default function BundleOrderDetailModal({
                       const itemUserYuan = item.agentReport.userAmount * 1.05;
                       const itemUserMNT = itemUserYuan * exchangeRate;
                       return (
-                        <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-400 font-mono">#{idx + 1}</span>
-                              <span className="font-medium text-gray-900">{item.productName}</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">#{idx + 1}</span>
+                              <span className="font-medium text-gray-900 dark:text-white">{item.productName}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-green-600">{itemUserMNT.toLocaleString()}₮</span>
+                              <span className="font-semibold text-green-600 dark:text-green-400">{itemUserMNT.toLocaleString()}₮</span>
                               {/* Remove Item Button */}
                               {canRemoveItems && onRemoveItem && (
                                 <button
@@ -297,7 +297,7 @@ export default function BundleOrderDetailModal({
                                     }
                                   }}
                                   disabled={removeItemLoading === item.id}
-                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
                                   title="Бараа хасах"
                                 >
                                   {removeItemLoading === item.id ? (
@@ -312,13 +312,13 @@ export default function BundleOrderDetailModal({
                             </div>
                           </div>
                           {item.agentReport.quantity && (
-                            <p className="text-sm text-gray-600">Тоо: {item.agentReport.quantity}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Тоо: {item.agentReport.quantity}</p>
                           )}
                           {item.agentReport.additionalDescription && (
-                            <p className="text-sm text-gray-600 mt-1">{item.agentReport.additionalDescription}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.agentReport.additionalDescription}</p>
                           )}
                           {item.agentReport.paymentLink && (
-                            <a href={item.agentReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline mt-1 inline-block">
+                            <a href={item.agentReport.paymentLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block">
                               Төлбөрийн линк
                             </a>
                           )}
@@ -329,7 +329,7 @@ export default function BundleOrderDetailModal({
                                   key={imgIdx}
                                   src={imgUrl}
                                   alt={`Report ${imgIdx + 1}`}
-                                  className="w-full h-16 object-cover rounded border border-gray-200 cursor-pointer"
+                                  className="w-full h-16 object-cover rounded border border-gray-200 dark:border-gray-600 cursor-pointer"
                                   onClick={() => setZoomedImage(imgUrl)}
                                 />
                               ))}
@@ -340,16 +340,16 @@ export default function BundleOrderDetailModal({
                     })}
 
                     {/* Total for per-item mode */}
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                      <span className="text-sm text-gray-600">Нийт төлөх дүн:</span>
+                    <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                      <span className="text-sm text-gray-600 dark:text-gray-300">Нийт төлөх дүн:</span>
                       <div className="mt-2">
-                        <p className="text-xl font-bold text-green-700">
+                        <p className="text-xl font-bold text-green-700 dark:text-green-400">
                           {userTotalMNT.toLocaleString()}₮
                         </p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           ({userTotalYuan.toLocaleString()}¥ × {exchangeRate.toLocaleString()}₮)
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           Агент үнэ: {agentTotalYuan.toLocaleString()}¥ + 5% = {userTotalYuan.toLocaleString()}¥
                         </p>
                       </div>
@@ -361,33 +361,33 @@ export default function BundleOrderDetailModal({
 
             {/* Action Buttons for orders waiting for payment */}
             {bundleOrder.status === "tolbor_huleej_bn" && (
-              <div className="space-y-3 pt-4 border-t border-gray-200">
+              <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 {/* Payment Info */}
                 {adminSettings ? (
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl p-4 space-y-2">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Дансны дугаар:</label>
-                      <p className="text-gray-900 font-mono">{adminSettings.accountNumber}</p>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Дансны дугаар:</label>
+                      <p className="text-gray-900 dark:text-white font-mono">{adminSettings.accountNumber}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Дансны нэр:</label>
-                      <p className="text-gray-900">{adminSettings.accountName}</p>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Дансны нэр:</label>
+                      <p className="text-gray-900 dark:text-white">{adminSettings.accountName}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Банк:</label>
-                      <p className="text-gray-900">{adminSettings.bank}</p>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Банк:</label>
+                      <p className="text-gray-900 dark:text-white">{adminSettings.bank}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-sm text-center text-gray-500">Дансны мэдээлэл олдсонгүй</p>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <p className="text-sm text-center text-gray-500 dark:text-gray-400">Дансны мэдээлэл олдсонгүй</p>
                   </div>
                 )}
 
                 {/* If payment is verified, show waiting message */}
                 {bundleOrder.userPaymentVerified && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <p className="text-sm text-yellow-800 font-medium">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
                       Төлбөр төлсөн мэдээлэл admin-д илгээгдлээ. Admin баталгаажуулахад хүлээнэ үү.
                     </p>
                   </div>
@@ -415,7 +415,7 @@ export default function BundleOrderDetailModal({
                     {onOpenChat && (
                       <button
                         onClick={() => onOpenChat(bundleOrder)}
-                        className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors font-medium min-h-[44px] flex items-center justify-center gap-2"
+                        className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium min-h-[44px] flex items-center justify-center gap-2"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -452,8 +452,8 @@ export default function BundleOrderDetailModal({
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Үүсгэсэн огноо</label>
-                <p className="text-gray-700 mt-1">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Үүсгэсэн огноо</label>
+                <p className="text-gray-700 dark:text-gray-300 mt-1">
                   {new Date(bundleOrder.createdAt).toLocaleDateString("mn-MN", {
                     year: "numeric",
                     month: "long",
@@ -464,8 +464,8 @@ export default function BundleOrderDetailModal({
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Шинэчлэгдсэн огноо</label>
-                <p className="text-gray-700 mt-1">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Шинэчлэгдсэн огноо</label>
+                <p className="text-gray-700 dark:text-gray-300 mt-1">
                   {new Date(bundleOrder.updatedAt).toLocaleDateString("mn-MN", {
                     year: "numeric",
                     month: "long",
@@ -479,7 +479,7 @@ export default function BundleOrderDetailModal({
 
             {/* Cancel Button - For cancellable orders not in tolbor_huleej_bn */}
             {canCancel && bundleOrder.status !== "tolbor_huleej_bn" && onCancelOrder && (
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => {
                     if (confirm("Захиалгыг цуцлахдаа итгэлтэй байна уу?")) {

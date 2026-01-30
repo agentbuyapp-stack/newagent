@@ -431,10 +431,22 @@ class ApiClient {
     return this.request<Message[]>(`/orders/${orderId}/messages`);
   }
 
-  async sendMessage(orderId: string, data: { text?: string; imageUrl?: string }): Promise<Message> {
+  async sendMessage(orderId: string, data: { text?: string; imageUrl?: string; audioUrl?: string; audioDuration?: number }): Promise<Message> {
     return this.request<Message>(`/orders/${orderId}/messages`, {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  async getLatestVoiceMessage(orderId: string): Promise<LatestVoiceMessage | null> {
+    return this.request<LatestVoiceMessage | null>(`/orders/${orderId}/latest-voice`);
+  }
+
+  // Upload audio to Cloudinary
+  async uploadAudio(base64: string): Promise<{ url: string }> {
+    return this.request<{ url: string }>("/upload-image/audio", {
+      method: "POST",
+      body: JSON.stringify({ audio: base64 }),
     });
   }
 
@@ -751,6 +763,15 @@ export interface Message {
   senderId: string;
   text?: string;
   imageUrl?: string;
+  audioUrl?: string;
+  audioDuration?: number;
+  createdAt: string;
+}
+
+export interface LatestVoiceMessage {
+  audioUrl: string;
+  audioDuration?: number;
+  senderId: string;
   createdAt: string;
 }
 
