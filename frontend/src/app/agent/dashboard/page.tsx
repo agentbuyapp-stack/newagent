@@ -440,32 +440,6 @@ export default function AgentDashboardPage() {
     }
   };
 
-  // Fetch latest voice messages for active orders
-  const fetchLatestVoiceMessages = useCallback(async () => {
-    const activeOrders = myOrders.filter((o) =>
-      ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn"].includes(o.status)
-    );
-
-    const results: Record<string, LatestVoiceMessage | null> = {};
-    await Promise.all(
-      activeOrders.map(async (order) => {
-        try {
-          const voice = await apiClient.getLatestVoiceMessage(order.id);
-          results[order.id] = voice;
-        } catch {
-          results[order.id] = null;
-        }
-      })
-    );
-    setLatestVoiceMessages(results);
-  }, [myOrders, apiClient]);
-
-  useEffect(() => {
-    if (myOrders.length > 0) {
-      fetchLatestVoiceMessages();
-    }
-  }, [myOrders, fetchLatestVoiceMessages]);
-
   // Calculate user payment amount: agent report userAmount * exchangeRate * 1.05
   const calculateUserPaymentAmount = useCallback(
     (agentReport: AgentReport | null, exchangeRate: number = 1): number => {
@@ -734,6 +708,32 @@ export default function AgentDashboardPage() {
 
     return filtered;
   }, [orders, user?.role, user?.id]);
+
+  // Fetch latest voice messages for active orders
+  const fetchLatestVoiceMessages = useCallback(async () => {
+    const activeOrders = myOrders.filter((o) =>
+      ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga"].includes(o.status)
+    );
+
+    const results: Record<string, LatestVoiceMessage | null> = {};
+    await Promise.all(
+      activeOrders.map(async (order) => {
+        try {
+          const voice = await apiClient.getLatestVoiceMessage(order.id);
+          results[order.id] = voice;
+        } catch {
+          results[order.id] = null;
+        }
+      })
+    );
+    setLatestVoiceMessages(results);
+  }, [myOrders, apiClient]);
+
+  useEffect(() => {
+    if (myOrders.length > 0) {
+      fetchLatestVoiceMessages();
+    }
+  }, [myOrders, fetchLatestVoiceMessages]);
 
   // Memoize archived orders for agent
   const archivedOrders = useMemo(() => {
