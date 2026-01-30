@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Order, BundleOrder } from "@/lib/api";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Order, BundleOrder, LatestVoiceMessage } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import OrderCard from "@/components/OrderCard";
 import BundleOrderCard from "@/components/BundleOrderCard";
@@ -29,6 +29,8 @@ interface OrderHistorySectionProps {
   onReload: () => void;
   deleteLoading?: boolean;
   archiveLoading?: boolean;
+  // Voice recording props
+  onSendVoiceMessage?: (orderId: string, audioBase64: string, duration: number) => Promise<void>;
 }
 
 export default function OrderHistorySection({
@@ -47,6 +49,7 @@ export default function OrderHistorySection({
   onReload,
   deleteLoading = false,
   archiveLoading = false,
+  onSendVoiceMessage,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
@@ -55,6 +58,33 @@ export default function OrderHistorySection({
   >("active");
   const [orderViewMode, setOrderViewMode] = useState<"list" | "card" | "compact">("card");
   const [currentPage, setCurrentPage] = useState(1);
+  const [latestVoiceMessages, setLatestVoiceMessages] = useState<Record<string, LatestVoiceMessage | null>>({});
+
+  // Fetch latest voice messages for active orders
+  const fetchLatestVoiceMessages = useCallback(async () => {
+    const activeOrders = [...orders, ...bundleOrders].filter((o) =>
+      ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga"].includes(o.status)
+    );
+
+    const results: Record<string, LatestVoiceMessage | null> = {};
+    await Promise.all(
+      activeOrders.map(async (order) => {
+        try {
+          const voice = await apiClient.getLatestVoiceMessage(order.id);
+          results[order.id] = voice;
+        } catch {
+          results[order.id] = null;
+        }
+      })
+    );
+    setLatestVoiceMessages(results);
+  }, [orders, bundleOrders, apiClient]);
+
+  useEffect(() => {
+    if (showOrderSection && onSendVoiceMessage) {
+      fetchLatestVoiceMessages();
+    }
+  }, [showOrderSection, onSendVoiceMessage, fetchLatestVoiceMessages]);
 
   // Combine and filter orders
   const combinedOrders = useMemo((): CombinedOrder[] => {
@@ -406,6 +436,8 @@ export default function OrderHistorySection({
                           onArchive={onArchiveOrder}
                           deleteLoading={deleteLoading}
                           archiveLoading={archiveLoading}
+                          onSendVoiceMessage={onSendVoiceMessage}
+                          latestVoiceMessage={latestVoiceMessages[item.data.id]}
                         />
                       );
                     } else {
@@ -418,6 +450,8 @@ export default function OrderHistorySection({
                           onOpenChat={onOpenBundleChat}
                           onViewReport={onViewBundleReport}
                           onDelete={onDeleteBundleOrder}
+                          onSendVoiceMessage={onSendVoiceMessage}
+                          latestVoiceMessage={latestVoiceMessages[item.data.id]}
                         />
                       );
                     }

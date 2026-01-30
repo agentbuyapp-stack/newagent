@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { getMessages, sendMessage } from "../controllers/messageController";
+import { getMessages, sendMessage, getLatestVoiceMessage } from "../controllers/messageController";
 import { requireRole } from "../middleware/requireRole";
 import { validate, validateParams } from "../middleware/validate";
 import { sendMessageSchema, mongoIdSchema } from "../schemas";
@@ -17,6 +17,7 @@ const conditionalMessageLimiter = (req: Request, res: Response, next: NextFuncti
 
 // Message routes are nested under orders
 router.get("/:id/messages", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getMessages);
+router.get("/:id/latest-voice", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getLatestVoiceMessage);
 router.post("/:id/messages", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), conditionalMessageLimiter, validate(sendMessageSchema), sendMessage);
 
 export default router;
