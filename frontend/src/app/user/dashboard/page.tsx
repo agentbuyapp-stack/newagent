@@ -141,17 +141,16 @@ export default function UserDashboardPage() {
         if (cargosResult.status === "fulfilled") {
           setCargos(cargosResult.value);
         }
-        if (agentsResult.status === "fulfilled") {
-          // If no top agents set, fall back to public agents
-          if (agentsResult.value.length === 0) {
-            try {
-              const publicAgents = await apiClient.getPublicAgents();
-              setAgents(publicAgents.slice(0, 10));
-            } catch {
-              setAgents([]);
-            }
-          } else {
-            setAgents(agentsResult.value);
+        // Load agents - try top agents first, then fall back to public agents
+        if (agentsResult.status === "fulfilled" && agentsResult.value.length > 0) {
+          setAgents(agentsResult.value);
+        } else {
+          // Fall back to public agents if no top agents or error
+          try {
+            const publicAgents = await apiClient.getPublicAgents();
+            setAgents(publicAgents.slice(0, 10));
+          } catch {
+            setAgents([]);
           }
         }
         if (bundleOrdersResult.status === "fulfilled") {
@@ -837,13 +836,12 @@ export default function UserDashboardPage() {
                 </div>
               )}
 
-              {/* Box 4: Топ 10 Агентууд - Dropdown */}
-              {agents.length > 0 && (
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setShowAgents(!showAgents)}
-                  >
+              {/* Box 4: Агентууд - Dropdown */}
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setShowAgents(!showAgents)}
+                >
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-md shadow-yellow-500/20">
                         <svg
@@ -1094,7 +1092,6 @@ export default function UserDashboardPage() {
                     </div>
                   )}
                 </div>
-              )}
             </div>
           </div>
       </main>
