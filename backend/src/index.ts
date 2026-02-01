@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
@@ -12,6 +13,7 @@ import { swaggerSpec } from "./config/swagger";
 import mongoose from "mongoose";
 import { generalLimiter, authLimiter } from "./middleware/rateLimit";
 import logger from "./utils/logger";
+import { initializeSocket } from "./lib/socket";
 
 // Import routes
 import authRoutes from "./routes/authRoutes";
@@ -123,10 +125,15 @@ connectDB()
 
 const port = process.env.PORT || 4000;
 
-const server = app.listen(port, () => {
+// Create HTTP server and initialize Socket.io
+const httpServer = createServer(app);
+initializeSocket(httpServer);
+
+const server = httpServer.listen(port, () => {
   logger.info(`Server started on port ${port}`);
   logger.info(`API Docs available at http://localhost:${port}/api-docs`);
   logger.info(`Health check: http://localhost:${port}/health`);
+  logger.info(`Socket.io enabled for real-time messaging`);
 });
 
 // Graceful shutdown handling

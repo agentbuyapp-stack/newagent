@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
-import { Message, Order, BundleOrder } from "../models";
+import { Message, Order, BundleOrder, Profile } from "../models";
 import { uploadImageToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
+import { emitNewVoiceMessage } from "../lib/socket";
+import { sendChatNotificationEmail } from "../services/emailService";
 
 export const getMessages = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -168,6 +170,124 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       audioUrl: audioUrl || undefined,
       audioDuration: audioDuration || undefined,
     });
+
+    // Emit socket event for voice messages
+    if (audioUrl) {
+      // Determine recipient: if sender is user -> agent, if sender is agent/admin -> user
+      let recipientId: string | null = null;
+
+      // Extract userId from order
+      let orderUserId: string = '';
+      if (typeof order.userId === 'string') {
+        orderUserId = order.userId;
+      } else if (order.userId._id) {
+        orderUserId = order.userId._id.toString();
+      } else if (order.userId.id) {
+        orderUserId = order.userId.id.toString();
+      } else {
+        orderUserId = order.userId.toString();
+      }
+
+      // Extract agentId from order
+      let orderAgentId: string | null = null;
+      if (order.agentId) {
+        if (typeof order.agentId === 'string') {
+          orderAgentId = order.agentId;
+        } else if (order.agentId._id) {
+          orderAgentId = order.agentId._id.toString();
+        } else if (order.agentId.id) {
+          orderAgentId = order.agentId.id.toString();
+        } else if (order.agentId.toString) {
+          orderAgentId = order.agentId.toString();
+        } else {
+          orderAgentId = String(order.agentId);
+        }
+      }
+
+      if (req.user!.role === "user") {
+        // User sent voice -> notify agent
+        recipientId = orderAgentId;
+      } else {
+        // Agent/Admin sent voice -> notify user
+        recipientId = orderUserId;
+      }
+
+      if (recipientId) {
+        emitNewVoiceMessage(recipientId, orderId, {
+          audioUrl: audioUrl,
+          audioDuration: audioDuration,
+          senderId: senderId,
+          createdAt: message.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // Send email notification for chat messages (text/image) with 30-min rate limiting
+    // Run async, don't wait for response
+    (async () => {
+      try {
+        // Extract userId from order
+        let orderUserId: string = '';
+        if (typeof order!.userId === 'string') {
+          orderUserId = order!.userId;
+        } else if (order!.userId._id) {
+          orderUserId = order!.userId._id.toString();
+        } else if (order!.userId.id) {
+          orderUserId = order!.userId.id.toString();
+        } else {
+          orderUserId = order!.userId.toString();
+        }
+
+        // Extract agentId from order
+        let orderAgentId: string | null = null;
+        if (order!.agentId) {
+          if (typeof order!.agentId === 'string') {
+            orderAgentId = order!.agentId;
+          } else if (order!.agentId._id) {
+            orderAgentId = order!.agentId._id.toString();
+          } else if (order!.agentId.id) {
+            orderAgentId = order!.agentId.id.toString();
+          } else if (order!.agentId.toString) {
+            orderAgentId = order!.agentId.toString();
+          } else {
+            orderAgentId = String(order!.agentId);
+          }
+        }
+
+        // Determine recipient
+        let recipientId: string | null = null;
+        if (req.user!.role === "user") {
+          // User sent message -> notify agent
+          recipientId = orderAgentId;
+        } else {
+          // Agent/Admin sent message -> notify user
+          recipientId = orderUserId;
+        }
+
+        if (!recipientId) {
+          return; // No recipient to notify
+        }
+
+        // Get sender's name from Profile
+        const senderProfile = await Profile.findOne({ userId: senderId }).lean();
+        const senderName = senderProfile?.name || "Хэрэглэгч";
+
+        // Get product name from order
+        const fullOrder = await Order.findById(orderId).lean() || await BundleOrder.findById(orderId).lean();
+        const productName = (fullOrder as any)?.productName || (fullOrder as any)?.items?.[0]?.productName || "Захиалга";
+
+        // Send email notification with 30-min rate limiting
+        await sendChatNotificationEmail(
+          orderId,
+          recipientId,
+          req.user!.role as "user" | "agent" | "admin",
+          senderName,
+          productName
+        );
+      } catch (emailError) {
+        console.error("Chat notification email error:", emailError);
+      }
+    })();
 
     res.status(201).json({
       ...message.toObject(),

@@ -2,6 +2,8 @@ import nodemailer from "nodemailer";
 import { EmailQueue } from "../models/EmailQueue";
 import { EmailDailyCount } from "../models/EmailDailyCount";
 import { Profile } from "../models/Profile";
+import { ChatNotification } from "../models/ChatNotification";
+import { User } from "../models/User";
 import mongoose from "mongoose";
 
 const DAILY_EMAIL_LIMIT = 450;
@@ -434,4 +436,132 @@ export const emailTemplates = {
       <a href="https://agentbuy.mn/admin/dashboard" style="display: inline-block; background-color: #7c3aed; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Админ хэсэгт очих</a>
     `, "Урамшуулал хүсэлт"),
   }),
+
+  chatMessageFromUser: (productName: string, senderName: string) => ({
+    subject: "Хэрэглэгчээс чат ирлээ - Agentbuy",
+    body: `Сайн байна уу,\n\n${senderName} хэрэглэгч "${productName}" захиалгад чат илгээлээ.\n\nСистемд нэвтэрч харна уу.`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 20px; color: #3b82f6; font-size: 22px;">💬 Хэрэглэгчээс чат ирлээ</h2>
+      <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
+      <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Таны захиалгад хэрэглэгчээс чат ирлээ.</p>
+      <table style="width: 100%; background-color: #eff6ff; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+        <tr>
+          <td style="padding: 10px;">
+            <p style="margin: 0; color: #1d4ed8; font-size: 14px;">Илгээгч</p>
+            <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${senderName}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px;">
+            <p style="margin: 0; color: #1d4ed8; font-size: 14px;">Захиалга</p>
+            <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${productName}</p>
+          </td>
+        </tr>
+      </table>
+      <a href="https://agentbuy.mn/agent/dashboard" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Чат харах</a>
+    `, "Чат ирлээ"),
+  }),
+
+  chatMessageFromAgent: (productName: string, senderName: string) => ({
+    subject: "Agent-аас чат ирлээ - Agentbuy",
+    body: `Сайн байна уу,\n\n${senderName} agent "${productName}" захиалгад чат илгээлээ.\n\nСистемд нэвтэрч харна уу.`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 20px; color: #10b981; font-size: 22px;">💬 Agent-аас чат ирлээ</h2>
+      <p style="margin: 0 0 15px; color: #374151; font-size: 16px; line-height: 1.6;">Сайн байна уу,</p>
+      <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Таны захиалгад agent чат илгээлээ.</p>
+      <table style="width: 100%; background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #a7f3d0;">
+        <tr>
+          <td style="padding: 10px;">
+            <p style="margin: 0; color: #047857; font-size: 14px;">Agent</p>
+            <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${senderName}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px;">
+            <p style="margin: 0; color: #047857; font-size: 14px;">Захиалга</p>
+            <p style="margin: 5px 0 0; color: #111827; font-size: 16px; font-weight: 600;">${productName}</p>
+          </td>
+        </tr>
+      </table>
+      <a href="https://agentbuy.mn/user/dashboard" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Чат харах</a>
+    `, "Чат ирлээ"),
+  }),
+};
+
+// Chat notification cooldown in milliseconds (30 minutes)
+const CHAT_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
+
+/**
+ * Send chat notification email with 30-minute rate limiting
+ * Only sends email if 30 minutes have passed since last email for this order+recipient
+ */
+export const sendChatNotificationEmail = async (
+  orderId: string,
+  recipientId: string,
+  senderRole: "user" | "agent" | "admin",
+  senderName: string,
+  productName: string
+): Promise<{ sent: boolean; reason?: string }> => {
+  try {
+    const orderObjectId = new mongoose.Types.ObjectId(orderId);
+    const recipientObjectId = new mongoose.Types.ObjectId(recipientId);
+
+    // Check last email sent time for this order+recipient
+    const existing = await ChatNotification.findOne({
+      orderId: orderObjectId,
+      recipientId: recipientObjectId,
+    });
+
+    const now = new Date();
+
+    if (existing) {
+      const timeSinceLastEmail = now.getTime() - existing.lastEmailSentAt.getTime();
+
+      // If less than 30 minutes passed, skip email
+      if (timeSinceLastEmail < CHAT_NOTIFICATION_COOLDOWN_MS) {
+        const remainingMinutes = Math.ceil((CHAT_NOTIFICATION_COOLDOWN_MS - timeSinceLastEmail) / 60000);
+        return { sent: false, reason: `Cooldown: ${remainingMinutes} minutes remaining` };
+      }
+    }
+
+    // Get recipient's email
+    const recipient = await User.findById(recipientId).lean();
+    if (!recipient || !recipient.email) {
+      return { sent: false, reason: "Recipient email not found" };
+    }
+
+    // Check if recipient has email notifications enabled
+    const isEnabled = await isEmailNotificationEnabled(recipientId);
+    if (!isEnabled) {
+      return { sent: false, reason: "Email notifications disabled by user" };
+    }
+
+    // Get email template based on sender role
+    const template = senderRole === "user"
+      ? emailTemplates.chatMessageFromUser(productName, senderName)
+      : emailTemplates.chatMessageFromAgent(productName, senderName);
+
+    // Send email
+    const result = await sendEmail(
+      recipient.email,
+      template.subject,
+      template.body,
+      template.html
+    );
+
+    if (result.success) {
+      // Update or create the notification record
+      await ChatNotification.findOneAndUpdate(
+        { orderId: orderObjectId, recipientId: recipientObjectId },
+        { lastEmailSentAt: now },
+        { upsert: true }
+      );
+      return { sent: true };
+    } else {
+      return { sent: false, reason: result.reason };
+    }
+  } catch (error: any) {
+    console.error("sendChatNotificationEmail error:", error);
+    return { sent: false, reason: error.message };
+  }
 };

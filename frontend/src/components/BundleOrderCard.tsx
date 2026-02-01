@@ -5,7 +5,7 @@ import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import { BundleOrder, LatestVoiceMessage } from "@/lib/api";
 import { useVoiceRecording } from "@/hooks/useVoiceRecording";
-import { OrderCardVoice } from "./OrderCardVoice";
+import { OrderCardVoice, NewVoiceGlow, useIsNewVoiceMessage } from "./OrderCardVoice";
 
 interface BundleOrderCardProps {
   bundleOrder: BundleOrder;
@@ -24,6 +24,7 @@ interface BundleOrderCardProps {
     duration: number,
   ) => Promise<void>;
   latestVoiceMessage?: LatestVoiceMessage | null;
+  currentUserId?: string;
 }
 
 // Helper functions
@@ -90,9 +91,13 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
   archiveLoading = false,
   onSendVoiceMessage,
   latestVoiceMessage,
+  currentUserId,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
+
+  // Check if there's a new unheard voice message
+  const hasNewVoice = useIsNewVoiceMessage(latestVoiceMessage, currentUserId);
 
   // Check if order is active (voice recording enabled)
   const isActiveOrder = ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga"].includes(bundleOrder.status);
@@ -481,6 +486,9 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
     <div
       className="relative rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4 bg-linear-to-br from-slate-800 via-slate-700 to-slate-900"
     >
+      {/* New voice message glow effect */}
+      <NewVoiceGlow hasNewVoice={hasNewVoice} theme="dark" />
+
       {/* Voice recording overlay */}
       {isRecordingMode && (
         <OrderCardVoice
@@ -492,6 +500,7 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
           onStopRecording={handleStopRecording}
           onCancelRecording={handleCancelRecording}
           formatTime={formatTime}
+          currentUserId={currentUserId}
           latestVoiceMessage={latestVoiceMessage}
           theme="dark"
         />
@@ -677,6 +686,7 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
                 onCancelRecording={() => {}}
                 formatTime={formatTime}
                 latestVoiceMessage={latestVoiceMessage}
+                currentUserId={currentUserId}
                 theme="dark"
               />
             )}

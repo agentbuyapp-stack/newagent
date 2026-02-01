@@ -1,10 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
+import { io, Socket } from "socket.io-client";
 import {
   type User,
   type Profile,
@@ -95,6 +96,41 @@ export default function UserDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, clerkUser, router]);
 
+  // Socket connection for real-time voice message notifications
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:4000";
+
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      autoConnect: true,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      // Join user's personal room
+      socket.emit("join", user.id);
+    });
+
+    // Listen for new voice messages - refresh orders to update the UI
+    socket.on("new-voice-message", (event: { orderId: string }) => {
+      console.log("New voice message received for order:", event.orderId);
+      // Refresh orders to get the latest voice message data
+      loadData();
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const loadAgentReport = async (orderId: string) => {
     try {
       const report = await apiClient.getAgentReport(orderId);
@@ -141,17 +177,16 @@ export default function UserDashboardPage() {
         if (cargosResult.status === "fulfilled") {
           setCargos(cargosResult.value);
         }
-        if (agentsResult.status === "fulfilled") {
-          // If no top agents set, fall back to public agents
-          if (agentsResult.value.length === 0) {
-            try {
-              const publicAgents = await apiClient.getPublicAgents();
-              setAgents(publicAgents.slice(0, 10));
-            } catch {
-              setAgents([]);
-            }
-          } else {
-            setAgents(agentsResult.value);
+        // Load agents - try top agents first, then fall back to public agents
+        if (agentsResult.status === "fulfilled" && agentsResult.value.length > 0) {
+          setAgents(agentsResult.value);
+        } else {
+          // Fall back to public agents if no top agents or error
+          try {
+            const publicAgents = await apiClient.getPublicAgents();
+            setAgents(publicAgents.slice(0, 10));
+          } catch {
+            setAgents([]);
           }
         }
         if (bundleOrdersResult.status === "fulfilled") {
@@ -656,6 +691,7 @@ export default function UserDashboardPage() {
                 deleteLoading={deleteLoading}
                 archiveLoading={archiveLoading}
                 onSendVoiceMessage={handleSendVoiceMessage}
+                currentUserId={user?.id}
               />
 
               {/* Box 3: Cargonууд - Dropdown */}
@@ -853,13 +889,12 @@ export default function UserDashboardPage() {
                 </div>
               )}
 
-              {/* Box 4: Топ 10 Агентууд - Dropdown */}
-              {agents.length > 0 && (
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
-                    onClick={() => setShowAgents(!showAgents)}
-                  >
+              {/* Box 4: Агентууд - Dropdown */}
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setShowAgents(!showAgents)}
+                >
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl bg-linear-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-md shadow-yellow-500/20">
                         <svg
@@ -1110,7 +1145,6 @@ export default function UserDashboardPage() {
                     </div>
                   )}
                 </div>
-              )}
             </div>
           </div>
       </main>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { RecordingState } from "@/hooks/useVoiceRecording";
 
 export interface LatestVoiceMessage {
@@ -23,25 +23,59 @@ interface OrderCardVoiceProps {
 
   // Playback props
   latestVoiceMessage?: LatestVoiceMessage | null;
+  // Current user ID to check if the message is from the other party
+  currentUserId?: string;
 
   // Styling
   theme: "dark" | "light";
 }
 
-// Compact audio player for card
+// Helper to get/set listened messages in localStorage
+const LISTENED_KEY = "listenedVoiceMessages";
+function getListenedMessages(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = localStorage.getItem(LISTENED_KEY);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+function markAsListened(audioUrl: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const listened = getListenedMessages();
+    listened.add(audioUrl);
+    // Keep only last 500 entries to prevent localStorage bloat
+    const arr = Array.from(listened).slice(-500);
+    localStorage.setItem(LISTENED_KEY, JSON.stringify(arr));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// Compact audio player for card with pulse animation for new messages
 function CardAudioPlayer({
   audioUrl,
   duration,
   theme,
+  isNew,
+  onPlayed,
 }: {
   audioUrl: string;
   duration?: number;
   theme: "dark" | "light";
+  isNew?: boolean;
+  onPlayed?: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(duration || 0);
+  const [hasPlayed, setHasPlayed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Check if this message should show as new (not played yet)
+  const showAsNew = isNew && !hasPlayed && !isPlaying;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -78,6 +112,11 @@ function CardAudioPlayer({
       audio.pause();
     } else {
       audio.play();
+      // Mark as played
+      if (!hasPlayed) {
+        setHasPlayed(true);
+        onPlayed?.();
+      }
     }
     setIsPlaying(!isPlaying);
   };
@@ -95,37 +134,49 @@ function CardAudioPlayer({
   return (
     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      <button
-        onClick={togglePlay}
-        className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-          isDark
-            ? "bg-blue-500 hover:bg-blue-400 text-white"
-            : "bg-purple-500 hover:bg-purple-400 text-white"
-        }`}
-      >
-        {isPlaying ? (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-          </svg>
-        ) : (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
+      <div className="relative">
+        {/* Pulse ring animation for new messages */}
+        {showAsNew && (
+          <>
+            <div className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-50" />
+            <div className="absolute -inset-1 rounded-full bg-amber-400/30 animate-pulse" />
+          </>
         )}
-      </button>
+        <button
+          onClick={togglePlay}
+          className={`relative w-8 h-8 flex items-center justify-center rounded-full transition-all ${
+            showAsNew
+              ? "bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/50"
+              : isDark
+                ? "bg-blue-500 hover:bg-blue-400 text-white"
+                : "bg-purple-500 hover:bg-purple-400 text-white"
+          }`}
+        >
+          {isPlaying ? (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+      </div>
       {isPlaying && (
         <div className="flex items-center gap-2">
-          <div
-            className={`w-16 h-1 rounded-full overflow-hidden ${
-              isDark ? "bg-gray-600" : "bg-gray-300"
-            }`}
-          >
-            <div
-              className={`h-full transition-all ${
-                isDark ? "bg-blue-400" : "bg-purple-500"
-              }`}
-              style={{ width: `${progress}%` }}
-            />
+          {/* Waveform bars animation */}
+          <div className="flex items-center gap-0.5 h-4">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className={`w-0.5 rounded-full ${isDark ? "bg-blue-400" : "bg-purple-500"}`}
+                style={{
+                  height: `${Math.random() * 12 + 4}px`,
+                  animation: `waveform 0.5s ease-in-out ${i * 0.05}s infinite alternate`,
+                }}
+              />
+            ))}
           </div>
           <span
             className={`text-xs ${
@@ -136,6 +187,12 @@ function CardAudioPlayer({
           </span>
         </div>
       )}
+      <style jsx>{`
+        @keyframes waveform {
+          0% { height: 4px; }
+          100% { height: 16px; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -150,9 +207,32 @@ export const OrderCardVoice: React.FC<OrderCardVoiceProps> = ({
   onCancelRecording,
   formatTime,
   latestVoiceMessage,
+  currentUserId,
   theme,
 }) => {
   const isDark = theme === "dark";
+  const [listenedMessages, setListenedMessages] = useState<Set<string>>(new Set());
+
+  // Load listened messages from localStorage on mount
+  useEffect(() => {
+    setListenedMessages(getListenedMessages());
+  }, []);
+
+  // Check if the latest voice message is new (from other party and not listened)
+  const isNewVoiceMessage = useCallback(() => {
+    if (!latestVoiceMessage || !currentUserId) return false;
+    // Message is new if it's from the other party (not from current user) and not listened
+    const isFromOther = latestVoiceMessage.senderId !== currentUserId;
+    const isListened = listenedMessages.has(latestVoiceMessage.audioUrl);
+    return isFromOther && !isListened;
+  }, [latestVoiceMessage, currentUserId, listenedMessages]);
+
+  const handleVoicePlayed = useCallback(() => {
+    if (latestVoiceMessage) {
+      markAsListened(latestVoiceMessage.audioUrl);
+      setListenedMessages(prev => new Set([...prev, latestVoiceMessage.audioUrl]));
+    }
+  }, [latestVoiceMessage]);
 
   // Recording overlay UI
   if (isRecording || recordingState === "recording" || recordingState === "uploading") {
@@ -280,6 +360,8 @@ export const OrderCardVoice: React.FC<OrderCardVoiceProps> = ({
         audioUrl={latestVoiceMessage.audioUrl}
         duration={latestVoiceMessage.audioDuration}
         theme={theme}
+        isNew={isNewVoiceMessage()}
+        onPlayed={handleVoicePlayed}
       />
     );
   }
@@ -315,3 +397,40 @@ export const LongPressIndicator: React.FC<{
     </div>
   );
 };
+
+// New voice message glow overlay for cards
+export const NewVoiceGlow: React.FC<{
+  hasNewVoice: boolean;
+  theme: "dark" | "light";
+}> = ({ hasNewVoice, theme }) => {
+  if (!hasNewVoice) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-5 rounded-2xl overflow-hidden">
+      {/* Subtle animated border glow */}
+      <div className="absolute inset-0 rounded-2xl ring-2 ring-amber-400/60 animate-pulse" />
+      {/* Gradient overlay */}
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-amber-400/5 animate-pulse"
+        style={{ animationDuration: '2s' }}
+      />
+    </div>
+  );
+};
+
+// Helper hook to check if a voice message is new
+export function useIsNewVoiceMessage(
+  latestVoiceMessage: LatestVoiceMessage | null | undefined,
+  currentUserId: string | undefined
+): boolean {
+  const [listenedMessages, setListenedMessages] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setListenedMessages(getListenedMessages());
+  }, []);
+
+  if (!latestVoiceMessage || !currentUserId) return false;
+  const isFromOther = latestVoiceMessage.senderId !== currentUserId;
+  const isListened = listenedMessages.has(latestVoiceMessage.audioUrl);
+  return isFromOther && !isListened;
+}

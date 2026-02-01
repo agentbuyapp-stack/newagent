@@ -31,6 +31,7 @@ interface OrderHistorySectionProps {
   archiveLoading?: boolean;
   // Voice recording props
   onSendVoiceMessage?: (orderId: string, audioBase64: string, duration: number) => Promise<void>;
+  currentUserId?: string;
 }
 
 export default function OrderHistorySection({
@@ -50,6 +51,7 @@ export default function OrderHistorySection({
   deleteLoading = false,
   archiveLoading = false,
   onSendVoiceMessage,
+  currentUserId,
 }: OrderHistorySectionProps) {
   const apiClient = useApiClient();
   const [showOrderSection, setShowOrderSection] = useState(false);
@@ -438,6 +440,7 @@ export default function OrderHistorySection({
                           archiveLoading={archiveLoading}
                           onSendVoiceMessage={onSendVoiceMessage}
                           latestVoiceMessage={latestVoiceMessages[item.data.id]}
+                          currentUserId={currentUserId}
                         />
                       );
                     } else {
@@ -452,6 +455,7 @@ export default function OrderHistorySection({
                           onDelete={onDeleteBundleOrder}
                           onSendVoiceMessage={onSendVoiceMessage}
                           latestVoiceMessage={latestVoiceMessages[item.data.id]}
+                          currentUserId={currentUserId}
                         />
                       );
                     }
