@@ -1,10 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
+import { io, Socket } from "socket.io-client";
 import {
   type User,
   type Profile,
@@ -94,6 +95,41 @@ export default function UserDashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, clerkUser, router]);
+
+  // Socket connection for real-time voice message notifications
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:4000";
+
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      autoConnect: true,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      // Join user's personal room
+      socket.emit("join", user.id);
+    });
+
+    // Listen for new voice messages - refresh orders to update the UI
+    socket.on("new-voice-message", (event: { orderId: string }) => {
+      console.log("New voice message received for order:", event.orderId);
+      // Refresh orders to get the latest voice message data
+      loadData();
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const loadAgentReport = async (orderId: string) => {
     try {
@@ -655,6 +691,7 @@ export default function UserDashboardPage() {
                 deleteLoading={deleteLoading}
                 archiveLoading={archiveLoading}
                 onSendVoiceMessage={handleSendVoiceMessage}
+                currentUserId={user?.id}
               />
 
               {/* Box 3: Cargonууд - Dropdown */}

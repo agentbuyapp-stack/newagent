@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import { Order, LatestVoiceMessage } from "@/lib/api";
 import { useVoiceRecording } from "@/hooks/useVoiceRecording";
-import { OrderCardVoice } from "./OrderCardVoice";
+import { OrderCardVoice, NewVoiceGlow, useIsNewVoiceMessage } from "./OrderCardVoice";
 
 interface OrderCardProps {
   order: Order;
@@ -23,6 +23,7 @@ interface OrderCardProps {
     duration: number,
   ) => Promise<void>;
   latestVoiceMessage?: LatestVoiceMessage | null;
+  currentUserId?: string;
 }
 
 // Helper functions
@@ -89,9 +90,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   archiveLoading = false,
   onSendVoiceMessage,
   latestVoiceMessage,
+  currentUserId,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
+
+  // Check if there's a new unheard voice message from agent
+  const hasNewVoice = useIsNewVoiceMessage(latestVoiceMessage, currentUserId);
 
   // Check if order is active (voice recording enabled)
   const isActiveOrder = [
@@ -436,6 +441,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     <div
       className="relative rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4 bg-linear-to-br from-slate-800 via-slate-700 to-slate-900"
     >
+      {/* New voice message glow effect */}
+      <NewVoiceGlow hasNewVoice={hasNewVoice} theme="dark" />
+
       {/* Voice recording overlay */}
       {isRecordingMode && (
         <OrderCardVoice
@@ -448,6 +456,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           onCancelRecording={handleCancelRecording}
           formatTime={formatTime}
           latestVoiceMessage={latestVoiceMessage}
+          currentUserId={currentUserId}
           theme="dark"
         />
       )}
@@ -617,6 +626,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 onCancelRecording={() => {}}
                 formatTime={formatTime}
                 latestVoiceMessage={latestVoiceMessage}
+                currentUserId={currentUserId}
                 theme="dark"
               />
             )}

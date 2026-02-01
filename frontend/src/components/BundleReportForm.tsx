@@ -273,31 +273,31 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
 
       {/* Bundle Info */}
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-        <h4 className="font-medium text-gray-900 mb-2">Багц захиалгын мэдээлэл</h4>
-        <p className="text-sm text-gray-600">Нийт {bundleOrder.items.length} бараа</p>
+      <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-200 dark:border-slate-600">
+        <h4 className="font-medium text-gray-900 dark:text-white mb-2">Багц захиалгын мэдээлэл</h4>
+        <p className="text-sm text-gray-600 dark:text-slate-300">Нийт {bundleOrder.items.length} бараа</p>
         <div className="mt-2 space-y-1">
           {bundleOrder.items.map((item, idx) => (
             <div key={item.id} className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">{idx + 1}.</span>
-              <span className="text-gray-700">{item.productName}</span>
+              <span className="text-gray-400 dark:text-slate-500">{idx + 1}.</span>
+              <span className="text-gray-700 dark:text-slate-300">{item.productName}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Report Mode Toggle */}
-      <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
         <label className="flex items-center justify-between cursor-pointer">
           <div>
-            <span className="font-medium text-gray-900">Барааг тусад нь үнэлэх</span>
-            <p className="text-sm text-gray-500">
+            <span className="font-medium text-gray-900 dark:text-white">Барааг тусад нь үнэлэх</span>
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               {reportMode === "single"
                 ? "Одоо: Багц бүхэлд нэг нийт дүн"
                 : "Одоо: Бараа бүрт тусдаа дүн"}
@@ -322,7 +322,7 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
         /* Single Mode Form */
         <div className="space-y-4">
           <div>
-            <label htmlFor="totalUserAmount" className="block text-sm font-medium text-gray-900 mb-1">
+            <label htmlFor="totalUserAmount" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
               Нийт юань дүн <span className="text-red-500">*</span>
             </label>
             <input
@@ -333,13 +333,13 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
               required
               value={singleFormData.totalUserAmount || ""}
               onChange={(e) => setSingleFormData({ ...singleFormData, totalUserAmount: Math.round(parseFloat(e.target.value)) || 0 })}
-              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 text-base text-gray-900 dark:text-white bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-slate-400"
               placeholder="Нийт юань дүн оруулна уу"
             />
           </div>
 
           <div>
-            <label htmlFor="paymentLink" className="block text-sm font-medium text-gray-900 mb-1">
+            <label htmlFor="paymentLink" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
               Төлбөрийн холбоос / мэдээлэл
             </label>
             <input
@@ -347,13 +347,13 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
               type="text"
               value={singleFormData.paymentLink || ""}
               onChange={(e) => setSingleFormData({ ...singleFormData, paymentLink: e.target.value })}
-              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 text-base text-gray-900 dark:text-white bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-400 dark:placeholder:text-slate-400"
               placeholder="Холбоос эсвэл текст оруулах"
             />
           </div>
 
           <div>
-            <label htmlFor="additionalDescription" className="block text-sm font-medium text-gray-900 mb-1">
+            <label htmlFor="additionalDescription" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
               Нэмэлт тайлбар
             </label>
             <textarea
@@ -361,13 +361,13 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
               rows={3}
               value={singleFormData.additionalDescription || ""}
               onChange={(e) => setSingleFormData({ ...singleFormData, additionalDescription: e.target.value })}
-              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+              className="w-full px-4 py-3 text-base text-gray-900 dark:text-white bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none placeholder:text-gray-400 dark:placeholder:text-slate-400"
               placeholder="Нэмэлт тайлбар бичнэ үү..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
               Нэмэлт зураг (Дээд тал нь 3)
             </label>
             <input
@@ -376,10 +376,10 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
               multiple
               onChange={handleSingleImageChange}
               disabled={uploadingImages || singleImagePreviews.length >= 3}
-              className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50"
+              className="w-full px-4 py-3 text-base text-gray-900 dark:text-white bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300"
             />
             {uploadingImages && (
-              <p className="text-sm text-gray-500 mt-1">Зураг ачааллаж байна...</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Зураг ачааллаж байна...</p>
             )}
             {singleImagePreviews.length > 0 && (
               <div className="grid grid-cols-3 gap-3 mt-3">
@@ -388,7 +388,7 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-xl border border-gray-200"
+                      className="w-full h-24 object-cover rounded-xl border border-gray-200 dark:border-slate-600"
                     />
                     <button
                       type="button"
@@ -409,27 +409,27 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
         /* Per-Item Mode Form */
         <div className="space-y-4">
           {bundleOrder.items.map((item, idx) => (
-            <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div key={item.id} className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 p-4">
               <div className="flex items-center gap-3 mb-3">
                 {item.imageUrls && item.imageUrls[0] ? (
                   <img src={item.imageUrls[0]} alt={item.productName} className="w-12 h-12 rounded-lg object-cover" />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-slate-600 flex items-center justify-center">
                     <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                 )}
                 <div>
-                  <h5 className="font-medium text-gray-900">{item.productName}</h5>
-                  <p className="text-xs text-gray-500">Бараа #{idx + 1}</p>
+                  <h5 className="font-medium text-gray-900 dark:text-white">{item.productName}</h5>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Бараа #{idx + 1}</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1">
                       Юань дүн <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -439,12 +439,12 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
                       required
                       value={itemForms[item.id]?.userAmount || ""}
                       onChange={(e) => updateItemForm(item.id, "userAmount", Math.round(parseFloat(e.target.value)) || 0)}
-                      className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 dark:placeholder:text-slate-400"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1">
                       Тоо ширхэг
                     </label>
                     <input
@@ -452,40 +452,40 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
                       min="1"
                       value={itemForms[item.id]?.quantity || ""}
                       onChange={(e) => updateItemForm(item.id, "quantity", parseInt(e.target.value) || undefined)}
-                      className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 dark:placeholder:text-slate-400"
                       placeholder="1"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1">
                     Төлбөрийн холбоос / мэдээлэл
                   </label>
                   <input
                     type="text"
                     value={itemForms[item.id]?.paymentLink || ""}
                     onChange={(e) => updateItemForm(item.id, "paymentLink", e.target.value)}
-                    className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 dark:placeholder:text-slate-400"
                     placeholder="Холбоос эсвэл текст оруулах"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1">
                     Нэмэлт тайлбар
                   </label>
                   <textarea
                     rows={2}
                     value={itemForms[item.id]?.additionalDescription || ""}
                     onChange={(e) => updateItemForm(item.id, "additionalDescription", e.target.value)}
-                    className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="w-full px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none placeholder:text-gray-400 dark:placeholder:text-slate-400"
                     placeholder="Нэмэлт тайлбар бичнэ үү..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1">
                     Нэмэлт зураг (Дээд тал нь 3)
                   </label>
                   <input
@@ -494,10 +494,10 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
                     multiple
                     onChange={(e) => handleItemImageChange(item.id, e)}
                     disabled={uploadingItemId === item.id || (itemImages[item.id]?.previews?.length || 0) >= 3}
-                    className="w-full px-3 py-2 text-sm text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300"
                   />
                   {uploadingItemId === item.id && (
-                    <p className="text-xs text-gray-500 mt-1">Зураг ачааллаж байна...</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Зураг ачааллаж байна...</p>
                   )}
                   {itemImages[item.id]?.previews?.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mt-2">
@@ -506,7 +506,7 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
                           <img
                             src={preview}
                             alt={`Preview ${index + 1}`}
-                            className="w-full h-16 object-cover rounded-lg border border-gray-200"
+                            className="w-full h-16 object-cover rounded-lg border border-gray-200 dark:border-slate-500"
                           />
                           <button
                             type="button"
@@ -527,9 +527,9 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
           ))}
 
           {/* Total for per-item mode */}
-          <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+          <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-4 border border-green-200 dark:border-green-700">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-900">Нийт дүн:</span>
+              <span className="font-medium text-gray-900 dark:text-white">Нийт дүн:</span>
               <span className="text-xl font-bold text-green-600">{perItemTotal.toLocaleString()} ¥</span>
             </div>
           </div>
@@ -541,7 +541,7 @@ export default function BundleReportForm({ bundleOrder, onSuccess, onCancel }: B
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
+            className="flex-1 px-4 py-2.5 text-gray-700 dark:text-slate-300 bg-gray-200 dark:bg-slate-600 rounded-xl hover:bg-gray-300 dark:hover:bg-slate-500 active:bg-gray-400 dark:active:bg-slate-400 transition-colors font-medium min-h-11"
           >
             Цуцлах
           </button>
