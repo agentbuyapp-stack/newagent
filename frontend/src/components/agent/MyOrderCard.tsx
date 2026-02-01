@@ -1,9 +1,11 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
 import Image from "next/image";
-import type { Order, AgentReport } from "@/lib/api";
+import type { Order, AgentReport, LatestVoiceMessage } from "@/lib/api";
 import { getStatusText } from "@/lib/orderHelpers";
+import { useVoiceRecording } from "@/hooks/useVoiceRecording";
+import { OrderCardVoice } from "@/components/OrderCardVoice";
 
 interface MyOrderCardProps {
   order: Order;
@@ -17,6 +19,9 @@ interface MyOrderCardProps {
   onClearOrder: (orderId: string) => void;
   onArchiveOrder: (orderId: string) => void;
   calculateUserPaymentAmount: (report: AgentReport, exchangeRate: number) => number;
+  // Voice recording props
+  onSendVoiceMessage?: (orderId: string, audioBase64: string, duration: number) => Promise<void>;
+  latestVoiceMessage?: LatestVoiceMessage | null;
 }
 
 function getStatusBadgeClass(status: Order["status"]): string {
@@ -57,7 +62,11 @@ function MyOrderCard({
   onClearOrder,
   onArchiveOrder,
   calculateUserPaymentAmount,
+  onSendVoiceMessage,
+  latestVoiceMessage,
 }: MyOrderCardProps) {
+  const [isRecordingMode, setIsRecordingMode] = useState(false);
+
   const mainImage = order.imageUrls && order.imageUrls.length > 0
     ? order.imageUrls[0]
     : order.imageUrl || null;
@@ -67,10 +76,80 @@ function MyOrderCard({
   const isBundleOrder = (order as Order & { isBundleOrder?: boolean }).isBundleOrder;
   const userSnapshot = (order as Order & { userSnapshot?: { name: string; phone: string; cargo: string } }).userSnapshot;
 
+  // Check if order is active (voice recording enabled)
+  const isActiveOrder = ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga"].includes(order.status);
+  const canUseVoice = isActiveOrder && !!onSendVoiceMessage;
+
+  // Voice recording hook
+  const {
+    recordingState,
+    recordingDuration,
+    waveformData,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    formatTime,
+    setRecordingState,
+  } = useVoiceRecording({
+    maxDuration: 60,
+    onError: (error) => {
+      alert(error.message);
+      setIsRecordingMode(false);
+    },
+  });
+
+  // Handle start recording - triggered by button
+  const handleStartRecording = useCallback(async () => {
+    if (!canUseVoice || recordingState !== "idle") return;
+    setIsRecordingMode(true);
+    try {
+      await startRecording();
+    } catch {
+      setIsRecordingMode(false);
+    }
+  }, [canUseVoice, recordingState, startRecording]);
+
+  // Handle stop recording
+  const handleStopRecording = useCallback(async () => {
+    const result = await stopRecording();
+    if (result && onSendVoiceMessage) {
+      setRecordingState("uploading");
+      try {
+        await onSendVoiceMessage(order.id, result.base64, result.duration);
+      } catch (error) {
+        console.error("Failed to send voice message:", error);
+        alert("Дуут мессеж илгээхэд алдаа гарлаа");
+      }
+    }
+    setIsRecordingMode(false);
+  }, [stopRecording, onSendVoiceMessage, order.id, setRecordingState]);
+
+  // Handle cancel recording
+  const handleCancelRecording = useCallback(() => {
+    cancelRecording();
+    setIsRecordingMode(false);
+  }, [cancelRecording]);
+
   return (
     <div
-      className={`bg-linear-to-br from-white to-gray-50 rounded-xl border transition-all duration-300 p-3 hover:scale-[1.01] ${getCardBorderClass(order.status, needsReport, waitingPayment)}`}
+      className={`relative bg-linear-to-br from-white to-gray-50 rounded-xl border transition-all duration-300 p-3 hover:scale-[1.01] ${getCardBorderClass(order.status, needsReport, waitingPayment)}`}
     >
+      {/* Voice recording overlay */}
+      {isRecordingMode && (
+        <OrderCardVoice
+          isRecording={isRecordingMode}
+          recordingState={recordingState}
+          recordingDuration={recordingDuration}
+          waveformData={waveformData}
+          maxDuration={60}
+          onStopRecording={handleStopRecording}
+          onCancelRecording={handleCancelRecording}
+          formatTime={formatTime}
+          latestVoiceMessage={latestVoiceMessage}
+          theme="light"
+        />
+      )}
+
       <div className="flex gap-3">
         {/* Thumbnail */}
         <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-lg overflow-hidden relative">
@@ -112,12 +191,29 @@ function MyOrderCard({
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${getStatusBadgeClass(order.status)}`}>
               {getStatusText(order.status)}
             </span>
-            <span className="text-[10px] text-gray-400 shrink-0">
-              {new Date(order.createdAt).toLocaleDateString("mn-MN", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
+            <div className="flex items-center gap-1">
+              {/* Voice record button */}
+              {canUseVoice && !isRecordingMode && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartRecording();
+                  }}
+                  className="w-5 h-5 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition-all inline-flex items-center justify-center"
+                  title="Дуу бичих"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+              )}
+              <span className="text-[10px] text-gray-400 shrink-0">
+                {new Date(order.createdAt).toLocaleDateString("mn-MN", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
           </div>
 
           {/* Product name */}
@@ -165,6 +261,20 @@ function MyOrderCard({
           </svg>
           Харах
         </button>
+        {/* Voice playback for latest message */}
+        {latestVoiceMessage && !isRecordingMode && (
+          <OrderCardVoice
+            isRecording={false}
+            recordingState="idle"
+            recordingDuration={0}
+            waveformData={[]}
+            onStopRecording={() => {}}
+            onCancelRecording={() => {}}
+            formatTime={formatTime}
+            latestVoiceMessage={latestVoiceMessage}
+            theme="light"
+          />
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

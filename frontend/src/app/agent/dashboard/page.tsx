@@ -13,6 +13,7 @@ import {
   type RewardRequest,
   type Cargo,
   type BundleOrder,
+  type LatestVoiceMessage,
 } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
 import {
@@ -134,6 +135,9 @@ export default function AgentDashboardPage() {
   >("active");
   const [agentReports, setAgentReports] = useState<
     Record<string, AgentReport | null>
+  >({});
+  const [latestVoiceMessages, setLatestVoiceMessages] = useState<
+    Record<string, LatestVoiceMessage | null>
   >({});
   const [adminSettings, setAdminSettings] = useState<{
     accountNumber?: string;
@@ -551,6 +555,21 @@ export default function AgentDashboardPage() {
     }
   };
 
+  const handleSendVoiceMessage = useCallback(async (orderId: string, audioBase64: string, duration: number) => {
+    try {
+      // Upload audio first
+      const uploadResult = await apiClient.uploadAudio(audioBase64);
+      // Then send as message
+      await apiClient.sendMessage(orderId, {
+        audioUrl: uploadResult.url,
+        audioDuration: duration,
+      });
+    } catch (e: unknown) {
+      console.error("Failed to send voice message:", e);
+      throw e;
+    }
+  }, [apiClient]);
+
   // Open cancel modal for agent to enter reason
   const openCancelModal = (orderId: string) => {
     setCancelOrderId(orderId);
@@ -689,6 +708,32 @@ export default function AgentDashboardPage() {
 
     return filtered;
   }, [orders, user?.role, user?.id]);
+
+  // Fetch latest voice messages for active orders
+  const fetchLatestVoiceMessages = useCallback(async () => {
+    const activeOrders = myOrders.filter((o) =>
+      ["niitlegdsen", "agent_sudlaj_bn", "tolbor_huleej_bn", "amjilttai_zahialga"].includes(o.status)
+    );
+
+    const results: Record<string, LatestVoiceMessage | null> = {};
+    await Promise.all(
+      activeOrders.map(async (order) => {
+        try {
+          const voice = await apiClient.getLatestVoiceMessage(order.id);
+          results[order.id] = voice;
+        } catch {
+          results[order.id] = null;
+        }
+      })
+    );
+    setLatestVoiceMessages(results);
+  }, [myOrders, apiClient]);
+
+  useEffect(() => {
+    if (myOrders.length > 0) {
+      fetchLatestVoiceMessages();
+    }
+  }, [myOrders, fetchLatestVoiceMessages]);
 
   // Memoize archived orders for agent
   const archivedOrders = useMemo(() => {
@@ -1343,6 +1388,8 @@ export default function AgentDashboardPage() {
                           onClearOrder={handleClearCancelledOrder}
                           onArchiveOrder={handleArchiveOrder}
                           calculateUserPaymentAmount={calculateUserPaymentAmount}
+                          onSendVoiceMessage={handleSendVoiceMessage}
+                          latestVoiceMessage={latestVoiceMessages[order.id]}
                         />
                       ))}
                     </div>
