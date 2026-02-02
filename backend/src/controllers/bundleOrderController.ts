@@ -75,11 +75,14 @@ export const updateBundleOrderStatus = async (req: Request, res: Response): Prom
     return;
   }
 
+  const { status: newStatus, cancelReason } = req.body;
+
   const { order, error, status } = await bundleOrderService.updateOrderStatus(
     req.params.id,
     req.user.id,
     req.user.role,
-    req.body.status
+    newStatus,
+    cancelReason
   );
 
   if (error) {

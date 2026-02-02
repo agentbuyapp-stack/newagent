@@ -7,3 +7,10 @@ export { default as TrackCodeSection } from "./TrackCodeSection";
 export { default as OrderDates } from "./OrderDates";
 export { default as OrderActionButtons } from "./OrderActionButtons";
 export { default as MyOrderCard } from "./MyOrderCard";
+
+// New section components
+export { BundleItemDropdown } from "./BundleItemDropdown";
+export { PublishedOrdersSection } from "./PublishedOrdersSection";
+export { MyOrdersSection } from "./MyOrdersSection";
+export { CargosSection } from "./CargosSection";
+export { AgentOrderDetailModal } from "./AgentOrderDetailModal";

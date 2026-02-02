@@ -37,6 +37,7 @@ export const updateOrderStatusSchema = z.object({
     "amjilttai_zahialga",
     "tsutsalsan_zahialga",
   ]),
+  cancelReason: z.string().optional(),
 });
 
 // ============ Message Schemas ============
@@ -66,6 +67,17 @@ export const createBundleOrderSchema = z.object({
     description: z.string().min(1, "Тайлбар шаардлагатай"),
     imageUrl: z.string().optional(),
   })).min(1, "Хамгийн багадаа 1 бараа байх ёстой").max(10, "Хамгийн ихдээ 10 бараа"),
+});
+
+export const updateBundleOrderStatusSchema = z.object({
+  status: z.enum([
+    "niitlegdsen",
+    "agent_sudlaj_bn",
+    "tolbor_huleej_bn",
+    "amjilttai_zahialga",
+    "tsutsalsan_zahialga",
+  ]),
+  cancelReason: z.string().optional(),
 });
 
 // ============ Cargo Schemas ============

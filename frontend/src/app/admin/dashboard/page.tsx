@@ -3,534 +3,409 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
-import {
-  type User,
-  type Order,
-  type Cargo,
-  type AdminSettings,
-  type AdminSettingsData,
-  type AgentReport,
-  type RewardRequest,
-  type AgentSpecialty,
-} from "@/lib/api";
+import type { User } from "@/lib/api";
 import { useApiClient } from "@/lib/useApiClient";
+import { useAdminData, useAdminActions } from "@/hooks";
+import { DashboardLoading } from "@/components/shared";
+import {
+  AgentsTab,
+  OrdersTab,
+  CargosTab,
+  SettingsTab,
+  RewardsTab,
+} from "@/components/admin";
+import type { OrderFilterType } from "@/components/admin";
 import AgentProfileEditor from "@/components/admin/AgentProfileEditor";
 import AgentRankingManager from "@/components/admin/AgentRankingManager";
 import SpecialtyManager from "@/components/admin/SpecialtyManager";
 import CardManager from "@/components/admin/CardManager";
+import BannerManager from "@/components/admin/BannerManager";
+import ShowcaseManager from "@/components/admin/ShowcaseManager";
+
+type ActiveTabType =
+  | "agents"
+  | "orders"
+  | "cargos"
+  | "settings"
+  | "rewards"
+  | "ranking"
+  | "specialties"
+  | "cards"
+  | "banners"
+  | "showcase";
+
+const COLORS = { primary: "#6366f1", secondary: "#8b5cf6" };
+
+const AdminIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+    />
+  </svg>
+);
+
+const SIDEBAR_ICONS: Record<ActiveTabType, React.ReactNode> = {
+  agents: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+      />
+    </svg>
+  ),
+  orders: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+      />
+    </svg>
+  ),
+  cargos: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
+    </svg>
+  ),
+  settings: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  ),
+  rewards: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  ),
+  ranking: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
+    </svg>
+  ),
+  specialties: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+      />
+    </svg>
+  ),
+  cards: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+      />
+    </svg>
+  ),
+  banners: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+  ),
+  showcase: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+      />
+    </svg>
+  ),
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
   const apiClient = useApiClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [agents, setAgents] = useState<User[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [cargos, setCargos] = useState<Cargo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<
-    "agents" | "orders" | "cargos" | "settings" | "rewards" | "ranking" | "specialties" | "cards"
-  >("agents");
-  const [rewardRequests, setRewardRequests] = useState<RewardRequest[]>([]);
-  const [orderFilter, setOrderFilter] = useState<
-    "pending_payment" | "active" | "completed" | "cancelled"
-  >("pending_payment");
-  const [showCargoForm, setShowCargoForm] = useState(false);
-  const [editingCargo, setEditingCargo] = useState<Cargo | null>(null);
-  const [cargoFormData, setCargoFormData] = useState({
-    name: "",
-    description: "",
-    phone: "",
-    location: "",
-    website: "",
-    facebook: "",
-    imageUrl: "",
-  });
-  const [agentReports, setAgentReports] = useState<
-    Record<string, AgentReport | null>
-  >({});
-  const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(
-    null,
-  );
-  const [settingsFormData, setSettingsFormData] = useState<AdminSettingsData>({
-    accountNumber: "",
-    accountName: "",
-    bank: "",
-    exchangeRate: 1,
-    orderLimitEnabled: true,
-    maxOrdersPerDay: 10,
-    maxActiveOrders: 10,
-  });
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsSaved, setSettingsSaved] = useState(false);
-  const [isEditingSettings, setIsEditingSettings] = useState(false);
-  const [newAgentEmail, setNewAgentEmail] = useState("");
-  const [addingAgent, setAddingAgent] = useState(false);
-  const [uploadingCargoImage, setUploadingCargoImage] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<ActiveTabType>("agents");
+  const [orderFilter, setOrderFilter] =
+    useState<OrderFilterType>("pending_payment");
   const [editingAgent, setEditingAgent] = useState<User | null>(null);
-  const [specialties, setSpecialties] = useState<AgentSpecialty[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Cargo зураг upload хийх
-  const handleCargoImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const {
+    user,
+    agents,
+    orders,
+    cargos,
+    adminSettings,
+    agentReports,
+    rewardRequests,
+    specialties,
+    setAgents,
+    setAdminSettings,
+    setSpecialties,
+    settingsFormData,
+    setSettingsFormData,
+    loading,
+    error,
+    loadData,
+  } = useAdminData({ apiClient, clerkUser });
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      alert("Зөвхөн зураг оруулах боломжтой");
-      return;
-    }
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Зурагны хэмжээ 5MB-аас бага байх ёстой");
-      return;
-    }
-
-    setUploadingCargoImage(true);
-    try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        try {
-          const result = await apiClient.uploadImage(base64);
-          setCargoFormData((prev) => ({ ...prev, imageUrl: result.imageUrl }));
-        } catch (err) {
-          console.error("Upload error:", err);
-          alert("Зураг upload хийхэд алдаа гарлаа");
-        } finally {
-          setUploadingCargoImage(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error("File read error:", err);
-      setUploadingCargoImage(false);
-    }
-  };
+  const {
+    addingAgent,
+    savingSettings,
+    settingsSaved,
+    uploadingCargoImage,
+    handleAddAgent,
+    handleApproveAgent,
+    handleVerifyPayment,
+    handleCancelPayment,
+    handleAgentPayment,
+    handleCreateCargo,
+    handleUpdateCargo,
+    handleDeleteCargo,
+    handleCargoImageUpload,
+    handleSaveSettings,
+    handleApproveReward,
+    handleRejectReward,
+    handleRecalculateStats,
+  } = useAdminActions({ apiClient, loadData, setAdminSettings });
 
   useEffect(() => {
-    if (isLoaded && !clerkUser) {
-      router.push("/");
-      return;
-    }
-    if (isLoaded && clerkUser) {
-      loadData();
-    }
+    if (isLoaded && !clerkUser) router.push("/");
+    else if (isLoaded && clerkUser) loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, clerkUser, router]);
 
-  const loadData = async (includeRewards = true) => {
-    if (!clerkUser) return;
-
-    try {
-      const email = clerkUser.primaryEmailAddress?.emailAddress || "";
-      if (!email) {
-        setError("Имэйл олдсонгүй");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const userData = await apiClient.getMe();
-        setUser(userData);
-
-        if (userData.role !== "admin") {
-          setError("Та admin эрхгүй байна");
-          setLoading(false);
-          return;
-        }
-
-        // Load agents, orders, cargos, admin settings, specialties and reward requests
-        try {
-          const promises: Promise<unknown>[] = [
-            apiClient.getAgents(),
-            apiClient.getAdminOrders(),
-            apiClient.getCargos(),
-            apiClient.getAdminSettings(),
-            apiClient.getAdminSpecialties(),
-          ];
-
-          if (includeRewards) {
-            promises.push(apiClient.getRewardRequests());
-          }
-
-          const results = await Promise.all(promises);
-          const [
-            agentsData,
-            ordersData,
-            cargosData,
-            settingsData,
-            specialtiesData,
-            rewardRequestsData,
-          ] = results as [
-            User[],
-            Order[],
-            Cargo[],
-            AdminSettings,
-            AgentSpecialty[],
-            RewardRequest[] | undefined,
-          ];
-
-          // Debug: Log agents for production debugging
-          console.log(
-            "[DEBUG] Admin Dashboard: Loaded agents:",
-            agentsData.length,
-          );
-          console.log(
-            "[DEBUG] Agents data:",
-            agentsData.map((a: User) => ({
-              id: a.id,
-              email: a.email,
-              role: a.role,
-              isApproved: a.isApproved,
-              hasProfile: !!a.profile,
-            })),
-          );
-
-          setAgents(agentsData);
-          setOrders(ordersData);
-          setCargos(cargosData);
-          setAdminSettings(settingsData);
-          setSpecialties(specialtiesData || []);
-          if (includeRewards && rewardRequestsData) {
-            setRewardRequests(rewardRequestsData);
-          }
-          setSettingsFormData({
-            accountNumber: settingsData.accountNumber || "",
-            accountName: settingsData.accountName || "",
-            bank: settingsData.bank || "",
-            exchangeRate: settingsData.exchangeRate || 1,
-            orderLimitEnabled: settingsData.orderLimitEnabled ?? true,
-            maxOrdersPerDay: settingsData.maxOrdersPerDay ?? 10,
-            maxActiveOrders: settingsData.maxActiveOrders ?? 10,
-          });
-
-          // Load agent reports for orders
-          const reports: Record<string, AgentReport | null> = {};
-          for (const order of ordersData) {
-            if (
-              order.status === "agent_sudlaj_bn" ||
-              order.status === "tolbor_huleej_bn" ||
-              order.status === "amjilttai_zahialga"
-            ) {
-              try {
-                const report = await apiClient.getAgentReport(order.id);
-                reports[order.id] = report;
-              } catch {
-                reports[order.id] = null;
-              }
-            }
-          }
-          setAgentReports(reports);
-        } catch (fetchErr: unknown) {
-          console.error("Error fetching data:", fetchErr);
-          const errorMessage =
-            fetchErr instanceof Error
-              ? fetchErr.message
-              : "Мэдээлэл татахад алдаа гарлаа";
-          setError(errorMessage);
-          // Set empty arrays on error
-          setAgents([]);
-          setOrders([]);
-          setCargos([]);
-        }
-      } catch (e: unknown) {
-        console.error("Error in loadData:", e);
-        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-        setError(errorMessage);
-      }
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+  const handleSignOut = async () => {
+    if (confirm("Та системээс гарахдаа итгэлтэй байна уу?")) {
+      await signOut();
+      router.push("/");
     }
   };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleProfileSuccess = async () => {
-    await loadData();
-  };
-
-  const handleAddAgent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAgentEmail.trim()) {
-      alert("Email оруулах шаардлагатай");
-      return;
-    }
-
-    setAddingAgent(true);
-    try {
-      await apiClient.addAgent(newAgentEmail.trim());
-      setNewAgentEmail("");
-      await loadData();
-      alert("Agent амжилттай нэмэгдлээ!");
-    } catch (e: unknown) {
-      const errorMessage =
-        e instanceof Error ? e.message : "Agent нэмэхэд алдаа гарлаа";
-      alert(errorMessage);
-    } finally {
-      setAddingAgent(false);
-    }
-  };
-
-  const handleApproveAgent = async (agentId: string, approved: boolean) => {
-    try {
-      console.log(
-        `[DEBUG] Admin Dashboard: Approving agent ${agentId} with approved=${approved}`,
-      );
-      const updatedAgent = await apiClient.approveAgent(agentId, approved);
-      console.log(`[DEBUG] Admin Dashboard: Agent updated:`, updatedAgent);
-      await loadData();
-      alert(`Agent ${approved ? "батлагдлаа" : "цуцлагдлаа"}`);
-    } catch (e: unknown) {
-      console.error(`[DEBUG] Admin Dashboard: Error approving agent:`, e);
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleVerifyPayment = async (orderId: string) => {
-    try {
-      await apiClient.verifyUserPayment(orderId);
-      await loadData(); // Reload data to get updated order status
-      alert("User төлбөр батлагдлаа");
-      // Don't change orderFilter - keep it on current tab so user can see the update
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleCancelPayment = async (
-    orderId: string,
-    isBundleOrder: boolean = false,
-  ) => {
-    const reason = prompt(
-      "Төлбөр цуцлах шалтгаан (заавал биш):",
-      "Төлбөр ирээгүй",
-    );
-    if (reason === null) return; // User cancelled prompt
-
-    try {
-      await apiClient.cancelPayment(
-        orderId,
-        reason,
-        isBundleOrder ? "bundle" : "order",
-      );
-      await loadData();
-      setOrderFilter("cancelled"); // Switch to cancelled tab
-      alert("Төлбөр цуцлагдлаа. Захиалга цуцлагдсан төлөвт шилжлээ.");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleAgentPayment = async (orderId: string) => {
-    try {
-      await apiClient.markAgentPaymentPaid(orderId);
-      await loadData();
-      setOrderFilter("completed"); // Switch to completed tab after payment
-      alert(
-        "Agent төлбөр төлөгдсөн гэж тэмдэглэгдлээ. Agent-ийн оноо нэмэгдлээ.",
-      );
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      if (errorMessage.includes("no assigned agent")) {
-        alert(
-          "Энэ захиалгад agent томилогдоогүй байна. Эхлээд agent захиалгыг авсан эсэхийг шалгана уу.",
-        );
-      } else {
-        alert(errorMessage);
-      }
-    }
-  };
-
-  const handleApproveOrder = async (orderId: string) => {
-    if (!confirm("Энэ захиалгыг амжилттай гэж батлах уу?")) {
-      return;
-    }
-    try {
-      await apiClient.updateOrderStatus(orderId, "amjilttai_zahialga");
-      await loadData();
-      setOrderFilter("completed");
-      alert("Захиалга амжилттай батлагдлаа");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleCancelOrder = async (orderId: string) => {
-    if (!confirm("Энэ захиалгыг цуцлах уу?")) {
-      return;
-    }
-    try {
-      await apiClient.updateOrderStatus(orderId, "tsutsalsan_zahialga");
-      await loadData();
-      setOrderFilter("cancelled"); // Switch to cancelled tab
-      alert("Захиалга цуцлагдлаа");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleCreateCargo = async () => {
-    try {
-      if (!cargoFormData.name.trim()) {
-        alert("Cargo нэр оруулах шаардлагатай");
-        return;
-      }
-      await apiClient.createCargo(cargoFormData);
-      setCargoFormData({
-        name: "",
-        description: "",
-        phone: "",
-        location: "",
-        website: "",
-        facebook: "",
-        imageUrl: "",
-      });
-      setShowCargoForm(false);
-      await loadData();
-      alert("Cargo амжилттай үүслээ");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleUpdateCargo = async () => {
-    if (!editingCargo) return;
-    try {
-      await apiClient.updateCargo(editingCargo.id, cargoFormData);
-      setEditingCargo(null);
-      setCargoFormData({
-        name: "",
-        description: "",
-        phone: "",
-        location: "",
-        website: "",
-        facebook: "",
-        imageUrl: "",
-      });
-      await loadData();
-      alert("Cargo амжилттай шинэчлэгдлээ");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleDeleteCargo = async (cargoId: string) => {
-    if (!confirm("Та энэ cargo-г устгахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-    try {
-      await apiClient.deleteCargo(cargoId);
-      await loadData();
-      alert("Cargo амжилттай устгагдлаа");
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    setSavingSettings(true);
-    try {
-      const updatedSettings =
-        await apiClient.updateAdminSettings(settingsFormData);
-      setAdminSettings(updatedSettings);
-      setSettingsSaved(true);
-      setIsEditingSettings(false);
-      setTimeout(() => {
-        setSettingsSaved(false);
-      }, 3000);
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-      alert(errorMessage);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const handleEditSettings = () => {
-    setIsEditingSettings(true);
-    setSettingsSaved(false);
-  };
-
-  // All agents are approved since admin adds them directly
-  const approvedAgents = agents;
-
-  // Debug: Log agents for production debugging
-  console.log("[DEBUG] Admin Dashboard: Agents:", {
-    total: agents.length,
-    agents: approvedAgents.map((a: User) => ({
-      id: a.id,
-      email: a.email,
-      isApproved: a.isApproved,
-    })),
-  });
 
   if (!isLoaded || loading) {
     return (
-      <div className="fixed inset-0 bg-linear-to-br from-[#F0E8FF] via-[#F5F0FF] to-[#EEE8FF] flex items-center justify-center z-50 overflow-hidden">
-        {/* Animated background blobs */}
-        <div className="absolute top-0 -left-40 w-80 h-80 bg-purple-400/25 rounded-full blur-3xl animate-blob" />
-        <div className="absolute -top-20 right-10 w-72 h-72 bg-indigo-400/25 rounded-full blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute bottom-10 right-20 w-64 h-64 bg-violet-400/20 rounded-full blur-3xl animate-blob animation-delay-4000" />
+      <DashboardLoading
+        title="Админ"
+        gradientId="adminGradient"
+        primaryColor={COLORS.primary}
+        secondaryColor={COLORS.secondary}
+        icon={<AdminIcon className="w-14 h-14 text-white" />}
+      />
+    );
+  }
+  if (!clerkUser) return null;
+  if (error && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+        <div className="text-red-500 text-base">{error}</div>
+      </div>
+    );
+  }
+  if (user?.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+        <div className="text-red-500 text-base">Та admin эрхгүй байна</div>
+      </div>
+    );
+  }
 
-        <div className="flex flex-col items-center gap-8 z-10">
-          {/* Admin icon with animated rings */}
-          <div className="relative animate-fade-in">
-            {/* Outer pulse ring */}
-            <div
-              className="absolute inset-0 w-28 h-28 rounded-full border-4 border-[#8b5cf6]/20 animate-ping"
-              style={{ animationDuration: "2s" }}
-            />
+  const tabs: {
+    key: ActiveTabType;
+    label: string;
+    count?: number;
+    amber?: boolean;
+  }[] = [
+    { key: "agents", label: "Agents", count: agents.length },
+    { key: "orders", label: "Захиалгууд", count: orders.length },
+    { key: "cargos", label: "Cargos", count: cargos.length },
+    { key: "settings", label: "Тохиргоо" },
+    { key: "rewards", label: "Урамшуулал", count: rewardRequests.length },
+    { key: "ranking", label: "Топ 10" },
+    { key: "specialties", label: "Мэргэжил", count: specialties.length },
+    { key: "cards", label: "Карт", amber: true },
+    { key: "banners", label: "Баннер" },
+    { key: "showcase", label: "Бүтээгдэхүүн" },
+  ];
 
-            {/* Middle rotating ring */}
-            <svg
-              className="absolute -inset-2 w-32 h-32 animate-spin-slow"
-              viewBox="0 0 100 100"
-            >
-              <defs>
-                <linearGradient
-                  id="adminGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-900 flex">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <AdminIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Админ
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Удирдлагын самбар
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === tab.key
+                    ? tab.amber
+                      ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      : "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
+                    : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                <span
+                  className={
+                    activeTab === tab.key
+                      ? tab.amber
+                        ? "text-amber-500"
+                        : "text-indigo-500"
+                      : "text-gray-400 dark:text-slate-500"
+                  }
                 >
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="url(#adminGradient)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray="60 200"
-              />
-            </svg>
+                  {SIDEBAR_ICONS[tab.key]}
+                </span>
+                <span className="flex-1 text-left">{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span
+                    className={`px-2 py-0.5 text-xs rounded-full ${
+                      activeTab === tab.key
+                        ? tab.amber
+                          ? "bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200"
+                          : "bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200"
+                        : "bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
-            {/* Icon container */}
-            <div className="relative w-28 h-28 rounded-full bg-linear-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center shadow-2xl shadow-purple-500/40">
+          {/* Sign out */}
+          <div className="p-3 border-t border-gray-200 dark:border-slate-700">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
               <svg
-                className="w-14 h-14 text-white"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -538,1543 +413,127 @@ export default function AdminDashboardPage() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 />
               </svg>
-            </div>
-          </div>
-
-          {/* Text */}
-          <div className="flex flex-col items-center gap-4 animate-fade-in-up">
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-linear-to-r from-[#6366f1] to-[#8b5cf6]">
-              Админ
-            </h2>
-
-            <div className="flex items-center gap-3 text-gray-600 font-medium">
-              <span>Ачааллаж байна</span>
-              <div className="flex gap-1.5">
-                <span className="w-2.5 h-2.5 bg-[#6366f1] rounded-full animate-bounce-dot" />
-                <span className="w-2.5 h-2.5 bg-[#8b5cf6] rounded-full animate-bounce-dot animation-delay-150" />
-                <span className="w-2.5 h-2.5 bg-[#a78bfa] rounded-full animate-bounce-dot animation-delay-300" />
-              </div>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-48 h-1 bg-gray-200 rounded-full overflow-hidden animate-fade-in-up animation-delay-500">
-            <div className="h-full bg-linear-to-r from-[#6366f1] to-[#8b5cf6] rounded-full animate-progress-bar" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!clerkUser) {
-    return null;
-  }
-
-  if (error && !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-red-500 mb-4 text-base">{error}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (user?.role !== "admin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-red-500 mb-4 text-base">
-            Та admin эрхгүй байна
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSignOut = async () => {
-    if (!confirm("Та системээс гарахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-    await signOut();
-    router.push("/");
-  };
-
-  return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-[#6366f1] to-[#8b5cf6] flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-base sm:text-lg font-bold text-gray-900">
-                  Админ
-                </h1>
-                <p className="text-xs text-gray-500 hidden sm:block">
-                  {clerkUser?.primaryEmailAddress?.emailAddress}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-red-600 hover:text-white hover:bg-red-500 border border-red-200 hover:border-red-500 rounded-lg transition-colors font-medium"
-            >
-              Гарах
+              <span>Гарах</span>
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
-      <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
-        <div className="space-y-4 sm:space-y-6">
-          {/* Tabs */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
-            <div className="flex gap-1 sm:gap-2 border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab("agents")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "agents"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Agents ({agents.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("orders")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "orders"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Захиалгууд ({orders.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("cargos")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "cargos"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Cargos ({cargos.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "settings"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Тохиргоо
-              </button>
-              <button
-                onClick={() => setActiveTab("rewards")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "rewards"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Урамшуулал ({rewardRequests.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("ranking")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "ranking"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Топ 10
-              </button>
-              <button
-                onClick={() => setActiveTab("specialties")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "specialties"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Мэргэжил ({specialties.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("cards")}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
-                  activeTab === "cards"
-                    ? "text-amber-600 border-b-2 border-amber-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Карт
-              </button>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Mobile header */}
+        <header className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+              <AdminIcon className="w-4 h-4 text-white" />
             </div>
+            <span className="font-semibold text-gray-900 dark:text-white">
+              Админ
+            </span>
+          </div>
+        </header>
 
-            {/* Agents Tab */}
+        {/* Content */}
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 sm:p-6 min-h-full">
             {activeTab === "agents" && (
-              <div className="space-y-4">
-                {/* Add New Agent Form */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
-                    Шинэ Agent нэмэх
-                  </h3>
-                  <form
-                    onSubmit={handleAddAgent}
-                    className="flex flex-col sm:flex-row gap-3"
-                  >
-                    <input
-                      type="email"
-                      value={newAgentEmail}
-                      onChange={(e) => setNewAgentEmail(e.target.value)}
-                      placeholder="Agent email оруулах (жишээ: agent@example.com)"
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base min-h-11"
-                      disabled={addingAgent}
-                    />
-                    <button
-                      type="submit"
-                      disabled={addingAgent || !newAgentEmail.trim()}
-                      className="px-6 py-2.5 text-sm sm:text-base text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-11 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                    >
-                      {addingAgent ? "Нэмж байна..." : "Agent нэмэх"}
-                    </button>
-                  </form>
-                  <p className="text-xs text-gray-600 mt-2">
-                    Email оруулахад тухайн email-д agent эрх өгөгдөнө. Хэрэв
-                    user байхгүй бол шинээр үүсгэнэ.
-                  </p>
-                </div>
-
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mt-4 sm:mt-6">
-                  Батлагдсан Agents
-                </h3>
-                {approvedAgents.length > 0 ? (
-                  <div className="space-y-3">
-                    {approvedAgents.map((agent) => (
-                      <div
-                        key={agent.id}
-                        className="border border-gray-200 rounded-xl p-4 bg-green-50"
-                      >
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">
-                              {agent.profile?.name || agent.email}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {agent.email}
-                            </p>
-                            <p className="text-sm text-gray-600 capitalize">
-                              Эрх:{" "}
-                              {agent.role === "agent" && agent.isApproved
-                                ? `${agent.role}`
-                                : agent.role === "user" && agent.isApproved
-                                  ? `${agent.role}`
-                                  : agent.role}
-                            </p>
-                            {agent.profile?.phone && (
-                              <p className="text-sm text-gray-600">
-                                Утас: {agent.profile.phone}
-                              </p>
-                            )}
-                            <p className="text-xs text-green-800 mt-2">
-                              Батлагдсан
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setEditingAgent(agent)}
-                              className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
-                            >
-                              Профайл
-                            </button>
-                            <button
-                              onClick={() => handleApproveAgent(agent.id, false)}
-                              className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
-                            >
-                              Цуцлах
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                    Батлагдсан agent байхгүй байна.
-                  </div>
-                )}
-              </div>
+              <AgentsTab
+                agents={agents}
+                addingAgent={addingAgent}
+                onAddAgent={handleAddAgent}
+                onApproveAgent={handleApproveAgent}
+                onEditAgent={setEditingAgent}
+              />
             )}
-
-            {/* Orders Tab */}
             {activeTab === "orders" && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Захиалгууд
-                  </h3>
-                </div>
-
-                {/* Category Tabs */}
-                <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
-                  <button
-                    onClick={() => setOrderFilter("pending_payment")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 whitespace-nowrap ${
-                      orderFilter === "pending_payment"
-                        ? "text-orange-600 bg-orange-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    Төлбөр хүлээж байна (
-                    {
-                      orders.filter((o) => o.status === "tolbor_huleej_bn")
-                        .length
-                    }
-                    )
-                  </button>
-                  <button
-                    onClick={() => setOrderFilter("completed")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 whitespace-nowrap ${
-                      orderFilter === "completed"
-                        ? "text-green-600 bg-green-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    Дууссан (
-                    {
-                      orders.filter(
-                        (o) => o.status === "amjilttai_zahialga",
-                      ).length
-                    }
-                    )
-                  </button>
-                  <button
-                    onClick={() => setOrderFilter("cancelled")}
-                    className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-colors min-h-10 whitespace-nowrap ${
-                      orderFilter === "cancelled"
-                        ? "text-red-600 bg-red-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    Цуцалсан (
-                    {
-                      orders.filter(
-                        (o) => o.status === "tsutsalsan_zahialga",
-                      ).length
-                    }
-                    )
-                  </button>
-                </div>
-
-                {(() => {
-                  const filteredOrders = orders
-                    .filter((order) => {
-                      if (orderFilter === "pending_payment") {
-                        // Төлбөр хүлээж байна: tolbor_huleej_bn
-                        return order.status === "tolbor_huleej_bn";
-                      }
-                      if (orderFilter === "completed") {
-                        // Дууссан: amjilttai_zahialga
-                        return order.status === "amjilttai_zahialga";
-                      }
-                      if (orderFilter === "cancelled") {
-                        // Цуцалсан: tsutsalsan_zahialga
-                        return order.status === "tsutsalsan_zahialga";
-                      }
-                      return false;
-                    })
-                    .sort((a, b) => {
-                      // Sort: userPaymentVerified: true захиалгуудыг эхэнд харуулах
-                      if (a.userPaymentVerified && !b.userPaymentVerified)
-                        return -1;
-                      if (!a.userPaymentVerified && b.userPaymentVerified)
-                        return 1;
-                      return 0;
-                    });
-
-                  return filteredOrders.length > 0 ? (
-                    <div className="space-y-3">
-                      {filteredOrders.map((order) => {
-                        const report = agentReports[order.id];
-                        const userProfile = order.user?.profile;
-                        const agentProfile = order.agent?.profile;
-
-                        // Calculate user payment amount
-                        const calculateUserAmount = () => {
-                          if (!report) return null;
-                          const exchangeRate = adminSettings?.exchangeRate || 1;
-                          return report.userAmount * exchangeRate * 1.05;
-                        };
-
-                        return (
-                          <div
-                            key={order.id}
-                            className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:border-gray-300 transition-colors"
-                          >
-                            {/* Top row: Product name, Amount, Status */}
-                            <div className="flex items-start justify-between gap-2 mb-3">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">
-                                  {order.productName}
-                                </h4>
-                                {report && (
-                                  <p className="text-lg sm:text-xl font-bold text-green-600 mt-1">
-                                    {calculateUserAmount()?.toLocaleString()} ₮
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-1.5">
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                                    order.status === "niitlegdsen"
-                                      ? "bg-gray-100 text-gray-800"
-                                      : order.status === "agent_sudlaj_bn"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : order.status === "tolbor_huleej_bn"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : order.status ===
-                                              "amjilttai_zahialga"
-                                            ? "bg-green-100 text-green-800"
-                                            : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {order.status === "niitlegdsen"
-                                    ? "Нийтэлсэн"
-                                    : order.status === "agent_sudlaj_bn"
-                                      ? "Шалгаж байна"
-                                      : order.status === "tolbor_huleej_bn"
-                                        ? "Төлбөр хүлээж"
-                                        : order.status === "amjilttai_zahialga"
-                                          ? "Амжилттай"
-                                          : "Цуцлагдсан"}
-                                </span>
-                                {order.status === "tolbor_huleej_bn" && (
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${order.userPaymentVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
-                                  >
-                                    {order.userPaymentVerified
-                                      ? "Төлсөн"
-                                      : "Хүлээж байна"}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Info row: Phone numbers and payment link */}
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-gray-600 mb-3">
-                              {userProfile?.phone && (
-                                <span>
-                                  User:{" "}
-                                  <span className="font-medium text-gray-900">
-                                    {userProfile.phone}
-                                  </span>
-                                </span>
-                              )}
-                              {agentProfile?.phone && (
-                                <span>
-                                  Agent:{" "}
-                                  <span className="font-medium text-gray-900">
-                                    {agentProfile.phone}
-                                  </span>
-                                </span>
-                              )}
-                              {report?.paymentLink && (
-                                <a
-                                  href={report.paymentLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline truncate max-w-37.5 sm:max-w-50"
-                                >
-                                  Холбоос
-                                </a>
-                              )}
-                            </div>
-
-                            {/* Action buttons */}
-                            <div className="flex flex-row sm:flex-row gap-2">
-                              {order.status === "tolbor_huleej_bn" && (
-                                <button
-                                  onClick={() => handleVerifyPayment(order.id)}
-                                  className="px-3 py-2 text-xs sm:text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 active:bg-green-700 transition-colors font-medium text-center"
-                                >
-                                  Төлбөр батлах
-                                </button>
-                              )}
-                              {order.status === "tolbor_huleej_bn" && (
-                                <button
-                                  onClick={() =>
-                                    handleCancelPayment(order.id, false)
-                                  }
-                                  className="px-3 py-2 text-xs sm:text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors font-medium text-center"
-                                >
-                                  Төлбөр цуцлах
-                                </button>
-                              )}
-                              {/* Урамшуулал олгох - зөвхөн амжилттай захиалгад, agent төлбөр олгоогүй бол */}
-                              {order.status === "amjilttai_zahialga" &&
-                                !order.agentPaymentPaid &&
-                                order.agent && (
-                                  <button
-                                    onClick={() => handleAgentPayment(order.id)}
-                                    className="px-3 py-2 text-xs sm:text-sm text-white bg-purple-500 rounded-lg hover:bg-purple-600 active:bg-purple-700 transition-colors font-medium text-center"
-                                  >
-                                    Урамшуулал олгох
-                                  </button>
-                                )}
-                              {order.status === "amjilttai_zahialga" &&
-                                order.agentPaymentPaid && (
-                                  <span className="px-3 py-2 text-xs sm:text-sm text-purple-700 bg-purple-100 rounded-lg font-medium text-center">
-                                    Урамшуулал олгосон
-                                  </span>
-                                )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                      {orderFilter === "pending_payment"
-                        ? "Төлбөр хүлээж байгаа захиалга байхгүй байна."
-                        : "Дууссан захиалга байхгүй байна."}
-                    </div>
-                  );
-                })()}
-              </div>
+              <OrdersTab
+                orders={orders}
+                adminSettings={adminSettings}
+                agentReports={agentReports}
+                orderFilter={orderFilter}
+                onOrderFilterChange={setOrderFilter}
+                onVerifyPayment={handleVerifyPayment}
+                onCancelPayment={handleCancelPayment}
+                onAgentPayment={handleAgentPayment}
+              />
             )}
-
-            {/* Cargos Tab */}
             {activeTab === "cargos" && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Cargos
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setEditingCargo(null);
-                      setCargoFormData({
-                        name: "",
-                        description: "",
-                        phone: "",
-                        location: "",
-                        website: "",
-                        facebook: "",
-                        imageUrl: "",
-                      });
-                      setShowCargoForm(!showCargoForm);
-                    }}
-                    className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
-                  >
-                    {showCargoForm ? "Хаах" : "Cargo нэмэх"}
-                  </button>
-                </div>
-
-                {showCargoForm && (
-                  <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Cargo нэр
-                        </label>
-                        <input
-                          type="text"
-                          value={cargoFormData.name}
-                          onChange={(e) =>
-                            setCargoFormData({
-                              ...cargoFormData,
-                              name: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Cargo нэр оруулах"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Тайлбар
-                        </label>
-                        <textarea
-                          value={cargoFormData.description}
-                          onChange={(e) =>
-                            setCargoFormData({
-                              ...cargoFormData,
-                              description: e.target.value,
-                            })
-                          }
-                          rows={2}
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Тайлбар оруулах (жишээ: cargo & 24/7 smart locker)"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-1">
-                            Утас
-                          </label>
-                          <input
-                            type="text"
-                            value={cargoFormData.phone}
-                            onChange={(e) =>
-                              setCargoFormData({
-                                ...cargoFormData,
-                                phone: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="99739959"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-1">
-                            Байршил (Google Maps)
-                          </label>
-                          <input
-                            type="text"
-                            value={cargoFormData.location}
-                            onChange={(e) =>
-                              setCargoFormData({
-                                ...cargoFormData,
-                                location: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="https://maps.app.goo.gl/..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-1">
-                            Вэбсайт
-                          </label>
-                          <input
-                            type="text"
-                            value={cargoFormData.website}
-                            onChange={(e) =>
-                              setCargoFormData({
-                                ...cargoFormData,
-                                website: e.target.value,
-                              })
-                            }
-                            className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="www.example.mn"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Facebook хуудас
-                        </label>
-                        <input
-                          type="text"
-                          value={cargoFormData.facebook}
-                          onChange={(e) =>
-                            setCargoFormData({
-                              ...cargoFormData,
-                              facebook: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="https://facebook.com/..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Зураг
-                        </label>
-                        <div className="flex items-center gap-3">
-                          {cargoFormData.imageUrl ? (
-                            <div className="relative">
-                              <img
-                                src={cargoFormData.imageUrl}
-                                alt="Preview"
-                                className="w-20 h-20 object-cover rounded-lg border"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setCargoFormData((prev) => ({
-                                    ...prev,
-                                    imageUrl: "",
-                                  }))
-                                }
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
-                              {uploadingCargoImage ? (
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                              ) : (
-                                <>
-                                  <svg
-                                    className="w-6 h-6 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                    />
-                                  </svg>
-                                  <span className="text-xs text-gray-500 mt-1">
-                                    Зураг
-                                  </span>
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleCargoImageUpload}
-                                className="hidden"
-                                disabled={uploadingCargoImage}
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={
-                            editingCargo ? handleUpdateCargo : handleCreateCargo
-                          }
-                          className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-11"
-                        >
-                          {editingCargo ? "Шинэчлэх" : "Үүсгэх"}
-                        </button>
-                        {editingCargo && (
-                          <button
-                            onClick={() => {
-                              setEditingCargo(null);
-                              setCargoFormData({
-                                name: "",
-                                description: "",
-                                phone: "",
-                                location: "",
-                                website: "",
-                                facebook: "",
-                                imageUrl: "",
-                              });
-                            }}
-                            className="px-4 py-2.5 text-sm text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
-                          >
-                            Цуцлах
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {cargos.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {cargos.map((cargo) => (
-                      <div
-                        key={cargo.id}
-                        className="border border-gray-200 rounded-xl p-4 bg-white"
-                      >
-                        <div className="flex items-start gap-3">
-                          {cargo.imageUrl && (
-                            <img
-                              src={cargo.imageUrl}
-                              alt={cargo.name}
-                              className="w-12 h-12 object-cover rounded-lg shrink-0"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900">
-                              {cargo.name}
-                            </h4>
-                          </div>
-                        </div>
-                        {cargo.description && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {cargo.description}
-                          </p>
-                        )}
-                        <div className="mt-2 space-y-1 text-xs text-gray-500">
-                          {cargo.phone && (
-                            <p className="flex items-center gap-1">
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                />
-                              </svg>
-                              {cargo.phone}
-                            </p>
-                          )}
-                          {cargo.website && (
-                            <p className="flex items-center gap-1">
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                                />
-                              </svg>
-                              {cargo.website}
-                            </p>
-                          )}
-                          {cargo.location && (
-                            <p className="flex items-center gap-1">
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                              <span className="truncate">Байршил</span>
-                            </p>
-                          )}
-                          {cargo.facebook && (
-                            <p className="flex items-center gap-1">
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                              </svg>
-                              <span className="truncate">Facebook</span>
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => {
-                              setEditingCargo(cargo);
-                              setCargoFormData({
-                                name: cargo.name,
-                                description: cargo.description || "",
-                                phone: cargo.phone || "",
-                                location: cargo.location || "",
-                                website: cargo.website || "",
-                                facebook: cargo.facebook || "",
-                                imageUrl: cargo.imageUrl || "",
-                              });
-                              setShowCargoForm(true);
-                            }}
-                            className="px-3 py-1.5 text-xs text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-8"
-                          >
-                            Засах
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCargo(cargo.id)}
-                            className="px-3 py-1.5 text-xs text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-8"
-                          >
-                            Устгах
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                    Cargo байхгүй байна.
-                  </div>
-                )}
-              </div>
+              <CargosTab
+                cargos={cargos}
+                uploadingCargoImage={uploadingCargoImage}
+                onCreateCargo={handleCreateCargo}
+                onUpdateCargo={handleUpdateCargo}
+                onDeleteCargo={handleDeleteCargo}
+                onCargoImageUpload={handleCargoImageUpload}
+              />
             )}
-
-            {/* Settings Tab */}
             {activeTab === "settings" && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Тохиргоо
-                  </h3>
-                  {!isEditingSettings && (
-                    <button
-                      onClick={handleEditSettings}
-                      className="px-4 py-2.5 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 active:bg-blue-700 transition-colors font-medium min-h-10"
-                    >
-                      Засах
-                    </button>
-                  )}
-                </div>
-
-                <div className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white">
-                  <h4 className="text-base font-semibold text-gray-900 mb-4">
-                    Төлбөрийн дансны мэдээлэл
-                  </h4>
-
-                  {settingsSaved && (
-                    <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl text-sm">
-                      ✓ Тохиргоо амжилттай хадгалагдлаа
-                    </div>
-                  )}
-
-                  {isEditingSettings ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Дансны дугаар
-                        </label>
-                        <input
-                          type="text"
-                          value={settingsFormData.accountNumber || ""}
-                          onChange={(e) =>
-                            setSettingsFormData({
-                              ...settingsFormData,
-                              accountNumber: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Жишээ: 1234567890"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Дансны нэр
-                        </label>
-                        <input
-                          type="text"
-                          value={settingsFormData.accountName || ""}
-                          onChange={(e) =>
-                            setSettingsFormData({
-                              ...settingsFormData,
-                              accountName: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Жишээ: Agentbuy.mn"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Банк
-                        </label>
-                        <input
-                          type="text"
-                          value={settingsFormData.bank || ""}
-                          onChange={(e) =>
-                            setSettingsFormData({
-                              ...settingsFormData,
-                              bank: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Жишээ: Хаан банк"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">
-                          Ханш (Exchange Rate)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={settingsFormData.exchangeRate || 1}
-                          onChange={(e) =>
-                            setSettingsFormData({
-                              ...settingsFormData,
-                              exchangeRate: parseFloat(e.target.value) || 1,
-                            })
-                          }
-                          className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="Жишээ: 1.0"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          User-д харагдах дүн = Agent report дүн × Ханш × 1.05
-                        </p>
-                      </div>
-
-                      {/* Захиалгын хязгаарлалт */}
-                      <div className="border-t border-gray-200 pt-4 mt-4">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">
-                          Захиалгын хязгаарлалт
-                        </h5>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <label className="text-sm font-medium text-gray-700">
-                            Хязгаарлалт идэвхжүүлэх
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSettingsFormData({
-                                ...settingsFormData,
-                                orderLimitEnabled:
-                                  !settingsFormData.orderLimitEnabled,
-                              })
-                            }
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              settingsFormData.orderLimitEnabled
-                                ? "bg-green-500"
-                                : "bg-gray-300"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                settingsFormData.orderLimitEnabled
-                                  ? "translate-x-6"
-                                  : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        {settingsFormData.orderLimitEnabled && (
-                          <>
-                            <div className="mb-3">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Өдөрт максимум захиалга
-                              </label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={settingsFormData.maxOrdersPerDay || 10}
-                                onChange={(e) =>
-                                  setSettingsFormData({
-                                    ...settingsFormData,
-                                    maxOrdersPerDay:
-                                      parseInt(e.target.value) || 10,
-                                  })
-                                }
-                                className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Нэг хэрэглэгч өдөрт хамгийн ихдээ хэдэн захиалга
-                                үүсгэж болох
-                              </p>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Идэвхтэй захиалгын хязгаар
-                              </label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={settingsFormData.maxActiveOrders || 10}
-                                onChange={(e) =>
-                                  setSettingsFormData({
-                                    ...settingsFormData,
-                                    maxActiveOrders:
-                                      parseInt(e.target.value) || 10,
-                                  })
-                                }
-                                className="w-full px-4 py-3 text-base text-black bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Нэг хэрэглэгч дуусаагүй хэдэн захиалгатай байж
-                                болох
-                              </p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveSettings}
-                          disabled={savingSettings}
-                          className="flex-1 px-4 py-2.5 text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-11"
-                        >
-                          {savingSettings ? "Хадгалж байна..." : "Хадгалах"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsEditingSettings(false);
-                            setSettingsFormData({
-                              accountNumber: adminSettings?.accountNumber || "",
-                              accountName: adminSettings?.accountName || "",
-                              bank: adminSettings?.bank || "",
-                              exchangeRate: adminSettings?.exchangeRate || 1,
-                              orderLimitEnabled:
-                                adminSettings?.orderLimitEnabled ?? true,
-                              maxOrdersPerDay:
-                                adminSettings?.maxOrdersPerDay ?? 10,
-                              maxActiveOrders:
-                                adminSettings?.maxActiveOrders ?? 10,
-                            });
-                          }}
-                          className="px-4 py-2.5 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-11"
-                        >
-                          Цуцлах
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Дансны дугаар
-                        </label>
-                        <p className="text-gray-900 font-mono">
-                          {adminSettings?.accountNumber || "Тохируулаагүй"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Дансны нэр
-                        </label>
-                        <p className="text-gray-900">
-                          {adminSettings?.accountName || "Тохируулаагүй"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Банк
-                        </label>
-                        <p className="text-gray-900">
-                          {adminSettings?.bank || "Тохируулаагүй"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Ханш (Exchange Rate)
-                        </label>
-                        <p className="text-gray-900">
-                          {adminSettings?.exchangeRate || 1}
-                        </p>
-                      </div>
-
-                      {/* Захиалгын хязгаарлалт харах */}
-                      <div className="border-t border-gray-200 pt-4 mt-4">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">
-                          Захиалгын хязгаарлалт
-                        </h5>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              Төлөв:
-                            </span>
-                            <span
-                              className={`text-sm font-medium ${adminSettings?.orderLimitEnabled !== false ? "text-green-600" : "text-gray-500"}`}
-                            >
-                              {adminSettings?.orderLimitEnabled !== false
-                                ? "Идэвхтэй"
-                                : "Идэвхгүй"}
-                            </span>
-                          </div>
-                          {adminSettings?.orderLimitEnabled !== false && (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                  Өдөрт максимум:
-                                </span>
-                                <span className="text-sm font-medium text-gray-900">
-                                  {adminSettings?.maxOrdersPerDay ?? 10}{" "}
-                                  захиалга
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                  Идэвхтэй хязгаар:
-                                </span>
-                                <span className="text-sm font-medium text-gray-900">
-                                  {adminSettings?.maxActiveOrders ?? 10}{" "}
-                                  захиалга
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Agent Stats Section */}
-                <div className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white mt-4">
-                  <h4 className="text-base font-semibold text-gray-900 mb-4">
-                    Агентуудын статистик
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Агентуудын гүйлгээний тоо болон амжилтын хувийг захиалгын түүхээс дахин тооцоолох
-                  </p>
-                  <button
-                    onClick={async () => {
-                      if (!confirm("Бүх агентуудын статистикийг дахин тооцоолох уу? Энэ үйлдэл хэдэн секунд болж магадгүй.")) {
-                        return;
-                      }
-                      try {
-                        const result = await apiClient.recalculateAgentStats();
-                        alert(`Амжилттай! ${result.agents?.length || 0} агентын статистик шинэчлэгдлээ.`);
-                        await loadData();
-                      } catch (e: unknown) {
-                        const errorMessage = e instanceof Error ? e.message : "Алдаа гарлаа";
-                        alert(errorMessage);
-                      }
-                    }}
-                    className="px-4 py-2.5 text-sm text-white bg-purple-500 rounded-xl hover:bg-purple-600 active:bg-purple-700 transition-colors font-medium min-h-10"
-                  >
-                    Статистик дахин тооцоолох
-                  </button>
-                </div>
-              </div>
+              <SettingsTab
+                adminSettings={adminSettings}
+                settingsFormData={settingsFormData}
+                onSettingsFormChange={setSettingsFormData}
+                savingSettings={savingSettings}
+                settingsSaved={settingsSaved}
+                onSaveSettings={handleSaveSettings}
+                onRecalculateStats={handleRecalculateStats}
+              />
             )}
-
-            {/* Rewards Tab */}
             {activeTab === "rewards" && (
-              <div className="space-y-4">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                  Урамшуулал хүсэлтүүд
-                </h3>
-                {(() => {
-                  const pendingRequests = rewardRequests.filter(
-                    (r) => r.status === "pending",
-                  );
-                  const approvedRequests = rewardRequests.filter(
-                    (r) => r.status === "approved",
-                  );
-                  const rejectedRequests = rewardRequests.filter(
-                    (r) => r.status === "rejected",
-                  );
-
-                  return (
-                    <div className="space-y-6">
-                      {/* Pending Requests */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                          Хүлээж байгаа хүсэлтүүд ({pendingRequests.length})
-                        </h4>
-                        {pendingRequests.length > 0 ? (
-                          <div className="space-y-3">
-                            {pendingRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="border border-gray-200 rounded-xl p-4 bg-white"
-                              >
-                                <div className="flex justify-between items-start mb-3 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">
-                                      Agent:{" "}
-                                      {request.agent?.profile?.name ||
-                                        request.agent?.email ||
-                                        "Unknown"}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Утас:{" "}
-                                      {request.agent?.profile?.phone ||
-                                        "Байхгүй"}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      Имэйл: {request.agent?.email}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-base font-semibold text-green-600">
-                                      {request.amount.toLocaleString(
-                                        undefined,
-                                        { maximumFractionDigits: 2 },
-                                      )}{" "}
-                                      ₮
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {new Date(
-                                        request.createdAt,
-                                      ).toLocaleDateString("mn-MN", {
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={async () => {
-                                      if (
-                                        !confirm(
-                                          `Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллыг батлахдаа итгэлтэй байна уу?`,
-                                        )
-                                      ) {
-                                        return;
-                                      }
-
-                                      try {
-                                        await apiClient.approveRewardRequest(
-                                          request.id,
-                                        );
-                                        alert(
-                                          "Урамшуулал амжилттай батлагдлаа.",
-                                        );
-                                        await loadData();
-                                      } catch (e: unknown) {
-                                        const errorMessage =
-                                          e instanceof Error
-                                            ? e.message
-                                            : "Алдаа гарлаа";
-                                        alert(errorMessage);
-                                      }
-                                    }}
-                                    className="px-4 py-2.5 text-sm text-white bg-green-500 rounded-xl hover:bg-green-600 active:bg-green-700 transition-colors font-medium min-h-10"
-                                  >
-                                    Батлах
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (
-                                        !confirm(
-                                          `Та ${request.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₮ урамшууллын хүсэлтийг татгалзахдаа итгэлтэй байна уу? Оноо agent-д буцаагдана.`,
-                                        )
-                                      ) {
-                                        return;
-                                      }
-
-                                      try {
-                                        await apiClient.rejectRewardRequest(
-                                          request.id,
-                                        );
-                                        alert(
-                                          "Хүсэлт татгалзсан. Оноо agent-д буцаагдлаа.",
-                                        );
-                                        await loadData();
-                                      } catch (e: unknown) {
-                                        const errorMessage =
-                                          e instanceof Error
-                                            ? e.message
-                                            : "Алдаа гарлаа";
-                                        alert(errorMessage);
-                                      }
-                                    }}
-                                    className="px-4 py-2.5 text-sm text-white bg-red-500 rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-10"
-                                  >
-                                    Татгалзах
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                            Хүлээж байгаа урамшуулал хүсэлт байхгүй байна.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Approved Requests */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                          Батлагдсан урамшууллууд ({approvedRequests.length})
-                        </h4>
-                        {approvedRequests.length > 0 ? (
-                          <div className="space-y-3">
-                            {approvedRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="border border-green-200 rounded-xl p-4 bg-green-50"
-                              >
-                                <div className="flex justify-between items-start mb-3 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">
-                                      Agent:{" "}
-                                      {request.agent?.profile?.name ||
-                                        request.agent?.email ||
-                                        "Unknown"}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Утас:{" "}
-                                      {request.agent?.profile?.phone ||
-                                        "Байхгүй"}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      Имэйл: {request.agent?.email}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-base font-semibold text-green-600">
-                                      {request.amount.toLocaleString(
-                                        undefined,
-                                        { maximumFractionDigits: 2 },
-                                      )}{" "}
-                                      ₮
-                                    </p>
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1 inline-block">
-                                      Батлагдсан
-                                    </span>
-                                    {request.approvedAt && (
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        {new Date(
-                                          request.approvedAt,
-                                        ).toLocaleDateString("mn-MN", {
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                            Батлагдсан урамшуулал байхгүй байна.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Rejected Requests */}
-                      {rejectedRequests.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                            Татгалзсан хүсэлтүүд ({rejectedRequests.length})
-                          </h4>
-                          <div className="space-y-3">
-                            {rejectedRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="border border-red-200 rounded-xl p-4 bg-red-50"
-                              >
-                                <div className="flex justify-between items-start mb-3 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">
-                                      Agent:{" "}
-                                      {request.agent?.profile?.name ||
-                                        request.agent?.email ||
-                                        "Unknown"}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Утас:{" "}
-                                      {request.agent?.profile?.phone ||
-                                        "Байхгүй"}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      Имэйл: {request.agent?.email}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-base font-semibold text-red-600">
-                                      {request.amount.toLocaleString(
-                                        undefined,
-                                        { maximumFractionDigits: 2 },
-                                      )}{" "}
-                                      ₮
-                                    </p>
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1 inline-block">
-                                      Татгалзсан
-                                    </span>
-                                    {request.rejectedAt && (
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        {new Date(
-                                          request.rejectedAt,
-                                        ).toLocaleDateString("mn-MN", {
-                                          year: "numeric",
-                                          month: "long",
-                                          day: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+              <RewardsTab
+                rewardRequests={rewardRequests}
+                onApproveReward={handleApproveReward}
+                onRejectReward={handleRejectReward}
+              />
             )}
-
-            {/* Ranking Tab */}
             {activeTab === "ranking" && (
               <AgentRankingManager
                 agents={agents.filter((a) => a.isApproved)}
-                onUpdate={(updatedAgents) => {
+                onUpdate={(upd) =>
                   setAgents((prev) =>
-                    prev.map((a) => {
-                      const updated = updatedAgents.find((u) => u.id === a.id);
-                      return updated || a;
-                    })
-                  );
-                }}
+                    prev.map((a) => upd.find((u) => u.id === a.id) || a),
+                  )
+                }
               />
             )}
-
-            {/* Specialties Tab */}
             {activeTab === "specialties" && (
-              <SpecialtyManager
-                onSpecialtiesChange={(newSpecialties) => setSpecialties(newSpecialties)}
-              />
+              <SpecialtyManager onSpecialtiesChange={setSpecialties} />
             )}
-
-            {/* Cards Tab */}
             {activeTab === "cards" && <CardManager />}
+            {activeTab === "banners" && <BannerManager />}
+            {activeTab === "showcase" && <ShowcaseManager />}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
-      {/* Agent Profile Editor Modal */}
       {editingAgent && (
         <AgentProfileEditor
           agent={editingAgent}
           specialties={specialties}
-          onUpdate={(updatedAgent) => {
-            setAgents((prev) =>
-              prev.map((a) => (a.id === updatedAgent.id ? updatedAgent : a))
-            );
-          }}
+          onUpdate={(upd) =>
+            setAgents((prev) => prev.map((a) => (a.id === upd.id ? upd : a)))
+          }
           onClose={() => setEditingAgent(null)}
         />
       )}

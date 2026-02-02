@@ -8,7 +8,7 @@ interface CancelOrderModalProps {
   cancelLoading: boolean;
   onReasonChange: (reason: string) => void;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (reason: string) => void;
 }
 
 export default function CancelOrderModal({
@@ -22,13 +22,13 @@ export default function CancelOrderModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl border border-gray-200 max-w-md w-full shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-60 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 max-w-md w-full shadow-2xl">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
               <svg
-                className="w-6 h-6 text-red-600"
+                className="w-6 h-6 text-red-600 dark:text-red-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -42,27 +42,28 @@ export default function CancelOrderModal({
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Захиалга цуцлах
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Цуцлах шалтгаанаа бичнэ үү
               </p>
             </div>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Шалтгаан <span className="text-red-500">*</span>
             </label>
             <textarea
               value={cancelReason}
               onChange={(e) => onReasonChange(e.target.value)}
               placeholder="Захиалга цуцлах шалтгаанаа дэлгэрэнгүй бичнэ үү..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
               rows={4}
+              style={{ fontSize: "16px" }}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
               Хамгийн багадаа 5 тэмдэгт ({cancelReason.length}/5)
             </p>
           </div>
@@ -70,14 +71,14 @@ export default function CancelOrderModal({
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl font-semibold transition-colors min-h-12"
             >
               Буцах
             </button>
             <button
-              onClick={onConfirm}
+              onClick={() => onConfirm(cancelReason)}
               disabled={cancelLoading || cancelReason.trim().length < 5}
-              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-12"
             >
               {cancelLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

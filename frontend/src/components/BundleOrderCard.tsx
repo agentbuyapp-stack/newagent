@@ -344,6 +344,12 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
               </button>
             </div>
           )}
+          {/* Cancel Reason */}
+          {bundleOrder.status === "tsutsalsan_zahialga" && bundleOrder.cancelReason && (
+            <p className="text-xs text-red-500 dark:text-red-400 mt-1 italic line-clamp-2">
+              Шалтгаан: {bundleOrder.cancelReason}
+            </p>
+          )}
         </div>
 
         {/* Action buttons */}
@@ -576,6 +582,12 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
           {firstDescription && (
             <p className="text-xs text-slate-300 line-clamp-1 mt-1">
               {firstDescription}
+            </p>
+          )}
+          {/* Cancel Reason */}
+          {bundleOrder.status === "tsutsalsan_zahialga" && bundleOrder.cancelReason && (
+            <p className="text-xs text-red-300 line-clamp-2 mt-1 italic">
+              Шалтгаан: {bundleOrder.cancelReason}
             </p>
           )}
         </div>

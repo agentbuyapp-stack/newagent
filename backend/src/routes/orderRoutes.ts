@@ -29,7 +29,7 @@ const conditionalOrderLimiter = (req: Request, res: Response, next: NextFunction
 router.get("/", requireRole(["user", "agent", "admin"]), getOrders);
 router.get("/:id", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getOrder);
 router.post("/", requireRole(["user", "agent", "admin"]), conditionalOrderLimiter, validate(createOrderSchema), createOrder);
-router.put("/:id/status", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), validate(updateOrderStatusSchema), updateOrderStatus);
+router.put("/:id/status", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), validate(updateOrderStatusSchema), updateOrderStatus);
 router.put("/:id/track-code", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), updateTrackCode);
 router.put("/:id/user-payment-confirmed", requireRole("user"), validateParams(mongoIdSchema), confirmUserPayment);
 router.get("/:id/report", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getAgentReport);

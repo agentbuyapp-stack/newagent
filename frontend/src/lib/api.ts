@@ -558,10 +558,10 @@ class ApiClient {
     });
   }
 
-  async updateBundleOrderStatus(orderId: string, status: OrderStatus): Promise<BundleOrder> {
+  async updateBundleOrderStatus(orderId: string, status: OrderStatus, cancelReason?: string): Promise<BundleOrder> {
     return this.request<BundleOrder>(`/bundle-orders/${orderId}/status`, {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, cancelReason }),
     });
   }
 
@@ -666,6 +666,113 @@ class ApiClient {
       body: JSON.stringify({ amount }),
     });
   }
+
+  // Banner endpoints
+  async getActiveBanners(): Promise<{ success: boolean; data: Banner[] }> {
+    return this.request<{ success: boolean; data: Banner[] }>("/banners/active");
+  }
+
+  async getAllBanners(): Promise<{ success: boolean; data: Banner[] }> {
+    return this.request<{ success: boolean; data: Banner[] }>("/banners");
+  }
+
+  async createBanner(data: Omit<Banner, "id" | "createdAt" | "updatedAt">): Promise<{ success: boolean; data: Banner; message: string }> {
+    return this.request<{ success: boolean; data: Banner; message: string }>("/banners", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateBanner(id: string, data: Partial<Banner>): Promise<{ success: boolean; data: Banner; message: string }> {
+    return this.request<{ success: boolean; data: Banner; message: string }>(`/banners/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteBanner(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/banners/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async toggleBannerStatus(id: string): Promise<{ success: boolean; data: Banner; message: string }> {
+    return this.request<{ success: boolean; data: Banner; message: string }>(`/banners/${id}/toggle`, {
+      method: "PATCH",
+    });
+  }
+
+  // Product Showcase endpoints
+  async getActiveShowcases(): Promise<{ success: boolean; data: ProductShowcase[] }> {
+    return this.request<{ success: boolean; data: ProductShowcase[] }>("/showcases/active");
+  }
+
+  async getAllShowcases(): Promise<{ success: boolean; data: ProductShowcase[] }> {
+    return this.request<{ success: boolean; data: ProductShowcase[] }>("/showcases");
+  }
+
+  async createShowcase(data: Omit<ProductShowcase, "id" | "createdAt" | "updatedAt">): Promise<{ success: boolean; data: ProductShowcase; message: string }> {
+    return this.request<{ success: boolean; data: ProductShowcase; message: string }>("/showcases", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateShowcase(id: string, data: Partial<ProductShowcase>): Promise<{ success: boolean; data: ProductShowcase; message: string }> {
+    return this.request<{ success: boolean; data: ProductShowcase; message: string }>(`/showcases/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteShowcase(id: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/showcases/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async toggleShowcaseStatus(id: string): Promise<{ success: boolean; data: ProductShowcase; message: string }> {
+    return this.request<{ success: boolean; data: ProductShowcase; message: string }>(`/showcases/${id}/toggle`, {
+      method: "PATCH",
+    });
+  }
+}
+
+export type BannerType = "video" | "image" | "link";
+export type BannerTarget = "all" | "user" | "agent";
+
+export interface Banner {
+  id: string;
+  _id?: string;
+  title: string;
+  subtitle?: string;
+  type: BannerType;
+  url: string;
+  thumbnailUrl?: string;
+  isActive: boolean;
+  order: number;
+  targetAudience: BannerTarget;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShowcaseProduct {
+  name: string;
+  image: string;
+  price?: number;
+  link?: string;
+  badge?: "belen" | "zahialgaar";
+}
+
+export interface ProductShowcase {
+  id: string;
+  _id?: string;
+  title: string;
+  products: ShowcaseProduct[];
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Cargo {
@@ -892,11 +999,13 @@ export interface BundleOrder {
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
   trackCode?: string;
+  cancelReason?: string; // Reason for cancellation
   // Report mode: "single" = one price for whole bundle, "per_item" = price for each item
   reportMode?: "single" | "per_item";
   // Bundle-level report (used when reportMode is "single")
   bundleReport?: BundleReport;
   archivedByUser?: boolean;
+  archivedByAgent?: boolean;
   createdAt: string;
   updatedAt: string;
   user?: User;

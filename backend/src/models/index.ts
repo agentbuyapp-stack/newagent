@@ -13,6 +13,8 @@ export * from "./AgentSpecialty";
 export * from "./AgentReview";
 export * from "./CardTransaction";
 export * from "./ChatNotification";
+export * from "./Banner";
+export * from "./ProductShowcase";
 
 // Re-export Role type for convenience
 export type { Role } from "./User";

@@ -178,7 +178,15 @@ export default function OrderHistorySection({
 
   const handleClearAllArchivedOrders = async () => {
     try {
-      await Promise.all(archivedOrders.map((o) => apiClient.cancelOrder(o.id)));
+      // Only clear cancelled orders from archive
+      const cancelledArchivedOrders = archivedOrders.filter(
+        (o) => o.status === "tsutsalsan_zahialga"
+      );
+      if (cancelledArchivedOrders.length === 0) {
+        alert("Цуцлагдсан захиалга байхгүй байна.");
+        return;
+      }
+      await Promise.all(cancelledArchivedOrders.map((o) => apiClient.cancelOrder(o.id)));
 
       onReload();
     } catch (error) {
@@ -316,22 +324,13 @@ export default function OrderHistorySection({
               </button>
               <button
                 onClick={() => setOrderFilter("archived")}
-                className={`relative px-3 sm:px-4 py-1.5 pr-5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
+                className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-colors whitespace-nowrap min-h-9 sm:min-h-10 ${
                   orderFilter === "archived"
                     ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 Архив
-                <span
-                  className={`absolute -top-2 -right-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-semibold ${
-                    orderFilter === "archived"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {archivedCount}
-                </span>
               </button>
             </div>
           </div>
@@ -348,15 +347,20 @@ export default function OrderHistorySection({
             </div>
           )}
 
-          {/* Clear All button for archived orders */}
+          {/* Archive info and Clear All button for cancelled orders only */}
           {orderFilter === "archived" && filteredOrders.length > 0 && (
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={handleClearAllArchivedOrders}
-                className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-9 sm:min-h-10"
-              >
-                Бүгдийг устгах
-              </button>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Нийт {archivedCount} захиалга
+              </span>
+              {archivedOrders.filter((o) => o.status === "tsutsalsan_zahialga").length > 0 && (
+                <button
+                  onClick={handleClearAllArchivedOrders}
+                  className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 active:bg-red-700 transition-colors font-medium min-h-9 sm:min-h-10"
+                >
+                  Цуцлагдсан устгах ({archivedOrders.filter((o) => o.status === "tsutsalsan_zahialga").length})
+                </button>
+              )}
             </div>
           )}
 

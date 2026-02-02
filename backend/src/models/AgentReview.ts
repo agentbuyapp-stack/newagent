@@ -57,7 +57,6 @@ const AgentReviewSchema = new Schema<IAgentReview>(
 
 AgentReviewSchema.index({ agentId: 1, createdAt: -1 });
 AgentReviewSchema.index({ userId: 1 });
-AgentReviewSchema.index({ orderId: 1 }, { unique: true });
 
 export const AgentReview =
   (mongoose.models.AgentReview as mongoose.Model<IAgentReview>) ||
