@@ -166,8 +166,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     }
   };
 
-  // Can delete if status is "niitlegdsen" (before agent review) OR if archived
-  const canDelete = order.status === "niitlegdsen" || order.archivedByUser;
+  // Delete disabled - users should only archive, not delete
+  const canDelete = false;
   // Can archive only if order is completed or cancelled and not already archived
   const canArchive =
     (order.status === "amjilttai_zahialga" ||
@@ -298,6 +298,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 )}
               </button>
             </div>
+          )}
+          {/* Cancel Reason */}
+          {order.status === "tsutsalsan_zahialga" && order.cancelReason && (
+            <p className="text-xs text-red-500 dark:text-red-400 mt-1 italic truncate">
+              Шалтгаан: {order.cancelReason}
+            </p>
           )}
         </div>
 
@@ -518,6 +524,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <p className="text-xs text-slate-300 line-clamp-1 mt-1">
             {order.description}
           </p>
+
+          {/* Cancel Reason */}
+          {order.status === "tsutsalsan_zahialga" && order.cancelReason && (
+            <p className="text-xs text-red-300 line-clamp-2 mt-1 italic">
+              Шалтгаан: {order.cancelReason}
+            </p>
+          )}
         </div>
       </div>
 

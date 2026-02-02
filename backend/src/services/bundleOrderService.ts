@@ -236,7 +236,8 @@ class BundleOrderService {
     orderId: string,
     userId: string,
     role: string,
-    status: OrderStatus
+    status: OrderStatus,
+    cancelReason?: string
   ): Promise<BundleOrderResult> {
     try {
       const user = await User.findById(userId);
@@ -247,6 +248,119 @@ class BundleOrderService {
       const order = await BundleOrder.findById(orderId);
       if (!order) {
         return { error: "Bundle order not found", status: 404 };
+      }
+
+      const currentStatus = order.status;
+      const orderUserId = order.userId?.toString();
+      const orderAgentId = order.agentId?.toString();
+
+      // ========== ROLE-SPECIFIC CANCELLATION RULES ==========
+      if (status === "tsutsalsan_zahialga") {
+        // User cancellation rules
+        if (role === "user") {
+          // User must own the order
+          if (orderUserId !== userId) {
+            return { error: "Зөвхөн өөрийн захиалгыг цуцлах боломжтой", status: 403 };
+          }
+          // User can cancel from: niitlegdsen (before agent takes) OR tolbor_huleej_bn (after seeing report)
+          if (currentStatus !== "niitlegdsen" && currentStatus !== "tolbor_huleej_bn") {
+            return {
+              error: "Хэрэглэгч зөвхөн agent авахаас өмнө эсвэл тайлан хараад цуцлах боломжтой",
+              status: 400
+            };
+          }
+          // Cannot cancel if payment already verified
+          if (order.userPaymentVerified) {
+            return { error: "Төлбөр баталгаажсан тул цуцлах боломжгүй", status: 400 };
+          }
+        }
+        // Agent cancellation rules
+        else if (role === "agent") {
+          // Agent must be assigned to order
+          if (orderAgentId !== userId) {
+            return { error: "Зөвхөн өөрт оноогдсон захиалгыг цуцлах боломжтой", status: 403 };
+          }
+          // Agent can only cancel from agent_sudlaj_bn (before sending report)
+          if (currentStatus !== "agent_sudlaj_bn") {
+            return {
+              error: "Agent зөвхөн тайлан илгээхээс өмнө цуцлах боломжтой",
+              status: 400
+            };
+          }
+          // Agent requires cancel reason
+          if (!cancelReason || cancelReason.trim().length < 5) {
+            return { error: "Цуцлах шалтгаан шаардлагатай (хамгийн багадаа 5 тэмдэгт)", status: 400 };
+          }
+        }
+        // Admin cancellation rules
+        else if (role === "admin") {
+          // Admin can cancel from amjilttai_zahialga (if user falsely confirmed payment)
+          // Admin can also cancel from any other status
+          if (currentStatus === "tsutsalsan_zahialga") {
+            return { error: "Захиалга аль хэдийн цуцлагдсан", status: 400 };
+          }
+        }
+
+        // Update order status to cancelled
+        order.status = status;
+        if (cancelReason) {
+          (order as any).cancelReason = cancelReason.trim();
+        }
+        // Update all items status too
+        order.items.forEach((item: any) => {
+          item.status = "tsutsalsan_zahialga";
+        });
+        await order.save();
+
+        return {
+          order: {
+            id: order._id,
+            status: order.status,
+            agentId: order.agentId,
+          },
+        };
+      }
+
+      // ========== OTHER STATUS TRANSITION RULES ==========
+      // Define valid transitions for non-cancel status changes
+      const validTransitions: Record<string, Record<string, string[]>> = {
+        agent: {
+          "niitlegdsen": ["agent_sudlaj_bn"],
+          "agent_sudlaj_bn": ["tolbor_huleej_bn"],
+          "tolbor_huleej_bn": [],
+          "amjilttai_zahialga": [],
+          "tsutsalsan_zahialga": [],
+        },
+        admin: {
+          "niitlegdsen": ["agent_sudlaj_bn"],
+          "agent_sudlaj_bn": ["tolbor_huleej_bn"],
+          "tolbor_huleej_bn": ["amjilttai_zahialga"],
+          "amjilttai_zahialga": [],
+          "tsutsalsan_zahialga": [],
+        },
+        user: {
+          // Users can't change to other statuses (only cancel handled above)
+          "niitlegdsen": [],
+          "agent_sudlaj_bn": [],
+          "tolbor_huleej_bn": [],
+          "amjilttai_zahialga": [],
+          "tsutsalsan_zahialga": [],
+        },
+      };
+
+      const roleTransitions = validTransitions[role] || validTransitions.user;
+      const allowedNextStatuses = roleTransitions[currentStatus] || [];
+
+      if (!allowedNextStatuses.includes(status)) {
+        return {
+          error: `"${currentStatus}" статусаас "${status}" статус руу шилжих боломжгүй`,
+          status: 400
+        };
+      }
+
+      // Agent can only take orders that aren't assigned
+      if (status === "agent_sudlaj_bn" && role === "agent" && order.agentId) {
+        return { error: "Энэ захиалга аль хэдийн agent авсан байна", status: 400 };
       }
 
       // Assign agent if status is being changed by agent
@@ -590,9 +704,17 @@ class BundleOrderService {
         return { error: "Not authorized to cancel this order", status: 403 };
       }
 
-      // Only allow cancellation when status is "tolbor_huleej_bn" and payment not verified
-      if (order.status !== "tolbor_huleej_bn" || order.userPaymentVerified) {
-        return { error: "Order cannot be cancelled at this stage", status: 400 };
+      // User can cancel from: niitlegdsen (before agent takes) OR tolbor_huleej_bn (after seeing report)
+      if (order.status !== "niitlegdsen" && order.status !== "tolbor_huleej_bn") {
+        return {
+          error: "Хэрэглэгч зөвхөн agent авахаас өмнө эсвэл тайлан хараад цуцлах боломжтой",
+          status: 400
+        };
+      }
+
+      // Cannot cancel if payment already verified
+      if (order.userPaymentVerified) {
+        return { error: "Төлбөр баталгаажсан тул цуцлах боломжгүй", status: 400 };
       }
 
       order.status = "tsutsalsan_zahialga";

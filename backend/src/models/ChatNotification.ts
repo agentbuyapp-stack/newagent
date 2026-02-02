@@ -13,7 +13,6 @@ const ChatNotificationSchema = new Schema<IChatNotification>(
     orderId: {
       type: Schema.Types.ObjectId,
       required: true,
-      index: true,
     },
     recipientId: {
       type: Schema.Types.ObjectId,

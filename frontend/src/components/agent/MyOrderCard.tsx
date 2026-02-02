@@ -7,8 +7,11 @@ import { getStatusText } from "@/lib/orderHelpers";
 import { useVoiceRecording } from "@/hooks/useVoiceRecording";
 import { OrderCardVoice, NewVoiceGlow, useIsNewVoiceMessage } from "@/components/OrderCardVoice";
 
+type ViewModeType = "card" | "list" | "compact";
+
 interface MyOrderCardProps {
   order: Order;
+  viewMode?: ViewModeType;
   agentReport?: AgentReport | null;
   exchangeRate: number;
   canArchive: boolean;
@@ -59,6 +62,7 @@ function getProgressPercent(status: Order["status"]): number {
 
 function MyOrderCard({
   order,
+  viewMode = "card",
   agentReport,
   exchangeRate,
   canArchive,
@@ -154,6 +158,49 @@ function MyOrderCard({
 
   const theme = isDark ? "dark" : "light";
 
+  // Compact View - Simple list with just name, status, and expand button
+  if (viewMode === "compact") {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-all px-4 py-2.5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              order.status === "amjilttai_zahialga"
+                ? "bg-green-500"
+                : order.status === "tsutsalsan_zahialga"
+                  ? "bg-red-500"
+                  : order.status === "tolbor_huleej_bn"
+                    ? "bg-blue-500"
+                    : order.status === "agent_sudlaj_bn"
+                      ? "bg-yellow-500"
+                      : "bg-gray-400"
+            }`}
+          />
+          {needsReport && (
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+          )}
+          <span className="text-sm text-gray-900 dark:text-white truncate">
+            {order.productName}
+          </span>
+          {agentReport && (
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+              {calculateUserPaymentAmount(agentReport, exchangeRate).toLocaleString()}₮
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => onViewOrder(order)}
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+        >
+          <svg className="w-4 h-4 text-gray-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // Card View (default)
   return (
     <div className="relative rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-300 overflow-hidden p-4 bg-linear-to-br from-white via-gray-50 to-gray-100 dark:from-slate-800 dark:via-slate-700 dark:to-slate-900">
       {/* New voice message glow effect */}
@@ -261,6 +308,13 @@ function MyOrderCard({
               {(order.user?.profile?.cargo || userSnapshot?.cargo) && (
                 <span className="text-gray-500 dark:text-slate-400"> • {order.user?.profile?.cargo || userSnapshot?.cargo}</span>
               )}
+            </p>
+          )}
+
+          {/* Cancel Reason */}
+          {order.status === "tsutsalsan_zahialga" && order.cancelReason && (
+            <p className="text-xs text-red-500 dark:text-red-400 mt-1 italic truncate">
+              Шалтгаан: {order.cancelReason}
             </p>
           )}
         </div>

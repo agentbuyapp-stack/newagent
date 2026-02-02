@@ -16,7 +16,7 @@ import {
 } from "../controllers/bundleOrderController";
 import { requireRole } from "../middleware/requireRole";
 import { validate, validateParams } from "../middleware/validate";
-import { createBundleOrderSchema, mongoIdSchema } from "../schemas";
+import { createBundleOrderSchema, updateBundleOrderStatusSchema, mongoIdSchema } from "../schemas";
 import { orderLimiter } from "../middleware/rateLimit";
 
 const router = Router();
@@ -25,7 +25,7 @@ const router = Router();
 router.get("/", requireRole(["user", "agent", "admin"]), getBundleOrders);
 router.get("/:id", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), getBundleOrder);
 router.post("/", requireRole(["user", "admin"]), orderLimiter, validate(createBundleOrderSchema), createBundleOrder);
-router.put("/:id/status", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), updateBundleOrderStatus);
+router.put("/:id/status", requireRole(["user", "agent", "admin"]), validateParams(mongoIdSchema), validate(updateBundleOrderStatusSchema), updateBundleOrderStatus);
 router.put("/:id/items/:itemId/status", requireRole(["agent", "admin"]), updateBundleItemStatus);
 router.post("/:id/items/:itemId/report", requireRole(["agent", "admin"]), createBundleItemReport);
 router.post("/:id/report", requireRole(["agent", "admin"]), validateParams(mongoIdSchema), createBundleReport);

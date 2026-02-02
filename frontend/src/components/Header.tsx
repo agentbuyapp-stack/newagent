@@ -11,7 +11,14 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { apiClient, type User } from "@/lib/api";
 
 // Footer page-үүд (нэвтрэлгүйгээр харах боломжтой)
-const publicPages = ["/about", "/terms", "/privacy", "/faq", "/tutorial", "/help"];
+const publicPages = [
+  "/about",
+  "/terms",
+  "/privacy",
+  "/faq",
+  "/tutorial",
+  "/help",
+];
 
 export default function Header() {
   const pathname = usePathname();
@@ -63,9 +70,23 @@ export default function Header() {
   return (
     <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
-        <Link href={isSignedIn ? getDashboardUrl() : "/"} className="flex items-center gap-2 sm:gap-3">
-          <img src="/icon.png" alt="AgentBuy" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
-          <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">Agentbuy.mn</span>
+        <Link
+          href={isSignedIn ? getDashboardUrl() : "/"}
+          className="flex items-center gap-2"
+        >
+          <img
+            src="/icon.png"
+            alt="AgentBuy"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg"
+          />
+          <div className="flex flex-col">
+            <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-tight">
+              Agentbuy.mn
+            </span>
+            <span className="text-[6px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              Худалдан авалт хялбар боллоо
+            </span>
+          </div>
         </Link>
         {!isPublicPage ? (
           <SignedIn>
@@ -82,8 +103,18 @@ export default function Header() {
               href={getDashboardUrl()}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
               </svg>
               Буцах
             </Link>

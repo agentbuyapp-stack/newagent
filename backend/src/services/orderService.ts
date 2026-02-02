@@ -549,35 +549,100 @@ export class OrderService {
         return { error: "Invalid status", status: 400 };
       }
 
-      // Require cancel reason for agents
-      if (status === "tsutsalsan_zahialga" && role === "agent") {
-        if (!cancelReason || cancelReason.trim().length < 5) {
-          return { error: "Cancel reason is required (minimum 5 characters)", status: 400 };
-        }
-      }
-
       const order = await Order.findById(orderId).lean();
       if (!order) {
         return { error: "Order not found", status: 404 };
       }
 
-      // Validate status transitions
-      const validTransitions: Record<string, string[]> = {
-        "niitlegdsen": ["agent_sudlaj_bn", "tsutsalsan_zahialga"],
-        "agent_sudlaj_bn": ["tolbor_huleej_bn", "tsutsalsan_zahialga"],
-        "tolbor_huleej_bn": ["amjilttai_zahialga", "tsutsalsan_zahialga"],
-        "amjilttai_zahialga": [], // Final state - no transitions allowed
-        "tsutsalsan_zahialga": [], // Final state - no transitions allowed
-      };
-
       const currentStatus = order.status;
-      const allowedNextStatuses = validTransitions[currentStatus] || [];
+      const orderUserId = order.userId?.toString();
+      const orderAgentId = order.agentId?.toString();
 
-      if (!allowedNextStatuses.includes(status)) {
-        return {
-          error: `"${currentStatus}" статусаас "${status}" статус руу шилжих боломжгүй`,
-          status: 400
+      // ========== ROLE-SPECIFIC CANCELLATION RULES ==========
+      if (status === "tsutsalsan_zahialga") {
+        // User cancellation rules
+        if (role === "user") {
+          // User must own the order
+          if (orderUserId !== userId) {
+            return { error: "Зөвхөн өөрийн захиалгыг цуцлах боломжтой", status: 403 };
+          }
+          // User can cancel from: niitlegdsen (before agent takes) OR tolbor_huleej_bn (after seeing report)
+          if (currentStatus !== "niitlegdsen" && currentStatus !== "tolbor_huleej_bn") {
+            return {
+              error: "Хэрэглэгч зөвхөн agent авахаас өмнө эсвэл тайлан хараад цуцлах боломжтой",
+              status: 400
+            };
+          }
+        }
+        // Agent cancellation rules
+        else if (role === "agent") {
+          // Agent must be assigned to order
+          if (orderAgentId !== userId) {
+            return { error: "Зөвхөн өөрт оноогдсон захиалгыг цуцлах боломжтой", status: 403 };
+          }
+          // Agent can only cancel from agent_sudlaj_bn (before sending report)
+          if (currentStatus !== "agent_sudlaj_bn") {
+            return {
+              error: "Agent зөвхөн тайлан илгээхээс өмнө цуцлах боломжтой",
+              status: 400
+            };
+          }
+          // Agent requires cancel reason
+          if (!cancelReason || cancelReason.trim().length < 5) {
+            return { error: "Цуцлах шалтгаан шаардлагатай (хамгийн багадаа 5 тэмдэгт)", status: 400 };
+          }
+        }
+        // Admin cancellation rules
+        else if (role === "admin") {
+          // Admin can cancel from amjilttai_zahialga (if user falsely confirmed payment)
+          // Admin can also cancel from any other status
+          if (currentStatus === "tsutsalsan_zahialga") {
+            return { error: "Захиалга аль хэдийн цуцлагдсан", status: 400 };
+          }
+        }
+      }
+      // ========== OTHER STATUS TRANSITION RULES ==========
+      else {
+        // Define valid transitions for non-cancel status changes
+        const validTransitions: Record<string, Record<string, string[]>> = {
+          agent: {
+            "niitlegdsen": ["agent_sudlaj_bn"],
+            "agent_sudlaj_bn": ["tolbor_huleej_bn"],
+            "tolbor_huleej_bn": [],
+            "amjilttai_zahialga": [],
+            "tsutsalsan_zahialga": [],
+          },
+          admin: {
+            "niitlegdsen": ["agent_sudlaj_bn"],
+            "agent_sudlaj_bn": ["tolbor_huleej_bn"],
+            "tolbor_huleej_bn": ["amjilttai_zahialga"],
+            "amjilttai_zahialga": [],
+            "tsutsalsan_zahialga": [],
+          },
+          user: {
+            // Users can't change to other statuses (only cancel handled above)
+            "niitlegdsen": [],
+            "agent_sudlaj_bn": [],
+            "tolbor_huleej_bn": [],
+            "amjilttai_zahialga": [],
+            "tsutsalsan_zahialga": [],
+          },
         };
+
+        const roleTransitions = validTransitions[role] || validTransitions.user;
+        const allowedNextStatuses = roleTransitions[currentStatus] || [];
+
+        if (!allowedNextStatuses.includes(status)) {
+          return {
+            error: `"${currentStatus}" статусаас "${status}" статус руу шилжих боломжгүй`,
+            status: 400
+          };
+        }
+
+        // Agent can only take orders that aren't assigned
+        if (status === "agent_sudlaj_bn" && role === "agent" && order.agentId) {
+          return { error: "Энэ захиалга аль хэдийн agent авсан байна", status: 400 };
+        }
       }
 
       const updateData: any = { status };

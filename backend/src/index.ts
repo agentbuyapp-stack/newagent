@@ -28,6 +28,8 @@ import uploadRoutes from "./routes/uploadRoutes";
 import bundleOrderRoutes from "./routes/bundleOrderRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import cardRoutes from "./routes/cardRoutes";
+import bannerRoutes from "./routes/bannerRoutes";
+import productShowcaseRoutes from "./routes/productShowcaseRoutes";
 import { initCronJobs } from "./services/cronService";
 
 const app = express();
@@ -101,6 +103,8 @@ app.use("/upload-image", uploadRoutes);
 app.use("/bundle-orders", bundleOrderRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/cards", cardRoutes);
+app.use("/banners", bannerRoutes);
+app.use("/showcases", productShowcaseRoutes);
 
 // 404 handler
 app.use((_req, res) => {
