@@ -477,3 +477,50 @@ export const processExpiredBatches = async () => {
 
   console.log(`Processed ${expiredBatch1.length} expired batches`);
 };
+
+// ============ Support Chat Notifications ============
+
+// Notify admins: Support handoff requested
+export const notifyAdminSupportHandoff = async (
+  sessionId: string,
+  visitorInfo?: string
+) => {
+  // Get all admins
+  const admins = await User.find({ role: "admin" }).lean();
+
+  if (admins.length === 0) return;
+
+  const title = "Дэмжлэг хүсэлт ирлээ";
+  const message = visitorInfo
+    ? `${visitorInfo} хэрэглэгч дэмжлэг хүсэж байна. Session: ${sessionId}`
+    : `Хэрэглэгч дэмжлэг хүсэж байна. Session: ${sessionId}`;
+
+  // Bulk insert notifications
+  const notifications = admins.map((admin) => ({
+    userId: admin._id,
+    type: "support_handoff" as NotificationType,
+    title,
+    message,
+  }));
+  await Notification.insertMany(notifications);
+
+  // Send emails in parallel
+  await Promise.all(
+    admins.map(async (admin) => {
+      const emailEnabled = await isEmailNotificationEnabled(admin._id);
+      if (emailEnabled) {
+        const profile = await Profile.findOne({ userId: admin._id }).lean();
+        if (profile?.email) {
+          await sendEmail(
+            profile.email,
+            title,
+            message,
+            `<h2>Дэмжлэг хүсэлт</h2><p>${message}</p><a href="https://agentbuy.mn/admin/dashboard">Админ хэсэгт очих</a>`
+          );
+        }
+      }
+    })
+  );
+
+  console.log(`[Support] Notified ${admins.length} admins about support handoff`);
+};

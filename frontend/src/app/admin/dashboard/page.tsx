@@ -21,6 +21,7 @@ import SpecialtyManager from "@/components/admin/SpecialtyManager";
 import CardManager from "@/components/admin/CardManager";
 import BannerManager from "@/components/admin/BannerManager";
 import ShowcaseManager from "@/components/admin/ShowcaseManager";
+import KnowledgeBaseTab from "@/components/admin/KnowledgeBaseTab";
 
 type ActiveTabType =
   | "agents"
@@ -32,7 +33,8 @@ type ActiveTabType =
   | "specialties"
   | "cards"
   | "banners"
-  | "showcase";
+  | "showcase"
+  | "knowledge";
 
 const COLORS = { primary: "#6366f1", secondary: "#8b5cf6" };
 
@@ -209,6 +211,21 @@ const SIDEBAR_ICONS: Record<ActiveTabType, React.ReactNode> = {
       />
     </svg>
   ),
+  knowledge: (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+      />
+    </svg>
+  ),
 };
 
 export default function AdminDashboardPage() {
@@ -318,6 +335,7 @@ export default function AdminDashboardPage() {
     { key: "cards", label: "Карт", amber: true },
     { key: "banners", label: "Баннер" },
     { key: "showcase", label: "Бүтээгдэхүүн" },
+    { key: "knowledge", label: "Knowledge Base" },
   ];
 
   return (
@@ -523,6 +541,7 @@ export default function AdminDashboardPage() {
             {activeTab === "cards" && <CardManager />}
             {activeTab === "banners" && <BannerManager />}
             {activeTab === "showcase" && <ShowcaseManager />}
+            {activeTab === "knowledge" && <KnowledgeBaseTab />}
           </div>
         </main>
       </div>

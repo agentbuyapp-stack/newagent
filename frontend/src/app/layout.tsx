@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SupportWidget from "@/components/SupportWidget";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +45,9 @@ export default function RootLayout({
           <Header />
           {children}
           <Footer />
+
+          {/* AI Support Widget */}
+          <SupportWidget />
         </body>
       </html>
     </ClerkProvider>

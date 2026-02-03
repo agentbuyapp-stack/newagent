@@ -163,3 +163,48 @@ export const clerkAuth = async (
     });
   }
 };
+
+/**
+ * Alias for clerkAuth - requires authentication
+ */
+export const requireClerkAuth = clerkAuth;
+
+/**
+ * Optional authentication - continues even if no token provided
+ * Useful for routes that work for both guests and logged-in users
+ */
+export const optionalClerkAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+
+  // If no auth header, continue without user
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Set auth object for compatibility
+    (req as any).auth = { userId: null };
+    return next();
+  }
+
+  // If auth header exists, try to authenticate
+  try {
+    const sessionToken = authHeader.substring(7);
+
+    if (!process.env.CLERK_SECRET_KEY) {
+      (req as any).auth = { userId: null };
+      return next();
+    }
+
+    const { sub: userId } = await verifyToken(sessionToken, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
+
+    (req as any).auth = { userId };
+    next();
+  } catch (error) {
+    // On error, continue as guest
+    (req as any).auth = { userId: null };
+    next();
+  }
+};
