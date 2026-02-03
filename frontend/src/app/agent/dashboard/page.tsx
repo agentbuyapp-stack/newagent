@@ -16,8 +16,6 @@ import {
   CargosSection,
   AgentOrderDetailModal,
 } from "@/components/agent";
-import BannerDisplay from "@/components/BannerDisplay";
-import ProductShowcaseDisplay from "@/components/ProductShowcaseDisplay";
 
 const ChatModal = dynamic(() => import("@/components/ChatModal"), { ssr: false });
 const AgentReportForm = dynamic(() => import("@/components/AgentReportForm"), { ssr: false });
@@ -170,8 +168,6 @@ export default function AgentDashboardPage() {
           )}
 
           <CargosSection cargos={cargos} />
-          <ProductShowcaseDisplay />
-          <BannerDisplay className="mt-4" />
         </div>
       </main>
 

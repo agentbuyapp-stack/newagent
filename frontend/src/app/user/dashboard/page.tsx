@@ -13,8 +13,6 @@ import NewOrderForm from "@/components/dashboard/NewOrderForm";
 import OrderHistorySection from "@/components/dashboard/OrderHistorySection";
 import ProfileForm from "@/components/ProfileForm";
 import { CargosSection, TopAgentsSection, OrderDetailModal, AgentDetailModal } from "@/components/user";
-import BannerDisplay from "@/components/BannerDisplay";
-import ProductShowcaseDisplay from "@/components/ProductShowcaseDisplay";
 
 const ChatModal = dynamic(() => import("@/components/ChatModal"), { ssr: false });
 const BundleOrderDetailModal = dynamic(() => import("@/components/dashboard/BundleOrderDetailModal"), { ssr: false });
@@ -124,8 +122,6 @@ export default function UserDashboardPage() {
 
           <CargosSection cargos={cargos} />
           <TopAgentsSection agents={agents} onAgentClick={(a) => { setSelectedAgent(a); setShowAgentModal(true); }} />
-          <ProductShowcaseDisplay />
-          <BannerDisplay className="mt-4" />
         </div>
       </main>
 

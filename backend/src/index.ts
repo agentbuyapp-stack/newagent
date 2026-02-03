@@ -28,8 +28,6 @@ import uploadRoutes from "./routes/uploadRoutes";
 import bundleOrderRoutes from "./routes/bundleOrderRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import cardRoutes from "./routes/cardRoutes";
-import bannerRoutes from "./routes/bannerRoutes";
-import productShowcaseRoutes from "./routes/productShowcaseRoutes";
 import supportRoutes from "./routes/supportRoutes";
 import { initCronJobs } from "./services/cronService";
 import { seedKnowledgeBase } from "./models/KnowledgeBase";
@@ -108,8 +106,6 @@ app.use("/upload-image", uploadRoutes);
 app.use("/bundle-orders", bundleOrderRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/cards", cardRoutes);
-app.use("/banners", bannerRoutes);
-app.use("/showcases", productShowcaseRoutes);
 
 // 404 handler
 app.use((_req, res) => {
