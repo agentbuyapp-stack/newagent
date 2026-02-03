@@ -30,7 +30,9 @@ import notificationRoutes from "./routes/notificationRoutes";
 import cardRoutes from "./routes/cardRoutes";
 import bannerRoutes from "./routes/bannerRoutes";
 import productShowcaseRoutes from "./routes/productShowcaseRoutes";
+import supportRoutes from "./routes/supportRoutes";
 import { initCronJobs } from "./services/cronService";
+import { seedKnowledgeBase } from "./models/KnowledgeBase";
 
 const app = express();
 
@@ -83,6 +85,9 @@ app.get("/health", async (_req, res) => {
 // Public routes (before authentication)
 app.use("/auth", authLimiter, authRoutes);
 
+// Support routes (has its own auth handling - public + admin)
+app.use("/support", supportRoutes);
+
 // Use Clerk authentication for protected routes
 app.use(clerkAuth);
 
@@ -116,8 +121,11 @@ app.use(errorHandler);
 
 // Connect to MongoDB
 connectDB()
-  .then(() => {
+  .then(async () => {
     logger.info("MongoDB connected successfully");
+
+    // Seed knowledge base with default data
+    await seedKnowledgeBase();
 
     // Initialize cron jobs for email processing and notifications
     initCronJobs();
