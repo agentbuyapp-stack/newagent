@@ -5,6 +5,7 @@ import { checkOrderLimits } from "../utils/orderLimits";
 import { OrderStatus } from "../models/Order";
 import mongoose from "mongoose";
 import { cardService } from "./cardService";
+import { notifyAdminBundlePaymentRequest } from "./notificationService";
 
 interface BundleOrderResult {
   order?: any;
@@ -670,6 +671,15 @@ class BundleOrderService {
 
       order.userPaymentVerified = true;
       await order.save();
+
+      // Notify admin about payment verification request
+      const profile = await Profile.findOne({ userId }).lean();
+      const userName = profile?.name || "Хэрэглэгч";
+      notifyAdminBundlePaymentRequest(
+        order._id as mongoose.Types.ObjectId,
+        order.items.length,
+        userName
+      ).catch((err) => console.error("Failed to notify admin:", err));
 
       return {
         order: {

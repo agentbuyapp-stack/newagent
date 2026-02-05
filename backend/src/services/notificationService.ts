@@ -253,6 +253,44 @@ export const notifyAdminPaymentRequest = async (
   );
 };
 
+// Notify admin: Bundle order payment verification request
+export const notifyAdminBundlePaymentRequest = async (
+  bundleOrderId: mongoose.Types.ObjectId,
+  itemCount: number,
+  userName: string
+) => {
+  // Get all admins
+  const admins = await User.find({ role: "admin" }).lean();
+
+  if (admins.length === 0) return;
+
+  const title = "Bundle захиалгын төлбөр баталгаажуулах хүсэлт";
+  const message = `${userName} хэрэглэгч ${itemCount} барааны bundle захиалгын төлбөр баталгаажуулах хүсэлт илгээлээ.`;
+
+  // Bulk insert notifications (avoid N+1)
+  const notifications = admins.map((admin) => ({
+    userId: admin._id,
+    type: "payment_verification_request" as const,
+    title,
+    message,
+    orderId: bundleOrderId,
+  }));
+  await Notification.insertMany(notifications);
+
+  // Send emails in parallel
+  await Promise.all(
+    admins.map(async (admin) => {
+      const emailEnabled = await isEmailNotificationEnabled(admin._id);
+      if (emailEnabled) {
+        const profile = await Profile.findOne({ userId: admin._id }).lean();
+        if (profile?.email) {
+          await sendEmail(profile.email, title, message);
+        }
+      }
+    })
+  );
+};
+
 // Notify admin: Reward request
 export const notifyAdminRewardRequest = async (
   _agentId: mongoose.Types.ObjectId,
