@@ -247,10 +247,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {new Date(order.createdAt).toLocaleDateString("mn-MN", {
-              year: "numeric",
+            {new Date(order.createdAt).toLocaleDateString("en-US", {
               month: "short",
-              day: "numeric",
+              day: "2-digit",
             })}
           </p>
           {/* Track Code */}
@@ -507,9 +506,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 </button>
               )}
               <p className="text-xs text-slate-400">
-                {new Date(order.createdAt).toLocaleDateString("mn-MN", {
+                {new Date(order.createdAt).toLocaleDateString("en-US", {
                   month: "short",
-                  day: "numeric",
+                  day: "2-digit",
                 })}
               </p>
             </div>
@@ -551,13 +550,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </div>
       )}
 
-      {/* Buttons - Bottom */}
-      <div className="relative z-10 grid grid-cols-4 gap-1.5 mt-3">
+      {/* Buttons - Bottom (evenly distributed) */}
+      <div className="relative z-10 flex justify-around items-center mt-3">
         {/* Track Code Button */}
-        {order.trackCode ? (
+        {order.trackCode && (
           <button
             onClick={handleCopyTrackCode}
-            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
           >
             <svg
               className="w-4 h-4"
@@ -574,14 +573,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             </svg>
             {copied ? "Хуулсан" : "Трак"}
           </button>
-        ) : (
-          <div />
         )}
 
         {hasReport && onViewReport ? (
           <button
             onClick={() => onViewReport(order)}
-            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
           >
             <svg
               className="w-4 h-4"
@@ -601,7 +598,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         ) : (
           <button
             onClick={() => onViewDetails(order)}
-            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
           >
             <svg
               className="w-4 h-4"
@@ -626,7 +623,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </button>
         )}
 
-        {order.status !== "tsutsalsan_zahialga" ? (
+        {order.status !== "tsutsalsan_zahialga" && (
           <div className="flex items-center justify-center gap-1">
             {/* Voice playback for latest message */}
             {latestVoiceMessage && !isRecordingMode && (
@@ -663,8 +660,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               Чат
             </button>
           </div>
-        ) : (
-          <div />
         )}
 
         {canDelete && onDelete ? (
@@ -676,7 +671,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               }
             }}
             disabled={deleteLoading}
-            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {deleteLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -697,14 +692,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             )}
             {deleteLoading ? "..." : "Устгах"}
           </button>
-        ) : canArchive && onArchive ? (
+        ) : canArchive && onArchive && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onArchive(order);
             }}
             disabled={archiveLoading}
-            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-8 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {archiveLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -725,8 +720,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             )}
             {archiveLoading ? "..." : "Архив"}
           </button>
-        ) : (
-          <div />
         )}
       </div>
     </div>

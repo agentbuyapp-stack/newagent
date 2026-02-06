@@ -5,16 +5,17 @@ interface AnimatedIconsHomeProps {
   imgURL: string;
 }
 
-export const AnimatedIconsHome = ({ classname, style, imgURL }: AnimatedIconsHomeProps) => {
+export const AnimatedIconsHome = ({
+  classname,
+  style,
+  imgURL,
+}: AnimatedIconsHomeProps) => {
   return (
-    <div
-      className={classname}
-      style={{ animation: style }}
-    >
+    <div className={classname} style={{ animation: style }}>
       <img
         src={imgURL}
         alt="icon"
-        className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl shadow-lg object-cover"
+        className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-xl shadow-lg object-cover"
       />
     </div>
   );

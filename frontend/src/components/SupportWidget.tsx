@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSupportChat } from "@/hooks/useSupportChat";
 
 export default function SupportWidget() {
@@ -8,6 +8,11 @@ export default function SupportWidget() {
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Drag state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
 
   const {
     messages,
@@ -18,6 +23,84 @@ export default function SupportWidget() {
     requestHumanSupport,
     clearChat,
   } = useSupportChat();
+
+  // Load saved position from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("supportWidgetPosition");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setPosition(parsed);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  // Save position to localStorage
+  useEffect(() => {
+    if (position.x !== 0 || position.y !== 0) {
+      localStorage.setItem("supportWidgetPosition", JSON.stringify(position));
+    }
+  }, [position]);
+
+  // Drag handlers
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+    setIsDragging(true);
+  }, [position]);
+
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging || !dragRef.current) return;
+
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+    const deltaX = clientX - dragRef.current.startX;
+    const deltaY = clientY - dragRef.current.startY;
+
+    // Calculate new position (inverted because we're using right/bottom positioning)
+    let newX = dragRef.current.startPosX + deltaX;
+    let newY = dragRef.current.startPosY + deltaY;
+
+    // Constrain to viewport
+    const maxX = window.innerWidth - 80;
+    const maxY = window.innerHeight - 80;
+    newX = Math.max(-24, Math.min(maxX - 24, newX));
+    newY = Math.max(-24, Math.min(maxY - 24, newY));
+
+    setPosition({ x: newX, y: newY });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    dragRef.current = null;
+  }, []);
+
+  // Add/remove drag listeners
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleDragMove);
+      window.addEventListener("mouseup", handleDragEnd);
+      window.addEventListener("touchmove", handleDragMove);
+      window.addEventListener("touchend", handleDragEnd);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleDragMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("touchmove", handleDragMove);
+      window.removeEventListener("touchend", handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -47,12 +130,27 @@ export default function SupportWidget() {
     }
   };
 
+  // Handle button click (only if not dragging)
+  const handleButtonClick = () => {
+    if (!isDragging) {
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <>
-      {/* Chat Button */}
+      {/* Chat Button - Draggable */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 hover:scale-105"
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        onClick={handleButtonClick}
+        style={{
+          right: `${24 - position.x}px`,
+          bottom: `${24 - position.y}px`,
+        }}
+        className={`fixed z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 ${
+          isDragging ? "cursor-grabbing scale-110" : "cursor-grab hover:scale-105"
+        }`}
         aria-label="Support Chat"
       >
         {isOpen ? (
@@ -88,7 +186,13 @@ export default function SupportWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200">
+        <div
+          style={{
+            right: `${24 - position.x}px`,
+            bottom: `${96 - position.y}px`,
+          }}
+          className="fixed z-50 flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200"
+        >
           {/* Header */}
           <div className="flex items-center justify-between bg-blue-600 px-4 py-3 text-white">
             <div className="flex items-center gap-2">

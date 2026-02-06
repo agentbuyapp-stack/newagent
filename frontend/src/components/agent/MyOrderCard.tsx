@@ -286,9 +286,9 @@ function MyOrderCard({
                 </button>
               )}
               <p className="text-xs text-gray-500 dark:text-slate-400">
-                {new Date(order.createdAt).toLocaleDateString("mn-MN", {
+                {new Date(order.createdAt).toLocaleDateString("en-US", {
                   month: "short",
-                  day: "numeric",
+                  day: "2-digit",
                 })}
               </p>
             </div>
@@ -351,12 +351,12 @@ function MyOrderCard({
         </div>
       )}
 
-      {/* Buttons - Bottom (4-column grid) */}
-      <div className="relative z-10 grid grid-cols-4 gap-1.5 mt-3">
+      {/* Buttons - Bottom (evenly distributed) */}
+      <div className="relative z-10 flex justify-around items-center mt-3">
         {/* View Button */}
         <button
           onClick={() => onViewOrder(order)}
-          className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+          className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -365,22 +365,20 @@ function MyOrderCard({
           Харах
         </button>
 
-        {/* Report or Chat Button */}
-        {needsReport ? (
+        {/* Report Button */}
+        {needsReport && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onOpenReportForm(order, !!isBundleOrder);
             }}
-            className="h-8 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+            className="h-8 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Тайлан
           </button>
-        ) : (
-          <div />
         )}
 
         {/* Chat Button with Voice */}
@@ -420,21 +418,21 @@ function MyOrderCard({
               e.stopPropagation();
               onClearOrder(order.id);
             }}
-            className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-red-500 dark:text-red-400 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1"
+            className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-red-500 dark:text-red-400 rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             Устгах
           </button>
-        ) : canArchive ? (
+        ) : canArchive && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onArchiveOrder(order.id);
             }}
             disabled={archiveLoading}
-            className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-8 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-lg text-sm font-medium transition-all inline-flex items-center justify-center gap-1 px-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {archiveLoading ? (
               <div className="w-4 h-4 border-2 border-gray-500 dark:border-white border-t-transparent rounded-full animate-spin" />
@@ -445,8 +443,6 @@ function MyOrderCard({
             )}
             {archiveLoading ? "..." : "Архив"}
           </button>
-        ) : (
-          <div />
         )}
       </div>
     </div>

@@ -125,9 +125,9 @@ export function PublishedOrdersSection({
                               </span>
                             )}
                             <span className="text-[10px] text-slate-400 shrink-0">
-                              {new Date(order.createdAt).toLocaleDateString("mn-MN", {
+                              {new Date(order.createdAt).toLocaleDateString("en-US", {
                                 month: "short",
-                                day: "numeric",
+                                day: "2-digit",
                               })}
                             </span>
                           </div>

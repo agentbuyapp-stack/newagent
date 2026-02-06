@@ -292,10 +292,9 @@ export const BundleOrderCard: React.FC<BundleOrderCardProps> = ({
             </span>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {new Date(bundleOrder.createdAt).toLocaleDateString("mn-MN", {
-              year: "numeric",
+            {new Date(bundleOrder.createdAt).toLocaleDateString("en-US", {
               month: "short",
-              day: "numeric",
+              day: "2-digit",
             })}
           </p>
           {/* Track Code */}
