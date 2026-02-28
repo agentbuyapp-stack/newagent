@@ -17,7 +17,7 @@ async function main() {
     
     if (!user) {
       console.error(`❌ User олдсонгүй: ${email}`);
-      console.log("Эхлээд Clerk дээр бүртгүүлэх хэрэгтэй.");
+      console.log("Эхлээд бүртгүүлэх хэрэгтэй.");
       process.exit(1);
     }
     

@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -50,8 +49,13 @@ const saveSessionId = (sessionId: string) => {
   localStorage.setItem("support_session_id", sessionId);
 };
 
+// Helper to get auth token from localStorage
+const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+};
+
 export const useSupportChat = (): UseSupportChatReturn => {
-  const { getToken } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +72,7 @@ export const useSupportChat = (): UseSupportChatReturn => {
 
   const loadSession = async (sid: string) => {
     try {
-      const token = await getToken();
+      const token = getAuthToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -108,7 +112,7 @@ export const useSupportChat = (): UseSupportChatReturn => {
       setMessages((prev) => [...prev, userMessage]);
 
       try {
-        const token = await getToken();
+        const token = getAuthToken();
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
@@ -157,7 +161,7 @@ export const useSupportChat = (): UseSupportChatReturn => {
         setIsLoading(false);
       }
     },
-    [sessionId, getToken]
+    [sessionId]
   );
 
   const requestHumanSupport = useCallback(async () => {
@@ -167,7 +171,7 @@ export const useSupportChat = (): UseSupportChatReturn => {
     setError(null);
 
     try {
-      const token = await getToken();
+      const token = getAuthToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -201,7 +205,7 @@ export const useSupportChat = (): UseSupportChatReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, getToken]);
+  }, [sessionId]);
 
   const clearChat = useCallback(() => {
     setMessages([]);

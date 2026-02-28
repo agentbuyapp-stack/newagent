@@ -9,7 +9,6 @@ export { useUserActions } from "./useUserActions";
 export { useUserData } from "./useUserData";
 export { useAdminData } from "./useAdminData";
 export { useAdminActions } from "./useAdminActions";
-export { useAgentData } from "./useAgentData";
 
 // Types
 export type { OrderFilterType } from "./useAgentOrders";

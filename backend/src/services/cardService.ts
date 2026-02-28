@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { User, Profile, CardTransaction, CardTransactionType } from "../models";
 
-const INITIAL_CARDS = 5;
+const INITIAL_CARDS = 1;
 
 export interface CardHistoryItem {
   id: string;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SupportWidget from "@/components/SupportWidget";
@@ -35,21 +35,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    >
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <AuthProvider>
           <Header />
           {children}
           <Footer />
 
           {/* AI Support Widget */}
           <SupportWidget />
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

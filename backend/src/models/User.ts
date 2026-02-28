@@ -21,8 +21,11 @@ export interface IAgentProfile {
 }
 
 export interface IUser extends Document {
+  phone?: string;
+  password?: string;
   email: string;
   role: Role;
+  orderCredits: number;
   isApproved: boolean;
   approvedAt?: Date;
   approvedBy?: string;
@@ -35,6 +38,15 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
+    phone: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+    },
     email: {
       type: String,
       required: true,
@@ -46,6 +58,11 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["user", "agent", "admin"],
       default: "user",
+    },
+    orderCredits: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
     isApproved: {
       type: Boolean,
@@ -96,4 +113,3 @@ const UserSchema = new Schema<IUser>(
 );
 
 export const User = (mongoose.models.User as mongoose.Model<IUser>) || mongoose.model<IUser>("User", UserSchema);
-

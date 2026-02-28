@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Cargo } from "@/lib/api";
+
+const PER_PAGE = 5;
 
 interface CargosSectionProps {
   cargos: Cargo[];
@@ -9,6 +11,13 @@ interface CargosSectionProps {
 
 export function CargosSection({ cargos }: CargosSectionProps) {
   const [showCargos, setShowCargos] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(cargos.length / PER_PAGE);
+  const paginated = useMemo(
+    () => cargos.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [cargos, page]
+  );
 
   if (cargos.length === 0) return null;
 
@@ -60,9 +69,23 @@ export function CargosSection({ cargos }: CargosSectionProps) {
 
       {showCargos && (
         <div className="mt-4 space-y-3">
-          {cargos.map((cargo) => (
+          {paginated.map((cargo) => (
             <CargoCard key={cargo.id} cargo={cargo} />
           ))}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button onClick={() => setPage(Math.max(page - 1, 1))} disabled={page === 1}
+                className="px-2.5 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="text-xs text-gray-500">{page} / {totalPages}</span>
+              <button onClick={() => setPage(Math.min(page + 1, totalPages))} disabled={page === totalPages}
+                className="px-2.5 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

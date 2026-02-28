@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Order, User, BundleOrder, AgentReport, LatestVoiceMessage } from "@/lib/api";
 
-export type OrderFilterType = "active" | "completed" | "cancelled" | "archived";
+export type OrderFilterType = "all" | "active" | "completed" | "cancelled" | "archived";
 
 interface UseAgentOrdersOptions {
   orders: Order[];
@@ -49,7 +49,7 @@ export function useAgentOrders({
 }: UseAgentOrdersOptions): UseAgentOrdersReturn {
   const ITEMS_PER_PAGE = 10;
 
-  const [orderFilter, setOrderFilter] = useState<OrderFilterType>("active");
+  const [orderFilter, setOrderFilter] = useState<OrderFilterType>("all");
   const [myOrdersPage, setMyOrdersPage] = useState(1);
   const [latestVoiceMessages, setLatestVoiceMessages] = useState<
     Record<string, LatestVoiceMessage | null>
@@ -122,13 +122,12 @@ export function useAgentOrders({
     if (orderFilter === "archived") {
       return archivedOrders;
     }
-
+    if (orderFilter === "all") {
+      return myOrders;
+    }
     return myOrders.filter((order) => {
       if (orderFilter === "active") {
-        return (
-          order.status === "agent_sudlaj_bn" ||
-          order.status === "tolbor_huleej_bn"
-        );
+        return order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn";
       }
       if (orderFilter === "completed") {
         return order.status === "amjilttai_zahialga";

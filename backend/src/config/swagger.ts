@@ -24,7 +24,7 @@ const options: swaggerJsdoc.Options = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Clerk JWT token",
+          description: "JWT authentication token",
         },
       },
       schemas: {

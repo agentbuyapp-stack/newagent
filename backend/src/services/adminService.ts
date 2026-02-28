@@ -1,5 +1,6 @@
-import { User, Profile, Order, BundleOrder, AdminSettings, RewardRequest, AgentReport } from "../models";
+import { User, Profile, Order, BundleOrder, AdminSettings, RewardRequest, AgentReport, PackageRequest } from "../models";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import { notifyAgentPaymentVerified } from "./notificationService";
 import { cardService } from "./cardService";
 
@@ -24,43 +25,44 @@ const formatUser = (user: any) => {
 
 class AdminService {
   /**
-   * Add new agent
+   * Add new agent (admin creates with phone + password + email)
    */
-  async addAgent(email: string, adminId: string): Promise<AdminResult> {
+  async addAgent(data: { phone: string; password: string; email: string; displayName?: string }, adminId: string): Promise<AdminResult> {
     try {
-      if (!email || typeof email !== "string") {
-        return { error: "Email is required", status: 400 };
+      const { phone, password, email, displayName } = data;
+
+      if (!phone || !password || !email) {
+        return { error: "Утас, нууц үг, email бүгд шаардлагатай", status: 400 };
       }
 
-      // Check if user exists
-      let user = await User.findOne({ email: email.toLowerCase().trim() });
-
-      if (!user) {
-        // Create new user with agent role
-        user = await User.create({
-          email: email.toLowerCase().trim(),
-          role: "agent",
-          isApproved: true,
-          approvedAt: new Date(),
-          approvedBy: adminId,
-        });
-      } else {
-        // Update existing user to agent role
-        user = await User.findByIdAndUpdate(
-          user._id,
-          {
-            role: "agent",
-            isApproved: true,
-            approvedAt: new Date(),
-            approvedBy: adminId,
-          },
-          { new: true }
-        );
+      const cleanPhone = phone.replace(/\D/g, "");
+      if (cleanPhone.length !== 8) {
+        return { error: "Утасны дугаар 8 оронтой байх ёстой", status: 400 };
       }
 
-      if (!user) {
-        return { error: "Failed to create/update user", status: 500 };
+      // Check for existing phone or email
+      const existingPhone = await User.findOne({ phone: cleanPhone }).lean();
+      if (existingPhone) {
+        return { error: "Энэ утасны дугаар бүртгэлтэй байна", status: 409 };
       }
+
+      const existingEmail = await User.findOne({ email: email.toLowerCase().trim() }).lean();
+      if (existingEmail) {
+        return { error: "Энэ email бүртгэлтэй байна", status: 409 };
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        phone: cleanPhone,
+        password: hashedPassword,
+        email: email.toLowerCase().trim(),
+        role: "agent",
+        isApproved: true,
+        approvedAt: new Date(),
+        approvedBy: adminId,
+        agentProfile: displayName ? { displayName } : undefined,
+      });
 
       // Get profile if exists
       const profile = await Profile.findOne({ userId: user._id }).lean();
@@ -69,7 +71,7 @@ class AdminService {
     } catch (error: any) {
       console.error("Error adding agent:", error);
       if (error.code === 11000) {
-        return { error: "Email already exists", status: 409 };
+        return { error: "Утас эсвэл email аль хэдийн бүртгэлтэй", status: 409 };
       }
       return { error: "Failed to add agent", status: 500 };
     }
@@ -245,11 +247,12 @@ class AdminService {
         return { error: "Invalid order ID", status: 400 };
       }
 
-      // Update order status to "amjilttai_zahialga" and set userPaymentVerified to true
+      // Update order status to "amjilttai_zahialga" and set userPaymentVerified + agentPaymentPaid
       const order = await Order.findByIdAndUpdate(
         orderId,
         {
           userPaymentVerified: true,
+          agentPaymentPaid: true,
           status: "amjilttai_zahialga"
         },
         { new: true }
@@ -259,21 +262,87 @@ class AdminService {
         return { error: "Order not found", status: 404 };
       }
 
-      // Notify agent about payment verified
+      // Auto-add agent bonus points when user payment is verified
       if (order.agentId) {
         const agentReport = await AgentReport.findOne({
           orderId: new mongoose.Types.ObjectId(orderId)
         }).lean();
-        const amount = agentReport?.userAmount || 0;
+        const userAmount = agentReport?.userAmount || 0;
 
         const agentIdObj = typeof order.agentId === 'object' && order.agentId !== null
           ? (order.agentId as any)._id || order.agentId
           : new mongoose.Types.ObjectId(String(order.agentId));
+
+        // Calculate agent bonus: userAmount * exchangeRate * 5%
+        const settings = await AdminSettings.findOne().lean();
+        const exchangeRate = settings?.exchangeRate || 1;
+        const agentBonus = userAmount * exchangeRate * 0.05;
+
+        if (agentBonus > 0) {
+          // Calculate success rate
+          const [totalOrders, successfulOrders] = await Promise.all([
+            Order.countDocuments({ agentId: agentIdObj }),
+            Order.countDocuments({ agentId: agentIdObj, status: "amjilttai_zahialga" })
+          ]);
+          const newSuccessRate = totalOrders > 0
+            ? Math.round((successfulOrders / totalOrders) * 100)
+            : 100;
+
+          // Add bonus points and update agent stats
+          await User.findByIdAndUpdate(
+            agentIdObj,
+            [
+              {
+                $set: {
+                  agentPoints: { $add: [{ $ifNull: ["$agentPoints", 0] }, agentBonus] },
+                  agentProfile: {
+                    $mergeObjects: [
+                      {
+                        specialties: [],
+                        rank: 999,
+                        isTopAgent: false,
+                        totalTransactions: 0,
+                        successRate: 0,
+                        languages: [],
+                        featured: false,
+                        availabilityStatus: "offline"
+                      },
+                      { $ifNull: ["$agentProfile", {}] },
+                      {
+                        totalTransactions: {
+                          $add: [
+                            { $ifNull: ["$agentProfile.totalTransactions", 0] },
+                            1
+                          ]
+                        },
+                        successRate: newSuccessRate
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          );
+
+          console.log(`[AUTO-BONUS] Agent ${agentIdObj.toString()} earned ${agentBonus.toFixed(2)}₮ bonus for order ${orderId}`);
+        }
+
+        // Refund card to user for successful order
+        const orderUser = await User.findById(order.userId).lean();
+        if (orderUser && orderUser.role === "user") {
+          await cardService.refundCardsForOrder(
+            order.userId.toString(),
+            orderId,
+            1
+          );
+        }
+
+        // Notify agent
         notifyAgentPaymentVerified(
           agentIdObj,
           new mongoose.Types.ObjectId(orderId),
           order.productName,
-          amount
+          userAmount
         ).catch((err) => console.error("Failed to notify agent:", err));
       }
 
@@ -590,9 +659,15 @@ class AdminService {
     accountName?: string;
     bank?: string;
     exchangeRate?: number;
+    galleryImages?: string[];
+    galleryItems?: { url: string; caption?: string }[];
+    heroImages?: string[];
+    orderLimitEnabled?: boolean;
+    maxOrdersPerDay?: number;
+    maxActiveOrders?: number;
   }): Promise<AdminResult> {
     try {
-      const { accountNumber, accountName, bank, exchangeRate } = data;
+      const { accountNumber, accountName, bank, exchangeRate, galleryImages, galleryItems, heroImages, orderLimitEnabled, maxOrdersPerDay, maxActiveOrders } = data;
 
       let settings = await AdminSettings.findOne().lean();
 
@@ -603,18 +678,31 @@ class AdminService {
           accountName: accountName || undefined,
           bank: bank || undefined,
           exchangeRate: exchangeRate || undefined,
+          galleryImages: galleryImages || [],
+          galleryItems: galleryItems || [],
+          heroImages: heroImages || [],
+          orderLimitEnabled: orderLimitEnabled ?? true,
+          maxOrdersPerDay: maxOrdersPerDay ?? 10,
+          maxActiveOrders: maxActiveOrders ?? 10,
         });
         settings = await AdminSettings.findById(newSettings._id).lean();
       } else {
         // Update existing settings
+        const updateData: any = {};
+        if (accountNumber !== undefined) updateData.accountNumber = accountNumber;
+        if (accountName !== undefined) updateData.accountName = accountName;
+        if (bank !== undefined) updateData.bank = bank;
+        if (exchangeRate !== undefined) updateData.exchangeRate = exchangeRate;
+        if (galleryImages !== undefined) updateData.galleryImages = galleryImages;
+        if (galleryItems !== undefined) updateData.galleryItems = galleryItems;
+        if (heroImages !== undefined) updateData.heroImages = heroImages;
+        if (orderLimitEnabled !== undefined) updateData.orderLimitEnabled = orderLimitEnabled;
+        if (maxOrdersPerDay !== undefined) updateData.maxOrdersPerDay = maxOrdersPerDay;
+        if (maxActiveOrders !== undefined) updateData.maxActiveOrders = maxActiveOrders;
+
         settings = await AdminSettings.findByIdAndUpdate(
           settings._id,
-          {
-            accountNumber: accountNumber !== undefined ? accountNumber : settings.accountNumber,
-            accountName: accountName !== undefined ? accountName : settings.accountName,
-            bank: bank !== undefined ? bank : settings.bank,
-            exchangeRate: exchangeRate !== undefined ? exchangeRate : settings.exchangeRate,
-          },
+          updateData,
           { new: true }
         ).lean();
       }
@@ -1007,6 +1095,165 @@ class AdminService {
     } catch (error: any) {
       console.error("Error recalculating agent stats:", error);
       return { error: "Failed to recalculate agent stats", status: 500 };
+    }
+  }
+  /**
+   * Get all package requests
+   */
+  async getPackageRequests(): Promise<AdminResult> {
+    try {
+      const requests = await PackageRequest.find({})
+        .populate("userId", null, User)
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const userIds = requests.map(r => {
+        if (!r.userId) return null;
+        if (typeof r.userId === 'object' && (r.userId as any)._id) return (r.userId as any)._id.toString();
+        return String(r.userId);
+      }).filter(Boolean) as string[];
+
+      const profiles = userIds.length > 0
+        ? await Profile.find({ userId: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) } }).lean()
+        : [];
+      const profileMap = new Map(profiles.map(p => [p.userId.toString(), p]));
+
+      const formatted = requests.map(req => {
+        let userIdStr = '';
+        if (req.userId) {
+          if (typeof req.userId === 'object' && (req.userId as any)._id) {
+            userIdStr = (req.userId as any)._id.toString();
+          } else {
+            userIdStr = String(req.userId);
+          }
+        }
+
+        const user = req.userId && typeof req.userId === 'object'
+          ? { ...req.userId, profile: profileMap.get(userIdStr) || null }
+          : null;
+
+        return {
+          ...req,
+          id: req._id.toString(),
+          userId: userIdStr,
+          user: user ? formatUser(user) : null,
+        };
+      });
+
+      return { data: formatted };
+    } catch (error) {
+      console.error("Error getting package requests:", error);
+      return { error: "Failed to get package requests", status: 500 };
+    }
+  }
+
+  /**
+   * Approve package request — add cards to user
+   */
+  async approvePackageRequest(requestId: string, adminId: string): Promise<AdminResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(requestId)) {
+        return { error: "Invalid request ID", status: 400 };
+      }
+
+      const request = await PackageRequest.findById(requestId).lean();
+      if (!request) return { error: "Хүсэлт олдсонгүй", status: 404 };
+      if (request.status !== "pending") return { error: "Хүсэлт аль хэдийн шийдвэрлэгдсэн", status: 400 };
+
+      const cardsToAdd = parseInt(request.packageType);
+
+      // Add cards to user
+      const userId = request.userId.toString();
+      const user = await User.findById(userId);
+      if (!user) return { error: "Хэрэглэгч олдсонгүй", status: 404 };
+
+      user.researchCards = (user.researchCards || 0) + cardsToAdd;
+      await user.save();
+
+      // Update request status
+      await PackageRequest.findByIdAndUpdate(requestId, {
+        status: "approved",
+        processedBy: adminId,
+        processedAt: new Date(),
+      });
+
+      return { data: { message: `${cardsToAdd} карт хэрэглэгчид нэмэгдлээ`, cardsAdded: cardsToAdd } };
+    } catch (error) {
+      console.error("Error approving package request:", error);
+      return { error: "Failed to approve package request", status: 500 };
+    }
+  }
+
+  /**
+   * Reject package request
+   */
+  async rejectPackageRequest(requestId: string, adminId: string): Promise<AdminResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(requestId)) {
+        return { error: "Invalid request ID", status: 400 };
+      }
+
+      const request = await PackageRequest.findById(requestId).lean();
+      if (!request) return { error: "Хүсэлт олдсонгүй", status: 404 };
+      if (request.status !== "pending") return { error: "Хүсэлт аль хэдийн шийдвэрлэгдсэн", status: 400 };
+
+      await PackageRequest.findByIdAndUpdate(requestId, {
+        status: "rejected",
+        processedBy: adminId,
+        processedAt: new Date(),
+      });
+
+      return { data: { message: "Хүсэлт татгалзагдлаа" } };
+    } catch (error) {
+      console.error("Error rejecting package request:", error);
+      return { error: "Failed to reject package request", status: 500 };
+    }
+  }
+
+  /**
+   * Manually add credits/cards to a user
+   */
+  async addUserCredits(userId: string, amount: number, _adminId: string): Promise<AdminResult> {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return { error: "Invalid user ID", status: 400 };
+      }
+      if (!amount || amount < 1) {
+        return { error: "Нэмэх картын тоо 1-ээс их байх ёстой", status: 400 };
+      }
+
+      const user = await User.findById(userId);
+      if (!user) return { error: "Хэрэглэгч олдсонгүй", status: 404 };
+
+      user.researchCards = (user.researchCards || 0) + amount;
+      await user.save();
+
+      return { data: { message: `${amount} карт нэмэгдлээ`, newBalance: user.researchCards } };
+    } catch (error) {
+      console.error("Error adding user credits:", error);
+      return { error: "Failed to add credits", status: 500 };
+    }
+  }
+
+  /**
+   * Get all users (admin)
+   */
+  async getUsers(): Promise<AdminResult> {
+    try {
+      const users = await User.find({}).sort({ createdAt: -1 }).lean();
+      const userIds = users.map(u => u._id);
+      const profiles = await Profile.find({ userId: { $in: userIds } }).lean();
+      const profileMap = new Map(profiles.map(p => [p.userId.toString(), p]));
+
+      const formatted = users.map(u => formatUser({
+        ...u,
+        profile: profileMap.get(u._id.toString()) || null,
+      }));
+
+      return { data: formatted };
+    } catch (error) {
+      console.error("Error getting users:", error);
+      return { error: "Failed to get users", status: 500 };
     }
   }
 }

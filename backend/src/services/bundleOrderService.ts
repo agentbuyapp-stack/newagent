@@ -4,7 +4,7 @@ import { Profile } from "../models/Profile";
 import { checkOrderLimits } from "../utils/orderLimits";
 import { OrderStatus } from "../models/Order";
 import mongoose from "mongoose";
-import { cardService } from "./cardService";
+// cardService removed — using daily order limit instead
 import { notifyAdminBundlePaymentRequest } from "./notificationService";
 
 interface BundleOrderResult {
@@ -162,11 +162,6 @@ class BundleOrderService {
           return { error: limitCheck.reason, status: 429 };
         }
 
-        // Check if user has enough cards for all items (1 card per item)
-        const hasEnoughCards = await cardService.hasEnoughCards(userId, role, items.length);
-        if (!hasEnoughCards) {
-          return { error: `Судалгааны карт хүрэлцэхгүй байна. ${items.length} бараанд ${items.length} карт шаардлагатай.`, status: 400 };
-        }
       }
 
       // Get user profile for snapshot
@@ -201,11 +196,6 @@ class BundleOrderService {
         })),
         status: "niitlegdsen",
       });
-
-      // Deduct cards for users after successful order creation (1 card per item)
-      if (role === "user") {
-        await cardService.deductCardsForBundleOrder(userId, order._id.toString(), items.length);
-      }
 
       return {
         order: {
@@ -793,23 +783,9 @@ class BundleOrderService {
         return { error: "Сүүлийн барааг хасах боломжгүй. Захиалга цуцлах уу?", status: 400 };
       }
 
-      const itemName = item.productName;
-
       // Remove the item
       order.items.pull(itemId);
       await order.save();
-
-      // Burn the card for the removed item (record the transaction but don't refund)
-      // Only burn card if the order was created by a user (not agent/admin)
-      const orderUser = await User.findById(order.userId);
-      if (orderUser && orderUser.role === "user") {
-        await cardService.burnCardForRemovedItem(
-          order.userId.toString(),
-          orderId,
-          itemId,
-          itemName
-        );
-      }
 
       // Reload the order to get the full data
       const updatedOrder = await BundleOrder.findById(orderId).lean();

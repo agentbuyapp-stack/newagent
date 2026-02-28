@@ -23,7 +23,7 @@ interface UseAdminDataOptions {
     getRewardRequests: () => Promise<RewardRequest[]>;
     getAgentReport: (orderId: string) => Promise<AgentReport | null>;
   };
-  clerkUser: { primaryEmailAddress?: { emailAddress?: string } | null } | null | undefined;
+  authUser?: { email?: string; id?: string } | null | undefined;
 }
 
 interface UseAdminDataReturn {
@@ -62,7 +62,7 @@ interface UseAdminDataReturn {
 
 export function useAdminData({
   apiClient,
-  clerkUser,
+  authUser,
 }: UseAdminDataOptions): UseAdminDataReturn {
   const [user, setUser] = useState<User | null>(null);
   const [agents, setAgents] = useState<User[]>([]);
@@ -86,10 +86,10 @@ export function useAdminData({
 
   const loadData = useCallback(
     async (includeRewards = true) => {
-      if (!clerkUser) return;
+      if (!authUser) return;
 
       try {
-        const email = clerkUser.primaryEmailAddress?.emailAddress || "";
+        const email = authUser?.email || "";
         if (!email) {
           setError("Имэйл олдсонгүй");
           setLoading(false);
@@ -195,7 +195,7 @@ export function useAdminData({
         setLoading(false);
       }
     },
-    [clerkUser, apiClient]
+    [authUser, apiClient]
   );
 
   return {

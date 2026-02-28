@@ -1,17 +1,15 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function SignOutButton() {
-  const { signOut } = useClerk();
+  const { logout } = useAuthContext();
   const router = useRouter();
 
-  const handleSignOut = async () => {
-    if (!confirm("Та системээс гарахдаа итгэлтэй байна уу?")) {
-      return;
-    }
-    await signOut();
+  const handleSignOut = () => {
+    if (!confirm("Та системээс гарахдаа итгэлтэй байна уу?")) return;
+    logout();
     router.push("/");
   };
 

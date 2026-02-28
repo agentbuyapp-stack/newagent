@@ -8,7 +8,7 @@ export interface ISupportMessage {
 
 export interface ISupportChat extends Document {
   sessionId: string;
-  clerkUserId?: string;
+  userId?: string;
   visitorId: string;
   messages: ISupportMessage[];
   status: "active" | "waiting_human" | "resolved";
@@ -48,7 +48,7 @@ const SupportChatSchema = new Schema<ISupportChat>(
       unique: true,
       index: true,
     },
-    clerkUserId: {
+    userId: {
       type: String,
       index: true,
     },
@@ -79,7 +79,7 @@ const SupportChatSchema = new Schema<ISupportChat>(
 
 // Indexes for efficient queries
 SupportChatSchema.index({ status: 1, createdAt: -1 });
-SupportChatSchema.index({ clerkUserId: 1, createdAt: -1 });
+SupportChatSchema.index({ userId: 1, createdAt: -1 });
 
 export const SupportChat =
   (mongoose.models.SupportChat as mongoose.Model<ISupportChat>) ||

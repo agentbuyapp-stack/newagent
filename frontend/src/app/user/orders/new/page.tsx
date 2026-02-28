@@ -177,7 +177,7 @@ export default function NewOrderPage() {
 
       if (createdOrders.length > 0) {
         // Success - redirect to dashboard
-        router.push("/user/dashboard");
+        router.push("/");
       } else {
         setError("Бүх захиалга үүсгэхэд алдаа гарлаа");
         setLoading(false);
@@ -216,7 +216,7 @@ export default function NewOrderPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link
-              href="/user/dashboard"
+              href="/"
               className="text-blue-500 hover:text-blue-600 text-base font-medium"
             >
               ← Буцах

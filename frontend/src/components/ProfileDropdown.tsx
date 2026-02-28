@@ -3,16 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { type User, type Profile } from "@/lib/api";
-import { useApiClient } from "@/lib/useApiClient";
+import { apiClient } from "@/lib/api";
 import ProfileForm from "./ProfileForm";
 
 export default function ProfileDropdown() {
-  const { user: clerkUser } = useUser();
-  const { signOut } = useClerk();
+  const { user: authUser, logout, isAuthenticated } = useAuthContext();
   const router = useRouter();
-  const apiClient = useApiClient();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -21,11 +19,11 @@ export default function ProfileDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (clerkUser) {
+    if (isAuthenticated) {
       loadProfile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clerkUser]);
+  }, [isAuthenticated]);
 
   // For agents, refresh points periodically and on window focus
   useEffect(() => {
@@ -68,7 +66,7 @@ export default function ProfileDropdown() {
   }, [isOpen]);
 
   const loadProfile = async () => {
-    if (!clerkUser) return;
+    if (!isAuthenticated) return;
 
     setLoading(true);
     try {
@@ -105,7 +103,7 @@ export default function ProfileDropdown() {
     if (!confirm("Та системээс гарахдаа итгэлтэй байна уу?")) {
       return;
     }
-    await signOut();
+    logout();
     router.push("/");
   };
 
@@ -250,7 +248,7 @@ export default function ProfileDropdown() {
                       Имэйл
                     </label>
                     <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                      {clerkUser?.primaryEmailAddress?.emailAddress}
+                      {authUser?.email || user?.email}
                     </p>
                   </div>
 

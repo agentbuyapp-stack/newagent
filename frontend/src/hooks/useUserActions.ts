@@ -69,11 +69,10 @@ export function useUserActions({
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [removeItemLoading, setRemoveItemLoading] = useState<string | null>(null);
 
-  // Check if order can be cancelled
+  // Check if order can be cancelled (cancel + archive)
   const canCancelOrder = useCallback((order: Order) => {
     return (
       order.status === "niitlegdsen" ||
-      order.status === "tsutsalsan_zahialga" ||
       order.status === "tolbor_huleej_bn"
     );
   }, []);

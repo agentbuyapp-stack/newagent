@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import Footer from "@/components/Footer";
 
 interface FAQItem {
   question: string;
@@ -66,33 +64,32 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Content */}
-      <main className="flex-1 py-12">
+      <main className="flex-1 py-8 sm:py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
             Түгээмэл асуулт хариулт
           </h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-[13px] sm:text-base text-gray-600 mb-5 sm:mb-8">
             Хэрэглэгчдээс ихэвчлэн асуудаг асуултууд болон хариултууд
           </p>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="border-b border-gray-200 last:border-b-0"
+                className="border-b border-gray-100 last:border-b-0"
               >
                 <button
                   onClick={() =>
                     setOpenIndex(openIndex === index ? null : index)
                   }
-                  className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 sm:px-6 py-3 sm:py-4 text-left flex items-center justify-between gap-3 sm:gap-4 hover:bg-gray-50 transition-colors"
                 >
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-gray-900 text-[13px] sm:text-base">
                     {faq.question}
                   </span>
                   <svg
-                    className={`w-5 h-5 text-gray-500 shrink-0 transition-transform ${openIndex === index ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 shrink-0 transition-transform ${openIndex === index ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -106,8 +103,8 @@ export default function FAQPage() {
                   </svg>
                 </button>
                 {openIndex === index && (
-                  <div className="px-6 pb-4">
-                    <p className="text-gray-600 leading-relaxed">
+                  <div className="px-4 sm:px-6 pb-3 sm:pb-4">
+                    <p className="text-[13px] sm:text-base text-gray-600 leading-relaxed">
                       {faq.answer}
                     </p>
                   </div>
@@ -116,19 +113,19 @@ export default function FAQPage() {
             ))}
           </div>
 
-          <div className="mt-8 bg-blue-50 rounded-2xl p-6 text-center">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="mt-6 sm:mt-8 bg-blue-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2">
               Асуултаа олсонгүй юу?
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-[13px] sm:text-base text-gray-600 mb-3 sm:mb-4">
               Бидэнтэй холбогдоорой, бид танд туслахдаа баяртай байна.
             </p>
             <a
               href="mailto:agentbuy.app@gmail.com"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-[13px] sm:text-base"
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

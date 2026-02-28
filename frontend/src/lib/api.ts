@@ -4,6 +4,7 @@ export type Role = "user" | "agent" | "admin";
 
 export interface User {
   id: string;
+  phone?: string;
   email: string;
   role: Role;
   isApproved?: boolean;
@@ -11,6 +12,7 @@ export interface User {
   approvedBy?: string;
   agentPoints?: number;
   researchCards?: number;
+  orderCredits?: number;
   profile?: Profile;
 }
 
@@ -27,9 +29,15 @@ export interface Profile {
   updatedAt: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
 export interface RegisterData {
+  phone: string;
+  password: string;
   email: string;
-  role?: Role;
 }
 
 export interface ProfileData {
@@ -51,6 +59,8 @@ export interface Order {
   description: string;
   imageUrl?: string; // Keep for backward compatibility
   imageUrls?: string[]; // Array of image URLs
+  audioUrl?: string;
+  label?: string;
   status: OrderStatus;
   userPaymentVerified?: boolean;
   agentPaymentPaid?: boolean;
@@ -67,29 +77,35 @@ export interface Order {
 export interface OrderData {
   productName?: string;
   description?: string;
-  imageUrl?: string; // Keep for backward compatibility
-  imageUrls?: string[]; // Array of image URLs (max 3)
+  imageUrl?: string;
+  imageUrls?: string[];
+  audioUrl?: string;
   products?: Array<{
     productName: string;
     description: string;
     imageUrls?: string[];
-  }>; // Multiple products in one order
+  }>;
+}
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
 }
 
 class ApiClient {
   private baseUrl: string;
-  private getToken: (() => Promise<string | null>) | null = null;
+  private token: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
   /**
-   * Set the function to get Clerk session token
-   * Call this with useAuth().getToken from Clerk
+   * Set JWT token for authenticated requests
    */
-  setTokenGetter(getToken: () => Promise<string | null>) {
-    this.getToken = getToken;
+  setToken(token: string | null) {
+    this.token = token;
   }
 
   async getHeaders(): Promise<HeadersInit> {
@@ -97,18 +113,10 @@ class ApiClient {
       "Content-Type": "application/json",
     };
 
-    // Get Clerk session token if available
-    if (this.getToken) {
-      const token = await this.getToken();
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      } else if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === "true") {
-        // Development mode: Skip authentication header
-        console.warn("⚠️  Development mode: Clerk authentication disabled");
-      }
-    } else if (process.env.NEXT_PUBLIC_DISABLE_CLERK_AUTH === "true") {
-      // Development mode: Skip authentication header
-      console.warn("⚠️  Development mode: Clerk authentication disabled");
+    // Read token from instance or fallback to localStorage
+    const token = this.token || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     return headers;
@@ -138,38 +146,88 @@ class ApiClient {
           errorData = { error: `HTTP error! status: ${response.status}` };
         }
 
-        // Log error for debugging
-        console.error(`API Error [${response.status}]:`, {
-          endpoint,
-          url,
-          error: errorData.error || errorData.message,
-          details: errorData,
-        });
+        // Auto-clear stale token on 401
+        if (response.status === 401) {
+          this.token = null;
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("token");
+          }
+        }
+
+        // Only log non-401 errors (401 is expected for expired sessions)
+        if (response.status !== 401) {
+          // Use warn for 404 (expected for missing reports/voice messages)
+          const logFn = response.status === 404 ? console.warn : console.error;
+          logFn(`API ${response.status} ${endpoint}:`, errorData.error || errorData.message || "");
+        }
 
         throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       return response.json();
     } catch (error: unknown) {
-      // Enhanced error logging
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error("API Request failed:", {
-        endpoint,
-        url,
-        error: errorMessage,
-        stack: errorStack,
-      });
+      // Only log network errors (not API errors which are already logged above)
+      if (error instanceof TypeError) {
+        console.error("Network error:", { endpoint, error: error.message });
+      }
       throw error;
     }
   }
 
   // Auth endpoints
-  // Note: With Clerk, registration is handled by Clerk. This endpoint is kept for backward compatibility.
-  async register(data: RegisterData): Promise<User> {
-    return this.request<User>("/auth/register", {
+  async login(phone: string, password: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>("/auth/login", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ phone, password }),
+    });
+  }
+
+  async adminLogin(email: string, password: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>("/auth/admin-login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async registerUser(phone: string, password: string, email: string, name: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ phone, password, email, name }),
+    });
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyOtp(email: string, otp: string): Promise<{ tempToken: string }> {
+    return this.request<{ tempToken: string }>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async resetPassword(tempToken: string, newPassword: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ tempToken, newPassword }),
+    });
+  }
+
+  async claimAccount(tempToken: string, phone: string, newPassword: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>("/auth/claim-account", {
+      method: "POST",
+      body: JSON.stringify({ tempToken, phone, newPassword }),
+    });
+  }
+
+  async purchasePackage(packageType: string): Promise<{ id: string; packageType: string; status: string; message: string }> {
+    return this.request<{ id: string; packageType: string; status: string; message: string }>("/orders/purchase-package", {
+      method: "POST",
+      body: JSON.stringify({ packageType }),
     });
   }
 
@@ -200,6 +258,10 @@ class ApiClient {
 
   async getOrders(): Promise<Order[]> {
     return this.request<Order[]>("/orders");
+  }
+
+  async getArchivedOrders(): Promise<Order[]> {
+    return this.request<Order[]>("/orders/archived");
   }
 
   async getOrder(orderId: string): Promise<Order> {
@@ -242,10 +304,10 @@ class ApiClient {
   }
 
   // Admin endpoints
-  async addAgent(email: string): Promise<User> {
+  async addAgent(data: { phone: string; password: string; email: string; displayName?: string }): Promise<User> {
     return this.request<User>("/admin/agents", {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(data),
     });
   }
 
@@ -268,6 +330,14 @@ class ApiClient {
   async getPublicAgents(): Promise<PublicAgent[]> {
     // Public endpoint - get approved agents with stats
     return this.request<PublicAgent[]>("/agents/public");
+  }
+
+  async getGalleryImages(): Promise<GalleryItem[]> {
+    return this.request<GalleryItem[]>("/gallery");
+  }
+
+  async getHeroImages(): Promise<string[]> {
+    return this.request<string[]>("/hero-images");
   }
 
   async getTopAgents(): Promise<PublicAgent[]> {
@@ -469,6 +539,12 @@ class ApiClient {
     });
   }
 
+  async deleteAgentReport(orderId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/orders/${orderId}/report`, {
+      method: "DELETE",
+    });
+  }
+
   // Reward request endpoints (agent)
   async getMyRewardRequests(): Promise<RewardRequest[]> {
     return this.request<RewardRequest[]>("/agents/reward-requests");
@@ -635,6 +711,43 @@ class ApiClient {
       body: JSON.stringify({ image: base64 }),
     });
     return { imageUrl: result.url };
+  }
+
+  // Daily order limit
+  async getDailyLimit(): Promise<{ todayCount: number; maxPerDay: number; remaining: number }> {
+    return this.request<{ todayCount: number; maxPerDay: number; remaining: number }>("/orders/daily-limit");
+  }
+
+  // Label endpoints
+  async getLabels(): Promise<Label[]> {
+    return this.request<Label[]>("/labels");
+  }
+
+  async createLabel(name: string, color: string): Promise<Label> {
+    return this.request<Label>("/labels", {
+      method: "POST",
+      body: JSON.stringify({ name, color }),
+    });
+  }
+
+  async deleteLabel(labelId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/labels/${labelId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async updateOrderLabel(orderId: string, label: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/labels/orders/${orderId}`, {
+      method: "PUT",
+      body: JSON.stringify({ label }),
+    });
+  }
+
+  async bulkUpdateOrderLabel(orderIds: string[], label: string): Promise<{ success: boolean; modifiedCount: number }> {
+    return this.request<{ success: boolean; modifiedCount: number }>("/labels/orders-bulk", {
+      method: "PUT",
+      body: JSON.stringify({ orderIds, label }),
+    });
   }
 
   // Card (Research Cards) endpoints
@@ -827,6 +940,11 @@ export interface FooterSettings {
   twitter?: string;
 }
 
+export interface GalleryItem {
+  url: string;
+  caption?: string;
+}
+
 export interface AdminSettings {
   id: string;
   accountNumber?: string;
@@ -836,6 +954,9 @@ export interface AdminSettings {
   orderLimitEnabled?: boolean;
   maxOrdersPerDay?: number;
   maxActiveOrders?: number;
+  galleryImages?: string[];
+  galleryItems?: GalleryItem[];
+  heroImages?: string[];
   footer?: FooterSettings;
   createdAt: string;
   updatedAt: string;
@@ -849,6 +970,9 @@ export interface AdminSettingsData {
   orderLimitEnabled?: boolean;
   maxOrdersPerDay?: number;
   maxActiveOrders?: number;
+  galleryImages?: string[];
+  galleryItems?: GalleryItem[];
+  heroImages?: string[];
   footer?: FooterSettings;
 }
 

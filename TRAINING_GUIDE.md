@@ -59,7 +59,7 @@ User захиалга үүсгэнэ
 | **TypeScript** | Төрлийн аюулгүй байдал |
 | **MongoDB + Mongoose** | Өгөгдлийн сан |
 | **Socket.io** | Real-time харилцаа |
-| **Clerk** | Аутентикаци |
+| **JWT (jsonwebtoken)** | Аутентикаци |
 | **Anthropic Claude** | AI support чатбот |
 | **Cloudinary** | Зураг/аудио хадгалах |
 | **Nodemailer** | И-мэйл илгээх |
@@ -73,7 +73,7 @@ User захиалга үүсгэнэ
 | **React 19** | UI library |
 | **TypeScript** | Төрлийн аюулгүй байдал |
 | **Tailwind CSS v4** | Загвар (Styling) |
-| **Clerk** | Аутентикаци (frontend) |
+| **AuthContext** | Аутентикаци (JWT + localStorage) |
 | **Socket.io Client** | Real-time холболт |
 
 ---
@@ -139,19 +139,24 @@ app.use(cors(corsOptions));  // CORS тохиргоо
 app.use(express.json());     // JSON парсинг
 app.use(rateLimit);          // Rate limiting
 
-// Route-ууд
+// Public route-ууд (auth шаардахгүй)
 app.use("/auth", authRoutes);
-app.use("/me", clerkAuth, authRoutes);
-app.use("/profile", clerkAuth, profileRoutes);
-app.use("/orders", clerkAuth, orderRoutes);
-app.use("/bundle-orders", clerkAuth, bundleOrderRoutes);
-app.use("/admin", clerkAuth, adminRoutes);
+app.use("/support", supportRoutes);
+
+// JWT auth middleware
+app.use(auth);
+
+// Protected route-ууд (auth шаардлагатай)
+app.get("/me", getMe);
+app.use("/profile", profileRoutes);
+app.use("/orders", orderRoutes);
+app.use("/bundle-orders", bundleOrderRoutes);
+app.use("/admin", adminRoutes);
 app.use("/agents", agentRoutes);
 app.use("/cargos", cargoRoutes);
-app.use("/cards", clerkAuth, cardRoutes);
-app.use("/notifications", clerkAuth, notificationRoutes);
-app.use("/support", supportRoutes);
-app.use("/upload-image", clerkAuth, uploadRoutes);
+app.use("/cards", cardRoutes);
+app.use("/notifications", notificationRoutes);
+app.use("/upload-image", uploadRoutes);
 ```
 
 ### 4.2 Controller жишээ
@@ -228,14 +233,14 @@ export const createOrder = async (userId: string, body: any) => {
 
 ### 4.4 Middleware
 
-**Аутентикаци** (`middleware/clerkAuth.ts`):
+**Аутентикаци** (`middleware/auth.ts`):
 ```typescript
-// Clerk token шалгаж, MongoDB User-тэй холбоно
-export const clerkAuth = async (req, res, next) => {
+// JWT token шалгаж, MongoDB User-тэй холбоно
+export const auth = async (req, res, next) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
-  const clerkUser = await verifyToken(token);
-  const user = await User.findOne({ email: clerkUser.email });
-  req.user = user;
+  const decoded = jwt.verify(token, JWT_SECRET); // { id, role }
+  const user = await User.findById(decoded.id);
+  req.user = { id: user._id.toString(), role: user.role };
   next();
 };
 ```
@@ -328,19 +333,14 @@ class ApiClient {
 }
 ```
 
-**ApiClient-г Hook-оор ашиглах:**
+**ApiClient singleton:**
 
 ```typescript
-// frontend/src/lib/useApiClient.ts
+// frontend/src/lib/api.ts
 
-export function useApiClient() {
-  const { getToken } = useAuth(); // Clerk-ийн hook
-
-  return useMemo(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-    return new ApiClient(apiUrl, getToken);
-  }, [getToken]);
-}
+// Token-г localStorage-аас авч Authorization header-т нэмнэ
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export const apiClient = new ApiClient(API_BASE_URL);
 ```
 
 ### 5.3 Компонент бүтэц
@@ -644,39 +644,37 @@ Research card нь захиалга үүсгэхэд шаардлагатай д
 
 ## 8. Аутентикаци ба авторизаци
 
-### 8.1 Clerk холболт
+### 8.1 JWT аутентикаци
+
+**Бүртгэл/Нэвтрэлт:**
+
+```typescript
+// POST /auth/register → { phone, password, email } → JWT token (30 хоног)
+// POST /auth/login    → { phone, password }         → JWT token (30 хоног)
+```
 
 **Серверийн тал:**
 
 ```typescript
-// middleware/clerkAuth.ts - Ерөнхий урсгал
+// middleware/auth.ts - Ерөнхий урсгал
 
 1. Client → Bearer token илгээнэ (Authorization header)
-2. clerkAuth middleware:
-   a. Token-г задлана
-   b. Clerk API-аар шалгана (verifyToken)
-   c. Clerk user-ийн email-аар MongoDB User олно
-   d. Байхгүй бол шинэ User үүсгэнэ
-   e. req.user = MongoDB User object
+2. auth middleware:
+   a. Token-г задлана (jwt.verify)
+   b. Decoded { id, role } авна
+   c. MongoDB User.findById(id) хайна
+   d. req.user = { id, role }
 3. Дараагийн middleware/controller руу дамжуулна
 ```
 
 **Клиентийн тал:**
 
 ```typescript
-// frontend/src/lib/useApiClient.ts
+// frontend/src/contexts/AuthContext.tsx
 
-import { useAuth } from "@clerk/nextjs";
-
-export function useApiClient() {
-  const { getToken } = useAuth();
-
-  return useMemo(() => {
-    return new ApiClient(API_URL, getToken);
-  }, [getToken]);
-}
-
-// Дуудлага хийхэд автоматаар Bearer token нэмнэ
+// Token-г localStorage-д хадгална
+// ApiClient Authorization: Bearer {token} нэмнэ
+// 401 хариу ирвэл автоматаар logout хийнэ
 ```
 
 ### 8.2 Роль шалгах
@@ -946,8 +944,7 @@ export const uploadToCloudinary = async (base64: string): Promise<string> => {
 
 | Hook | Файл | Зориулалт |
 |------|------|-----------|
-| `useUserData` | `hooks/useUserData.ts` | User dashboard-ийн бүх өгөгдөл |
-| `useAgentData` | `hooks/useAgentData.ts` | Agent dashboard-ийн бүх өгөгдөл |
+| `useUserData` | `hooks/useUserData.ts` | User/Agent-ийн бүх өгөгдөл |
 | `useAdminData` | `hooks/useAdminData.ts` | Admin dashboard-ийн бүх өгөгдөл |
 | `useOrderActions` | `hooks/useOrderActions.ts` | Захиалгын үйлдлүүд (agent) |
 | `useUserActions` | `hooks/useUserActions.ts` | Захиалгын үйлдлүүд (user) |
@@ -961,9 +958,9 @@ export const uploadToCloudinary = async (base64: string): Promise<string> => {
 ### 13.2 Hook хэрэглээний жишээ
 
 ```typescript
-// User dashboard-д ашиглах
-function UserDashboard() {
-  const apiClient = useApiClient();
+// Home page-д ашиглах (homeSection.tsx)
+function HomeSection() {
+  const { isAuthenticated, user: authUser } = useAuthContext();
 
   // 1. Өгөгдөл татах
   const {
@@ -972,18 +969,12 @@ function UserDashboard() {
     bundleOrders,
     cargos,
     agents,
-    settings,
     loading,
-    refreshOrders,
-  } = useUserData(apiClient);
+    loadData,
+  } = useUserData({ apiClient, authUser });
 
   // 2. Үйлдлүүд
-  const {
-    handleDeleteOrder,
-    handleCancelOrder,
-    handlePaymentPaid,
-    handleSendVoiceMessage,
-  } = useUserActions(apiClient, refreshOrders);
+  const actions = useUserActions({ apiClient, onReloadData: loadData });
 
   // 3. Socket
   const { joinOrder, leaveOrder, newVoiceMessages } = useSocket(user?.id);
@@ -1017,16 +1008,11 @@ NODE_ENV=development
 # MongoDB
 MONGODB_URI=mongodb://localhost:27017/agentbuy
 
-# Clerk аутентикаци
-CLERK_SECRET_KEY=sk_test_...
-
-# CORS
-CORS_ORIGINS=http://localhost:3000
+# JWT аутентикаци
+JWT_SECRET=your_jwt_secret_change_in_production
 
 # Cloudinary (зураг хадгалалт)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+CLOUDINARY_URL=cloudinary://...
 
 # Anthropic AI
 ANTHROPIC_API_KEY=sk-ant-...
@@ -1036,9 +1022,6 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
-
-# Dev горимд Clerk шалгалтыг алгасах
-DISABLE_CLERK_AUTH=true
 ```
 
 ### Frontend `.env.local`
@@ -1046,9 +1029,6 @@ DISABLE_CLERK_AUTH=true
 ```env
 # API endpoint
 NEXT_PUBLIC_API_URL=http://localhost:4000
-
-# Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
 ---
@@ -1135,9 +1115,9 @@ export default router;
 ### Алхам 4: Route бүртгэх
 
 ```typescript
-// backend/src/index.ts дотор нэмэх
+// backend/src/index.ts дотор нэмэх (auth middleware-ийн дараа)
 import wishlistRoutes from "./routes/wishlistRoutes";
-app.use("/wishlist", clerkAuth, wishlistRoutes);
+app.use("/wishlist", wishlistRoutes);
 ```
 
 ### Алхам 5: Frontend API нэмэх

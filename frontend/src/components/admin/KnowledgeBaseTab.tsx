@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+// Auth token handled by apiClient automatically
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -16,7 +16,6 @@ interface KnowledgeEntry {
 }
 
 export default function KnowledgeBaseTab() {
-  const { getToken } = useAuth();
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +53,7 @@ export default function KnowledgeBaseTab() {
   // Fetch system prompt
   const fetchSystemPrompt = async () => {
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/support/system-prompt`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -72,7 +71,7 @@ export default function KnowledgeBaseTab() {
     setSavingPrompt(true);
     setPromptSaved(false);
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/support/system-prompt`, {
         method: "PUT",
         headers: {
@@ -109,7 +108,7 @@ export default function KnowledgeBaseTab() {
     setError(null);
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/support/knowledge`, {
         method: "POST",
         headers: {
@@ -146,7 +145,7 @@ export default function KnowledgeBaseTab() {
     if (!confirm("Устгахдаа итгэлтэй байна уу?")) return;
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/support/knowledge/${id}`, {
         method: "DELETE",
         headers: {

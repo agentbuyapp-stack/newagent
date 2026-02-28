@@ -1,3 +1,5 @@
+"use client";
+
 import { HomeSection } from "./_features/homeSection";
 
 export default function Home() {

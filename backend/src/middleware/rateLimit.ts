@@ -12,7 +12,7 @@ export const generalLimiter = rateLimit({
 // Auth endpoints-д илүү хатуу limiter
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
-  max: 20, // 15 минутад 20 хүсэлт
+  max: process.env.NODE_ENV === "development" ? 100 : 20, // dev: 100, prod: 20
   message: { error: "Хэт олон нэвтрэх оролдлого. 15 минут хүлээнэ үү." },
   standardHeaders: true,
   legacyHeaders: false,

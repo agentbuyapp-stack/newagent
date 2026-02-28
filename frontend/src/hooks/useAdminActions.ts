@@ -15,7 +15,7 @@ interface CargoFormData {
 
 interface UseAdminActionsOptions {
   apiClient: {
-    addAgent: (email: string) => Promise<User>;
+    addAgent: (data: { phone: string; password: string; email: string; displayName?: string }) => Promise<User>;
     approveAgent: (agentId: string, approved: boolean) => Promise<User>;
     verifyUserPayment: (orderId: string) => Promise<unknown>;
     cancelPayment: (orderId: string, reason: string, type: "order" | "bundle") => Promise<unknown>;
@@ -42,7 +42,7 @@ interface UseAdminActionsReturn {
   uploadingCargoImage: boolean;
 
   // Agent actions
-  handleAddAgent: (email: string) => Promise<boolean>;
+  handleAddAgent: (data: { phone: string; password: string; email: string; displayName?: string }) => Promise<boolean>;
   handleApproveAgent: (agentId: string, approved: boolean) => Promise<void>;
 
   // Order actions
@@ -88,15 +88,15 @@ export function useAdminActions({
 
   // Agent actions
   const handleAddAgent = useCallback(
-    async (email: string): Promise<boolean> => {
-      if (!email.trim()) {
-        alert("Email оруулах шаардлагатай");
+    async (data: { phone: string; password: string; email: string; displayName?: string }): Promise<boolean> => {
+      if (!data.phone.trim() || !data.password.trim() || !data.email.trim()) {
+        alert("Утас, нууц үг, имэйл оруулах шаардлагатай");
         return false;
       }
 
       setAddingAgent(true);
       try {
-        await apiClient.addAgent(email.trim());
+        await apiClient.addAgent(data);
         await loadData();
         alert("Agent амжилттай нэмэгдлээ!");
         return true;

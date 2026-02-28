@@ -11,7 +11,7 @@ export const addAgent = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { data, error, status } = await adminService.addAgent(req.body.email, req.user.id);
+  const { data, error, status } = await adminService.addAgent(req.body, req.user.id);
 
   if (error) {
     res.status(status || 500).json({ error });
@@ -408,6 +408,105 @@ export const deleteReview = async (req: Request, res: Response): Promise<void> =
  */
 export const recalculateAgentStats = async (_req: Request, res: Response): Promise<void> => {
   const { data, error, status } = await adminService.recalculateAgentStats();
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
+
+// ==================== Package Request Management ====================
+
+/**
+ * GET /admin/package-requests - Get all package requests
+ */
+export const getPackageRequests = async (_req: Request, res: Response): Promise<void> => {
+  const { data, error, status } = await adminService.getPackageRequests();
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
+
+/**
+ * PUT /admin/package-requests/:id/approve - Approve package request
+ */
+export const approvePackageRequest = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { data, error, status } = await adminService.approvePackageRequest(
+    req.params.id,
+    req.user.id
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
+
+/**
+ * PUT /admin/package-requests/:id/reject - Reject package request
+ */
+export const rejectPackageRequest = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { data, error, status } = await adminService.rejectPackageRequest(
+    req.params.id,
+    req.user.id
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
+
+// ==================== User Credits Management ====================
+
+/**
+ * PUT /admin/users/:id/credits - Manually add credits to user
+ */
+export const addUserCredits = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+
+  const { data, error, status } = await adminService.addUserCredits(
+    req.params.id,
+    req.body.amount,
+    req.user.id
+  );
+
+  if (error) {
+    res.status(status || 500).json({ error });
+    return;
+  }
+
+  res.json(data);
+};
+
+/**
+ * GET /admin/users - Get all users
+ */
+export const getUsers = async (_req: Request, res: Response): Promise<void> => {
+  const { data, error, status } = await adminService.getUsers();
 
   if (error) {
     res.status(status || 500).json({ error });

@@ -21,7 +21,7 @@ interface UseUserDataOptions {
     getBundleOrders: () => Promise<BundleOrder[]>;
     getAgentReport: (orderId: string) => Promise<AgentReport | null>;
   };
-  clerkUser: { primaryEmailAddress?: { emailAddress?: string } | null } | null | undefined;
+  authUser: { email?: string; id?: string } | null | undefined;
 }
 
 interface UseUserDataReturn {
@@ -44,7 +44,7 @@ interface UseUserDataReturn {
   loadAgentReport: (orderId: string) => Promise<void>;
 }
 
-export function useUserData({ apiClient, clerkUser }: UseUserDataOptions): UseUserDataReturn {
+export function useUserData({ apiClient, authUser }: UseUserDataOptions): UseUserDataReturn {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -57,16 +57,9 @@ export function useUserData({ apiClient, clerkUser }: UseUserDataOptions): UseUs
   const [error, setError] = useState("");
 
   const loadData = useCallback(async () => {
-    if (!clerkUser) return;
+    if (!authUser) return;
 
     try {
-      const email = clerkUser.primaryEmailAddress?.emailAddress || "";
-      if (!email) {
-        setError("Имэйл олдсонгүй");
-        setLoading(false);
-        return;
-      }
-
       try {
         const userData = await apiClient.getMe();
         setUser(userData);
@@ -141,7 +134,7 @@ export function useUserData({ apiClient, clerkUser }: UseUserDataOptions): UseUs
     } finally {
       setLoading(false);
     }
-  }, [clerkUser, apiClient]);
+  }, [authUser, apiClient]);
 
   const loadAgentReport = useCallback(
     async (orderId: string) => {

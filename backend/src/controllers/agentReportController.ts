@@ -174,6 +174,62 @@ export const createAgentReport = async (req: Request, res: Response): Promise<vo
   }
 };
 
+export const deleteAgentReport = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthenticated" });
+      return;
+    }
+
+    const orderId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      res.status(400).json({ error: "Invalid order ID" });
+      return;
+    }
+
+    const order = await Order.findById(orderId).lean();
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    // Only allow deletion before user payment
+    if (order.userPaymentVerified) {
+      res.status(400).json({ error: "Хэрэглэгч төлбөр төлсний дараа тайлан устгах боломжгүй" });
+      return;
+    }
+
+    // Only agents assigned to the order or admins can delete reports
+    if (req.user.role === "agent") {
+      if (!order.agentId || order.agentId.toString() !== req.user.id) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    } else if (req.user.role !== "admin") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const report = await AgentReport.findOneAndDelete({
+      orderId: new mongoose.Types.ObjectId(orderId),
+    });
+
+    if (!report) {
+      res.status(404).json({ error: "Report not found" });
+      return;
+    }
+
+    // Revert order status back to agent_sudlaj_bn
+    await Order.findByIdAndUpdate(orderId, { status: "agent_sudlaj_bn" });
+
+    res.json({ message: "Тайлан амжилттай устгагдлаа" });
+  } catch (error: any) {
+    console.error("Error in DELETE /orders/:id/report:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const updateAgentReport = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {

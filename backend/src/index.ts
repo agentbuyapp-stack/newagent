@@ -7,7 +7,7 @@ import compression from "compression";
 import swaggerUi from "swagger-ui-express";
 import connectDB from "./lib/mongodb";
 import { errorHandler } from "./middleware/errorHandler";
-import { clerkAuth } from "./middleware/clerkAuth";
+import { auth } from "./middleware/auth";
 import { corsOptions } from "./config/cors";
 import { swaggerSpec } from "./config/swagger";
 import mongoose from "mongoose";
@@ -31,6 +31,7 @@ import cardRoutes from "./routes/cardRoutes";
 import supportRoutes from "./routes/supportRoutes";
 import { initCronJobs } from "./services/cronService";
 import { seedKnowledgeBase } from "./models/KnowledgeBase";
+import { AdminSettings } from "./models/AdminSettings";
 
 const app = express();
 
@@ -86,12 +87,37 @@ app.use("/auth", authLimiter, authRoutes);
 // Support routes (has its own auth handling - public + admin)
 app.use("/support", supportRoutes);
 
-// Use Clerk authentication for protected routes
-app.use(clerkAuth);
+// Public gallery endpoint - returns { url, caption }[]
+app.get("/gallery", async (_req, res) => {
+  try {
+    const settings = await AdminSettings.findOne().lean();
+    // Use galleryItems if available, fall back to galleryImages for backward compat
+    if (settings?.galleryItems && settings.galleryItems.length > 0) {
+      res.json(settings.galleryItems);
+    } else {
+      // Convert old string[] format to { url, caption }[]
+      const images = settings?.galleryImages || [];
+      res.json(images.map((url: string) => ({ url, caption: "" })));
+    }
+  } catch {
+    res.json([]);
+  }
+});
+
+// Public hero images endpoint
+app.get("/hero-images", async (_req, res) => {
+  try {
+    const settings = await AdminSettings.findOne().lean();
+    res.json(settings?.heroImages || []);
+  } catch {
+    res.json([]);
+  }
+});
+
+// JWT authentication for protected routes
+app.use(auth);
 
 // Protected routes
-// Note: authRoutes contains both /register (public) and /me (protected)
-// We mount /me separately since it should be at root level
 import { getMe } from "./controllers/authController";
 app.get("/me", getMe);
 
@@ -106,6 +132,9 @@ app.use("/upload-image", uploadRoutes);
 app.use("/bundle-orders", bundleOrderRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/cards", cardRoutes);
+
+import labelRoutes from "./routes/labelRoutes";
+app.use("/labels", labelRoutes);
 
 // 404 handler
 app.use((_req, res) => {

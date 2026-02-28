@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { type Message, type Order, type BundleOrder } from "@/lib/api";
-import { useApiClient } from "@/lib/useApiClient";
+import { apiClient } from "@/lib/api";
 
 interface ApiClientLike {
   getHeaders: () => Promise<HeadersInit>;
@@ -164,8 +164,7 @@ interface ChatModalProps {
 }
 
 export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
-  const { user: clerkUser } = useUser();
-  const apiClient = useApiClient();
+  const { user: authUser } = useAuthContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -194,7 +193,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
 
   // Get current user ID from database
   useEffect(() => {
-    if (isOpen && clerkUser) {
+    if (isOpen && authUser) {
       apiClient
         .getMe()
         .then((user) => {
@@ -202,7 +201,7 @@ export default function ChatModal({ order, isOpen, onClose }: ChatModalProps) {
         })
         .catch(console.error);
     }
-  }, [isOpen, clerkUser, apiClient]);
+  }, [isOpen, authUser, apiClient]);
 
   // Poll for new messages every 2 seconds
   useEffect(() => {

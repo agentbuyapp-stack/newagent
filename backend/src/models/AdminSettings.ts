@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IGalleryItem {
+  url: string;
+  caption?: string;
+}
+
 export interface IAdminSettings extends Document {
   accountNumber?: string;
   accountName?: string;
@@ -8,6 +13,9 @@ export interface IAdminSettings extends Document {
   orderLimitEnabled?: boolean;
   maxOrdersPerDay?: number;
   maxActiveOrders?: number;
+  galleryImages?: string[];
+  galleryItems?: IGalleryItem[];
+  heroImages?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +48,21 @@ const AdminSettingsSchema = new Schema<IAdminSettings>(
     maxActiveOrders: {
       type: Number,
       default: 10,
+    },
+    galleryImages: {
+      type: [String],
+      default: [],
+    },
+    galleryItems: {
+      type: [{
+        url: { type: String, required: true },
+        caption: { type: String, default: "" },
+      }],
+      default: [],
+    },
+    heroImages: {
+      type: [String],
+      default: [],
     },
   },
   {

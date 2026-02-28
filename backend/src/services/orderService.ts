@@ -10,7 +10,7 @@ import {
   notifyUserTrackCodeAdded,
   notifyAdminPaymentRequest,
 } from "./notificationService";
-import { cardService } from "./cardService";
+// cardService removed — using daily order limit instead
 
 // Types
 export interface OrderUser {
@@ -58,6 +58,7 @@ export interface CreateOrderInput {
   description?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  audioUrl?: string;
   products?: Array<{
     productName: string;
     description: string;
@@ -200,6 +201,7 @@ export class OrderService {
           return { orders: [], error: "Invalid user ID" };
         }
         query.userId = new mongoose.Types.ObjectId(userId);
+        query.archivedByUser = { $ne: true };
       } else if (role === "agent") {
         if (!mongoose.Types.ObjectId.isValid(userId)) {
           return { orders: [], error: "Invalid user ID" };
@@ -210,6 +212,7 @@ export class OrderService {
           { status: "niitlegdsen", agentId: { $exists: false } },
           { agentId: agentObjectId },
         ];
+        query.archivedByAgent = { $ne: true };
       }
       // Admins see all orders
 
@@ -267,6 +270,92 @@ export class OrderService {
       return { orders: formattedOrders };
     } catch (error: any) {
       console.error("OrderService.getOrders error:", error);
+      return { orders: [], error: error.message };
+    }
+  }
+
+  /**
+   * Get archived orders (lazy-loaded)
+   */
+  async getArchivedOrders(
+    userId: string,
+    role: string
+  ): Promise<{ orders: FormattedOrder[]; error?: string }> {
+    try {
+      let query: any = {};
+
+      if (role === "user") {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+          return { orders: [], error: "Invalid user ID" };
+        }
+        query.userId = new mongoose.Types.ObjectId(userId);
+        query.archivedByUser = true;
+      } else if (role === "agent") {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+          return { orders: [], error: "Invalid user ID" };
+        }
+        query.agentId = new mongoose.Types.ObjectId(userId);
+        query.archivedByAgent = true;
+      } else {
+        // Admin: all archived
+        query.$or = [
+          { archivedByUser: true },
+          { archivedByAgent: true },
+        ];
+      }
+
+      const orders = await Order.find(query)
+        .populate("userId", null, User)
+        .populate("agentId", null, User)
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      const userIds = [
+        ...new Set(orders.map((o) => extractUserId(o.userId)).filter(Boolean)),
+      ] as string[];
+      const agentIds = [
+        ...new Set(orders.map((o) => extractUserId(o.agentId)).filter(Boolean)),
+      ] as string[];
+      const allUserIds = [...new Set([...userIds, ...agentIds])];
+
+      const profiles =
+        allUserIds.length > 0
+          ? await Profile.find({
+              userId: {
+                $in: allUserIds.map((id) => new mongoose.Types.ObjectId(id)),
+              },
+            }).lean()
+          : [];
+      const profileMap = new Map(
+        profiles.map((p) => [p.userId.toString(), p])
+      );
+
+      const formattedOrders = orders.map((order) => {
+        const userIdStr = extractUserId(order.userId);
+        const agentIdStr = extractUserId(order.agentId);
+
+        const user = userIdStr
+          ? buildUserObject(
+              userIdStr,
+              typeof order.userId === "object" ? order.userId : null,
+              profileMap.get(userIdStr)
+            )
+          : null;
+
+        const agent = agentIdStr
+          ? buildUserObject(
+              agentIdStr,
+              typeof order.agentId === "object" ? order.agentId : null,
+              profileMap.get(agentIdStr)
+            )
+          : null;
+
+        return formatOrder({ ...order, user, agent });
+      });
+
+      return { orders: formattedOrders };
+    } catch (error: any) {
+      console.error("OrderService.getArchivedOrders error:", error);
       return { orders: [], error: error.message };
     }
   }
@@ -360,18 +449,13 @@ export class OrderService {
           return { error: limitCheck.reason, status: 429 };
         }
 
-        // Check if user has research cards
-        const hasCards = await cardService.hasCardsForOrder(userId, role);
-        if (!hasCards) {
-          return { error: "Судалгааны карт хүрэлцэхгүй байна", status: 400 };
-        }
       }
 
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         return { error: "Invalid user ID", status: 400 };
       }
 
-      const { productName, description, imageUrl, imageUrls, products } = input;
+      const { productName, description, imageUrl, imageUrls, audioUrl, products } = input;
 
       // Handle multiple products
       if (products && Array.isArray(products) && products.length > 0) {
@@ -395,13 +479,9 @@ export class OrderService {
         description: description.trim(),
         imageUrl: finalImageUrls[0],
         imageUrls: finalImageUrls,
+        ...(audioUrl ? { audioUrl } : {}),
         status: "niitlegdsen",
       });
-
-      // Deduct 1 card for users
-      if (role === "user") {
-        await cardService.deductCardForOrder(userId, order._id.toString());
-      }
 
       // Notify agents
       notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
@@ -426,7 +506,7 @@ export class OrderService {
    */
   private async createMultiProductOrder(
     userId: string,
-    role: string,
+    _role: string,
     products: Array<{ productName: string; description: string; imageUrls?: string[] }>
   ): Promise<{ order?: FormattedOrder; error?: string; status?: number }> {
     // Validate products
@@ -464,11 +544,6 @@ export class OrderService {
       imageUrls: finalImageUrls,
       status: "niitlegdsen",
     });
-
-    // Deduct 1 card for users
-    if (role === "user") {
-      await cardService.deductCardForOrder(userId, order._id.toString());
-    }
 
     notifyAgentsNewOrder(order._id, order.productName, 0, 1).catch((err) =>
       console.error("Failed to notify agents:", err)
@@ -775,7 +850,21 @@ export class OrderService {
         return { error: "Forbidden", status: 403 };
       }
 
-      await Order.findByIdAndDelete(orderId);
+      // Instead of deleting, cancel + archive the order
+      const updateData: any = {};
+      if (order.status === "niitlegdsen" || order.status === "agent_sudlaj_bn" || order.status === "tolbor_huleej_bn") {
+        updateData.status = "tsutsalsan_zahialga";
+      }
+      if (role === "user") {
+        updateData.archivedByUser = true;
+      } else if (role === "agent") {
+        updateData.archivedByAgent = true;
+      } else if (role === "admin") {
+        updateData.archivedByUser = true;
+        updateData.archivedByAgent = true;
+      }
+
+      await Order.findByIdAndUpdate(orderId, updateData);
       return { success: true };
     } catch (error: any) {
       console.error("OrderService.deleteOrder error:", error);

@@ -14,6 +14,8 @@ export interface IOrder extends Document {
   description: string;
   imageUrl?: string;
   imageUrls: string[];
+  audioUrl?: string;
+  label?: string;
   status: OrderStatus;
   userPaymentVerified: boolean;
   agentPaymentPaid: boolean;
@@ -51,6 +53,13 @@ const OrderSchema = new Schema<IOrder>(
     imageUrls: {
       type: [String],
       default: [],
+    },
+    audioUrl: {
+      type: String,
+    },
+    label: {
+      type: String,
+      trim: true,
     },
     status: {
       type: String,

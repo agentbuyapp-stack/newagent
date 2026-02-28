@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { PublicAgent } from "@/lib/api";
+
+const PER_PAGE = 5;
 
 interface TopAgentsSectionProps {
   agents: PublicAgent[];
@@ -11,6 +13,13 @@ interface TopAgentsSectionProps {
 
 export function TopAgentsSection({ agents, onAgentClick }: TopAgentsSectionProps) {
   const [showAgents, setShowAgents] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(agents.length / PER_PAGE);
+  const paginated = useMemo(
+    () => agents.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [agents, page]
+  );
 
   return (
     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative z-10">
@@ -60,14 +69,28 @@ export function TopAgentsSection({ agents, onAgentClick }: TopAgentsSectionProps
 
       {showAgents && (
         <div className="mt-4 space-y-4">
-          {agents.map((agent, index) => (
+          {paginated.map((agent, idx) => (
             <AgentCard
               key={agent.id}
               agent={agent}
-              index={index}
+              index={(page - 1) * PER_PAGE + idx}
               onClick={() => onAgentClick(agent)}
             />
           ))}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <button onClick={() => setPage(Math.max(page - 1, 1))} disabled={page === 1}
+                className="px-2.5 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="text-xs text-gray-500">{page} / {totalPages}</span>
+              <button onClick={() => setPage(Math.min(page + 1, totalPages))} disabled={page === totalPages}
+                className="px-2.5 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          )}
 
           {agents.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -231,13 +254,6 @@ function AgentCard({
                     </span>
                   )}
                 </h4>
-                {/* Rating */}
-                <div className="flex items-center gap-2 mt-1">
-                  {renderStars(agent.avgRating)}
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    ({agent.reviewCount} үнэлгээ)
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -248,113 +264,6 @@ function AgentCard({
               </p>
             )}
 
-            {/* Specialties */}
-            {agent.specialties && agent.specialties.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {agent.specialties.slice(0, 3).map((specialty, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 text-xs rounded-full font-medium"
-                  >
-                    {specialty}
-                  </span>
-                ))}
-                {agent.specialties.length > 3 && (
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
-                    +{agent.specialties.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Stats Row */}
-            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-1.5 text-sm">
-                <svg
-                  className="w-4 h-4 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-gray-700 dark:text-gray-300 font-semibold">
-                  {agent.successRate}%
-                </span>
-                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                  амжилт
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-sm">
-                <svg
-                  className="w-4 h-4 text-blue-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                  />
-                </svg>
-                <span className="text-gray-700 dark:text-gray-300 font-semibold">
-                  {agent.totalTransactions}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                  гүйлгээ
-                </span>
-              </div>
-              {agent.experienceYears && agent.experienceYears > 0 && (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <svg
-                    className="w-4 h-4 text-purple-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span className="text-gray-700 dark:text-gray-300 font-semibold">
-                    {agent.experienceYears}
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs">
-                    жил
-                  </span>
-                </div>
-              )}
-              {agent.responseTime && (
-                <div className="hidden sm:flex items-center gap-1.5 text-sm">
-                  <svg
-                    className="w-4 h-4 text-amber-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs">
-                    {agent.responseTime}
-                  </span>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>

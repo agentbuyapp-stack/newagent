@@ -13,6 +13,9 @@ export * from "./AgentSpecialty";
 export * from "./AgentReview";
 export * from "./CardTransaction";
 export * from "./ChatNotification";
+export * from "./PasswordReset";
+export * from "./PackageRequest";
+export * from "./Label";
 
 // Re-export Role type for convenience
 export type { Role } from "./User";

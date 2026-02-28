@@ -20,10 +20,10 @@ const generateVisitorId = () => {
  * POST /api/support/chat
  * Send message to AI and get response
  */
-export const chat = async (req: Request, res: Response) => {
+export const chat = async (req: Request, res: Response): Promise<any> => {
   try {
     const { message, sessionId, visitorId } = req.body;
-    const clerkUserId = (req as any).auth?.userId;
+    const userId = req.user?.id;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "Message is required" });
@@ -38,7 +38,7 @@ export const chat = async (req: Request, res: Response) => {
       // Create new session
       session = new SupportChat({
         sessionId: generateSessionId(),
-        clerkUserId,
+        userId,
         visitorId: visitorId || generateVisitorId(),
         messages: [],
         status: "active",
@@ -90,7 +90,7 @@ export const chat = async (req: Request, res: Response) => {
     if (aiResponse.handoffRequested) {
       session.status = "waiting_human";
       // Notify admins
-      await notifyAdminSupportHandoff(session.sessionId, session.clerkUserId || "Зочин");
+      await notifyAdminSupportHandoff(session.sessionId, session.userId || "Зочин");
     }
 
     await session.save();
@@ -113,7 +113,7 @@ export const chat = async (req: Request, res: Response) => {
  * GET /api/support/session/:sessionId
  * Get chat session by ID
  */
-export const getSession = async (req: Request, res: Response) => {
+export const getSession = async (req: Request, res: Response): Promise<any> => {
   try {
     const { sessionId } = req.params;
 
@@ -134,7 +134,7 @@ export const getSession = async (req: Request, res: Response) => {
  * POST /api/support/handoff
  * Request human support
  */
-export const requestHandoff = async (req: Request, res: Response) => {
+export const requestHandoff = async (req: Request, res: Response): Promise<any> => {
   try {
     const { sessionId } = req.body;
 
@@ -158,7 +158,7 @@ export const requestHandoff = async (req: Request, res: Response) => {
     await session.save();
 
     // Send notification to admins
-    await notifyAdminSupportHandoff(session.sessionId, session.clerkUserId || "Зочин");
+    await notifyAdminSupportHandoff(session.sessionId, session.userId || "Зочин");
 
     res.json({
       success: true,
@@ -175,7 +175,7 @@ export const requestHandoff = async (req: Request, res: Response) => {
  * GET /api/support/admin/chats
  * Get all support chats (admin only)
  */
-export const getAdminChats = async (req: Request, res: Response) => {
+export const getAdminChats = async (req: Request, res: Response): Promise<any> => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
 
@@ -211,7 +211,7 @@ export const getAdminChats = async (req: Request, res: Response) => {
  * POST /api/support/admin/reply
  * Admin reply to support chat
  */
-export const adminReply = async (req: Request, res: Response) => {
+export const adminReply = async (req: Request, res: Response): Promise<any> => {
   try {
     const { sessionId, message } = req.body;
     const adminId = (req as any).auth?.userId;
@@ -253,7 +253,7 @@ export const adminReply = async (req: Request, res: Response) => {
  * PUT /api/support/admin/resolve/:sessionId
  * Resolve a support chat
  */
-export const resolveChat = async (req: Request, res: Response) => {
+export const resolveChat = async (req: Request, res: Response): Promise<any> => {
   try {
     const { sessionId } = req.params;
 
@@ -298,7 +298,7 @@ export const getKnowledge = async (_req: Request, res: Response) => {
  * POST /api/support/knowledge
  * Add new knowledge base entry (admin only)
  */
-export const addKnowledge = async (req: Request, res: Response) => {
+export const addKnowledge = async (req: Request, res: Response): Promise<any> => {
   try {
     const { category, question, answer, keywords } = req.body;
 
@@ -328,7 +328,7 @@ export const addKnowledge = async (req: Request, res: Response) => {
  * DELETE /api/support/knowledge/:id
  * Delete knowledge base entry (admin only)
  */
-export const deleteKnowledge = async (req: Request, res: Response) => {
+export const deleteKnowledge = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
 
@@ -363,7 +363,7 @@ export const getSystemPromptController = async (_req: Request, res: Response) =>
  * PUT /api/support/system-prompt
  * Update system prompt (admin only)
  */
-export const updateSystemPromptController = async (req: Request, res: Response) => {
+export const updateSystemPromptController = async (req: Request, res: Response): Promise<any> => {
   try {
     const { prompt } = req.body;
 

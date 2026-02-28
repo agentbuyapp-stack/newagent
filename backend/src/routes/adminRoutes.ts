@@ -29,6 +29,13 @@ import {
   deleteReview,
   // Stats
   recalculateAgentStats,
+  // Package Requests
+  getPackageRequests,
+  approvePackageRequest,
+  rejectPackageRequest,
+  // User Management
+  addUserCredits,
+  getUsers,
 } from "../controllers/adminController";
 import { requireRole } from "../middleware/requireRole";
 
@@ -70,5 +77,13 @@ router.delete("/reviews/:id", requireRole("admin"), deleteReview);
 // Stats management
 router.post("/recalculate-stats", requireRole("admin"), recalculateAgentStats);
 
-export default router;
+// Package requests management
+router.get("/package-requests", requireRole("admin"), getPackageRequests);
+router.put("/package-requests/:id/approve", requireRole("admin"), approvePackageRequest);
+router.put("/package-requests/:id/reject", requireRole("admin"), rejectPackageRequest);
 
+// User management
+router.get("/users", requireRole("admin"), getUsers);
+router.put("/users/:id/credits", requireRole("admin"), addUserCredits);
+
+export default router;

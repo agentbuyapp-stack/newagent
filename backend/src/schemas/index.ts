@@ -22,6 +22,7 @@ export const createOrderSchema = z.object({
   description: z.string().max(5000).optional(),
   imageUrl: z.string().optional().nullable(),
   imageUrls: z.array(z.string()).max(3, "Хамгийн ихдээ 3 зураг оруулах боломжтой").optional(),
+  audioUrl: z.string().url().optional(),
   products: z.array(z.object({
     productName: z.string().min(1),
     description: z.string().min(1),
